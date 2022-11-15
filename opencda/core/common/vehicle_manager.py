@@ -9,7 +9,7 @@ import uuid
 
 from opencda.core.actuation.control_manager \
     import ControlManager
-from opencda.core.application.platooning.platoon_behavior_agent \
+from opencda.core.application.platooning.platoon_behavior_agent\
     import PlatooningBehaviorAgent
 from opencda.core.common.v2x_manager \
     import V2XManager
@@ -19,9 +19,9 @@ from opencda.core.sensing.perception.perception_manager \
     import PerceptionManager
 from opencda.core.plan.behavior_agent \
     import BehaviorAgent
-from opencda.core.plan.rl_behavior_agent import RLBehaviorAgent
 from opencda.core.map.map_manager import MapManager
 from opencda.core.common.data_dumper import DataDumper
+
 
 class VehicleManager(object):
     """
@@ -86,7 +86,6 @@ class VehicleManager(object):
         self.vid = str(uuid.uuid1())
         self.vehicle = vehicle
         self.carla_map = carla_map
-        self.application = application
 
         # retrieve the configure for different modules
         sensing_config = config_yaml['sensing']
@@ -97,7 +96,6 @@ class VehicleManager(object):
 
         # v2x module
         self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
-
         # localization module
         self.localizer = LocalizationManager(
             vehicle, sensing_config['localization'], carla_map)
@@ -109,6 +107,7 @@ class VehicleManager(object):
         self.map_manager = MapManager(vehicle,
                                       carla_map,
                                       map_config)
+
         # behavior agent
         self.agent = None
         if 'platooning' in application:
@@ -120,8 +119,6 @@ class VehicleManager(object):
                 behavior_config,
                 platoon_config,
                 carla_map)
-        elif 'rl' in application:
-            self.agent = RLBehaviorAgent(vehicle, carla_map, behavior_config)
         else:
             self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
 
@@ -192,21 +189,13 @@ class VehicleManager(object):
         # pass position and speed info to controller
         self.controller.update_info(ego_pos, ego_spd)
 
-    def run_step(self):
+    def run_step(self, target_speed=None):
         """
         Execute one step of navigation.
         """
         # visualize the bev map if needed
         self.map_manager.run_step()
-
-        if 'rl' in self.application:
-            # update agent info
-            self.agent.run_rl_reward_step()
-            target_speed, target_pos = self.agent.run_rl_action_step()
-        else:
-            target_speed, target_pos = self.agent.run_step()
-
-        # apply control
+        target_speed, target_pos = self.agent.run_step(target_speed)
         control = self.controller.run_step(target_speed, target_pos)
 
         # dump data

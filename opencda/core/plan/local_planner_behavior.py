@@ -571,7 +571,7 @@ class LocalPlanner(object):
         Returns
         -------
         speed : float
-            Next trajectory point's target speed.
+            Next trajectory point's target speed。
 
         waypoint : carla.waypoint
             Next trajectory point's waypoint.
