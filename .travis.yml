@@ -1,0 +1,24 @@
+language: python
+dist: bionic
+
+python:
+  - "3.7"
+  - "3.8"
+
+install:
+  - pip install --upgrade pip
+  - pip install coveralls pytest pytest-cov -r requirements_ci.txt
+
+# command to run tests
+script:
+   pytest --cov=test/
+
+after_success:
+  - coveralls
+
+notifications:
+  email:
+    recipients:
+      - derrickxu1994@gmail.com
+  on_success: never # default: change
+  on_failure: always # default: always
