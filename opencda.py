@@ -3,7 +3,7 @@
 Script to run different scenarios.
 """
 
-# Author: Wei Shao <phdweishao@gmail.com>
+# Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
 import argparse
@@ -15,7 +15,7 @@ from opencda.version import __version__
 
 
 def arg_parse():
-    parser = argparse.ArgumentParser(description="EI-Drive scenario runner.")
+    parser = argparse.ArgumentParser(description="OpenCDA scenario runner.")
     parser.add_argument('-t', "--test_scenario", required=True, type=str,
                         help='Define the name of the scenario you want to test. The given name must'
                              'match one of the testing scripts(e.g. single_2lanefree_carla) in '
