@@ -8,12 +8,12 @@ if [ -z "$CARLA_HOME" ]; then
 fi
 
 if [ -z "$CARLA_VERSION" ]; then
-   CARLA_VERSION="0.9.13"
+   CARLA_VERSION="0.9.11"
 fi
 
 CARLA_EGG_FILE=${CARLA_HOME}/PythonAPI/carla/dist/carla-"${CARLA_VERSION}"-py3.7-linux-x86_64.egg
 if [ ! -f "$CARLA_EGG_FILE" ]; then
-    echo "Error: $CARLA_EGG_FILE can not be found. Please make sure you are using python3.7 and carla 0.9.13. "
+    echo "Error: $CARLA_EGG_FILE can not be found. Please make sure you are using python3.7 and carla 0.9.11. "
     return 0
 fi
 

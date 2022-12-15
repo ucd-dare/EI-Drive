@@ -1,4 +1,4 @@
-name: EI-Drive
+name: opencda
 channels:
   - defaults
 dependencies:

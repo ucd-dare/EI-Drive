@@ -11,13 +11,13 @@ def _read_requirements_file():
 
 
 setup(
-    name='EI-Drive',
+    name='OpenCDA',
     version=__version__,
     packages=find_packages(),
-    url='https://github.com/swsamleo/EI-Drive.git',
+    url='https://github.com/ucla-mobility/OpenCDA.git',
     license='MIT',
-    author='Wei Shao',
-    author_email='phdweishao@gmail.com',
+    author='Runsheng Xu, Xu Han',
+    author_email='rxx3386@ucla.edu',
     description='A framework for fast developing cooperative driving automation and autonomous '
                 'vehicle modules in multi-resolution simulation environment"',
     long_description=open("README.md").read(),

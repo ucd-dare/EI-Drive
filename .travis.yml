@@ -19,6 +19,6 @@ after_success:
 notifications:
   email:
     recipients:
-      - phdweishao@gmail.com
+      - derrickxu1994@gmail.com
   on_success: never # default: change
   on_failure: always # default: always
