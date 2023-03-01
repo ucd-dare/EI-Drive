@@ -111,7 +111,7 @@ carla_traffic_manager:
   global_speed_perc: -100
   set_osm_mode: true # Enables or disables the OSM mode.
   auto_lane_change: false
-  random: true # whether to random select vehicles' color and model
+  random: false # whether to random select vehicles' color and model
   ignore_lights_percentage: 0 # whether set the traffic ignore traffic lights
   vehicle_list: ~  # a number or a list
   # Used only when vehicle_list is a number.

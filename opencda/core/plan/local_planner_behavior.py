@@ -215,7 +215,7 @@ class LocalPlanner(object):
 
     def generate_path(self):
         """
-        Generate the smooth path using cubic spline.
+        Generate the smooth trajectory using cubic spline.
 
         Returns :
         ----------
@@ -253,9 +253,8 @@ class LocalPlanner(object):
 
         # retrieve the future and past waypoint to check whether a lane change
         # is gonna operated
-        future_wpt = self._waypoint_buffer[-1][0]
-        previous_wpt = self._history_buffer[0][0] if len(
-            self._history_buffer) > 0 else current_wpt
+        future_wpt = self._waypoint_buffer[-1][0] if len(self._waypoint_buffer) > 0 else current_wpt
+        previous_wpt = self._history_buffer[0][0] if len( self._history_buffer) > 0 else current_wpt
 
         # check lateral offset from previous waypoint to current waypoint
         vec_norm, angle = cal_distance_angle(previous_wpt.transform.location,
@@ -374,12 +373,12 @@ class LocalPlanner(object):
 
     def generate_trajectory(self, rx, ry, rk):
         """
-        Sampling the generated path and assign speed to each point.
+        Sampling the generated trajectory and assign speed to each point.
 
         Parameters
         ----------
         rx : list
-            List of planned path points' x coordinates.
+            List of planned path points' x coordinates. (from generate_path)
 
         ry : list
             List of planned path points' y coordinates.
@@ -393,14 +392,14 @@ class LocalPlanner(object):
         """
         # unit distance for interpolation points
         ds = 0.1
-        # unit sampling resolution
+        # unit sampling resolution. Sample a point every dt.
         dt = self.dt
 
         target_speed = self._target_speed
         current_speed = self._ego_speed
 
         # sample the trajectory by 0.1 second
-        sample_num = 2.0 // dt
+        sample_num = 4.0 // dt  # future horizon
 
         break_flag = False
         current_speed = current_speed / 3.6
@@ -634,6 +633,6 @@ class LocalPlanner(object):
                                   lt=0.2)
 
         return self._target_speed, \
-               self.target_waypoint.transform.location if hasattr(
+               self.target_waypoint.transform.location if hasattr(  # here should be self.target_waypoint.location
                    self.target_waypoint,
                    'is_junction') else self.target_waypoint.location

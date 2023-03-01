@@ -25,6 +25,8 @@ from opencda.core.sensing.perception.o3d_lidar_libs import \
     o3d_visualizer_init, o3d_pointcloud_encode, o3d_visualizer_show, \
     o3d_camera_lidar_fusion
 
+from opencda.scenario_testing import demo
+
 
 class CameraSensor:
     """
@@ -302,6 +304,7 @@ class SemanticLidarSensor:
         else:
             self.sensor = world.spawn_actor(blueprint, spawn_point)
 
+        self.car_id = config_yaml['vid']
         # lidar data
         self.points = None
         self.obj_idx = None
@@ -387,6 +390,7 @@ class PerceptionManager:
         self.lidar_visualize = config_yaml['lidar_visualize']
         self.global_position = config_yaml['global_position'] \
             if 'global_position' in config_yaml else None
+
 
         self.cav_world = weakref.ref(cav_world)()
         ml_manager = cav_world.ml_manager
@@ -590,6 +594,7 @@ class PerceptionManager:
         world = self.carla_world
 
         vehicle_list = world.get_actors().filter("*vehicle*")
+
         thresh = 50 if not self.data_dump else 120
 
         vehicle_list = [v for v in vehicle_list if self.dist(v) < thresh and
@@ -629,19 +634,40 @@ class PerceptionManager:
             for (i, rgb_camera) in enumerate(self.rgb_camera):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
-                # we only visualiz the frontal camera
+                # we only visualize the frontal camera
                 rgb_image = np.array(rgb_camera.image)
                 # draw the ground truth bbx on the camera image
                 rgb_image = self.visualize_3d_bbx_front_camera(objects,
                                                                rgb_image,
                                                                i)
                 # resize to make it fittable to the screen
-                rgb_image = cv2.resize(rgb_image, (0, 0), fx=0.4, fy=0.4)
-
+                rgb_image = cv2.resize(rgb_image, (0, 0), fx=0.9, fy=1.0)  # 0.4,0.45
                 # show image using cv2
                 cv2.imshow(
-                    '%s camera of actor %d, perception deactivated' %
+                    '%s camera of actor %d' %
                     (names[i], self.id), rgb_image)
+                # print(cv2.getWindowImageRect('%s camera of actor %d, perception deactivated' %
+                #     (names[i], self.id)))
+
+                # if the number of vehicles is 3
+
+                if demo.player_ids is None:
+                    pass
+                elif len(demo.player_ids) != 6:
+                    pass
+                elif self.id in demo.player_ids:
+                    if self.id == demo.player_ids[0]:
+                        cv2.moveWindow('%s camera of actor %d' %
+                                       (names[i], self.id), 0, 0)
+                    if self.id == demo.player_ids[1]:
+                        cv2.moveWindow('%s camera of actor %d' %
+                                       (names[i], self.id), 0, 750)
+                    if self.id == demo.player_ids[2]:
+                        cv2.moveWindow('%s camera of actor %d' %
+                                       (names[i], self.id), 0, 1500)
+                else:
+                    pass
+
                 cv2.waitKey(1)
 
         if self.lidar_visualize:

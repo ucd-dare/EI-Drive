@@ -2,7 +2,7 @@
 """
 PID Control Class
 """
-
+import logging
 # Copyright (c) # Copyright (c) 2018-2020 CVC.
 #
 # This work is licensed under the terms of the MIT license.
@@ -10,7 +10,7 @@ PID Control Class
 
 
 from collections import deque
-
+import logging
 import math
 import numpy as np
 
@@ -77,6 +77,11 @@ class Controller:
 
         self.dynamic = args['dynamic']
 
+
+
+        # Set up logging to a file
+
+
     def dynamic_pid(self):
         """
         Compute kp, kd, ki based on current speed.
@@ -99,7 +104,6 @@ class Controller:
         -------
 
         """
-
         self.current_transform = ego_pos
         self.current_speed = ego_spd
         if self.dynamic:
@@ -112,7 +116,7 @@ class Controller:
         ----------
         target_speed : float
             Target speed of the ego vehicle.
-
+deque
         Returns
         -------
         acceleration : float
@@ -181,17 +185,17 @@ class Controller:
         return np.clip((self._lat_k_p * _dot) + (self._lat_k_d *
                        _de) + (self._lat_k_i * _ie), -1.0, 1.0)
 
-    def run_step(self, target_speed, waypoint):
+    def run_step(self, target_speed, waypoints):
         """
         Execute one step of control invoking both lateral and longitudinal
         PID controllers to reach a target waypoint at a given target_speed.
 
         Parameters
         ----------
-        target_speed : float
-            Target speed of the ego vehicle.
+        target_speed : deque
+            The deque of future target speed of the ego vehicle.
 
-        waypoint : carla.loaction
+        waypoints : carla.location
             Target location.
 
         Returns
@@ -201,10 +205,18 @@ class Controller:
 
         """
         # control class for carla vehicle
+        if len(waypoints) == 0:
+            print("waypoints is empty")
+        else:
+            waypoint = waypoints[0].location
+            target_speed = target_speed[0]
+
+
+        # print('waypoint.x = '+str(waypoint.x))
         control = carla.VehicleControl()
 
         # emergency stop
-        if target_speed == 0 or waypoint is None:
+        if target_speed == 0 or len(waypoints) == 0:
             control.steer = 0.0
             control.throttle = 0.0
             control.brake = 1.0
@@ -237,4 +249,5 @@ class Controller:
         control.hand_brake = False
         control.manual_gear_shift = False
         self.past_steering = steering
+        logging.info(control.steer)
         return control

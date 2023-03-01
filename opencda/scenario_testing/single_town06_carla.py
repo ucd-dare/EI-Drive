@@ -9,7 +9,7 @@ from opencda.core.common.cav_world import CavWorld
 from opencda.scenario_testing.evaluations.evaluate_manager import \
     EvaluationManager
 from opencda.scenario_testing.utils.yaml_utils import load_yaml
-
+from opencda.scenario_testing.utils.keyboard_listener import KeyListener
 
 def run_scenario(opt, config_yaml):
     try:
@@ -43,8 +43,17 @@ def run_scenario(opt, config_yaml):
                               current_time=scenario_params['current_time'])
 
         spectator = scenario_manager.world.get_spectator()
+
+        # kl = KeyListener()
+        # kl.start()
+
         # run steps
         while True:
+            # if kl.keys['esc']:
+            #     exit(0)
+            # if kl.keys['p']:
+            #     continue
+
             scenario_manager.tick()
             transform = single_cav_list[0].vehicle.get_transform()
             spectator.set_transform(carla.Transform(

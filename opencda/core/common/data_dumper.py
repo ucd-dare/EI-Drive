@@ -151,7 +151,7 @@ class DataDumper(object):
                        localization_manager,
                        behavior_agent):
         """
-        Save objects positions/spped, true ego position,
+        Save objects positions/speed, true ego position,
         predicted ego position, sensor transformations.
 
         Parameters

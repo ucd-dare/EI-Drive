@@ -13,6 +13,7 @@ import sys
 
 import numpy as np
 import carla
+from collections import deque
 
 from opencda.core.common.misc import get_speed, positive, cal_distance_angle
 from opencda.core.plan.collision_check import CollisionChecker
@@ -784,9 +785,11 @@ class BehaviorAgent(object):
             print('Simulation is Over')
             sys.exit(0)
 
-        # 1. Traffic light management
-        if self.traffic_light_manager(ego_vehicle_wp) != 0:
-            return 0, None
+        # TODO: revise the return
+        ### 1. Traffic light management
+        # if self.traffic_light_manager(ego_vehicle_wp) != 0:
+        #     print('traffic_light_manager')
+        #     return 0, None
 
         # 2. when the temporary route is finished, we return to the global route
         if len(self.get_local_planner().get_waypoints_queue()) == 0 \
@@ -875,18 +878,30 @@ class BehaviorAgent(object):
 
         # 7. Car following behavior
         if car_following_flag:
-            if distance < max(self.break_distance, 3):
-                return 0, None
+        #     if distance < max(self.break_distance, 3):
+        #         # TODO: revise the return
+        #         ### return 0, None
 
             target_speed = self.car_following_manager(obstacle_vehicle, distance, target_speed)
             target_speed, target_loc = self._local_planner.run_step(
                 rx, ry, rk, target_speed=target_speed)
-            return target_speed, target_loc
+            trajectory_buffer_speed = self._local_planner.get_trajectory()
+            trajectory_buffer = deque()
+            for traj in trajectory_buffer_speed:
+                trajectory_buffer.append(traj[0])
+            target_speed = np.repeat(target_speed, len(trajectory_buffer))
+            return target_speed, trajectory_buffer
 
         # 8. Normal behavior
         target_speed, target_loc = self._local_planner.run_step(
             rx, ry, rk, target_speed=self.max_speed - self.speed_lim_dist
             if not target_speed else target_speed)
-        return target_speed, target_loc
+        # revise for trajectory buffer
+        trajectory_buffer_speed = self._local_planner.get_trajectory()
+        trajectory_buffer = deque()
+        for traj in trajectory_buffer_speed:
+            trajectory_buffer.append(traj[0])
+        target_speed = np.repeat(target_speed, len(trajectory_buffer))
+        return target_speed, trajectory_buffer
 
 

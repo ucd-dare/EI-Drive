@@ -166,7 +166,8 @@ class ScenarioManager:
 
     def __init__(self, scenario_params,
                  apply_ml,
-                 carla_version,
+                 edge=False,
+                 carla_version='0.9.13',
                  xodr_path=None,
                  town=None,
                  cav_world=None):
@@ -235,6 +236,7 @@ class ScenarioManager:
         self.cav_world = cav_world
         self.carla_map = self.world.get_map()
         self.apply_ml = apply_ml
+        self.edge = edge
 
     @staticmethod
     def set_weather(weather_settings):
@@ -288,8 +290,8 @@ class ScenarioManager:
         """
         print('Creating single CAVs.')
         # By default, we use lincoln as our cav model.
-        default_model = 'vehicle.lincoln.mkz2017' \
-            if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2017'
+        default_model = 'vehicle.lincoln.mkz2020' \
+            if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2020'
 
         cav_vehicle_bp = \
             self.world.get_blueprint_library().find(default_model)
@@ -314,12 +316,21 @@ class ScenarioManager:
                 spawn_transform = map_helper(self.carla_version,
                                              *cav_config['spawn_special'])
 
-            cav_vehicle_bp.set_attribute('color', '0, 0, 255')
+            if 0 == i or 6 == i:
+                cav_vehicle_bp.set_attribute('color', '0, 0, 255')
+            elif 1 == i or 7 == i:
+                cav_vehicle_bp.set_attribute('color', '255, 0, 0')
+            elif 2 == i or 8 == i:
+                cav_vehicle_bp.set_attribute('color', '0, 255, 0')
+            else:
+                cav_vehicle_bp.set_attribute('color', '0, 0, 0')
             vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
+
+            cav_config['sensing']['perception']['vid'] = cav_config['id']
 
             # create vehicle manager for each cav
             vehicle_manager = VehicleManager(
-                vehicle, cav_config, application,
+                vehicle, cav_config, application, self.edge,
                 self.carla_map, self.cav_world,
                 current_time=self.scenario_params['current_time'],
                 data_dumping=data_dump)

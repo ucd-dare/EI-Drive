@@ -491,4 +491,5 @@ class GlobalRoutePlanner(object):
                         if closest_index > destination_index:
                             break
 
+        # print(route_trace)
         return route_trace

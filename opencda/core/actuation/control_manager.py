@@ -21,7 +21,7 @@ class ControlManager(object):
     Attributes
     ----------
     controller : opencda object.
-        The controller object of the OpenCDA framwork.
+        The controller object of the OpenCDA framework.
     """
 
     def __init__(self, control_config):
@@ -38,9 +38,10 @@ class ControlManager(object):
         """
         self.controller.update_info(ego_pos, ego_speed)
 
-    def run_step(self, target_speed, waypoint):
+    def run_step(self, target_speed, waypoints):
         """
         Execute current controller step.
         """
-        control_command = self.controller.run_step(target_speed, waypoint)
+        waypoint = waypoints
+        control_command = self.controller.run_step(target_speed, waypoints)
         return control_command

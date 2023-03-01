@@ -6,6 +6,8 @@ Basic class of CAV
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
 import uuid
+import carla
+from collections import deque
 
 from opencda.core.actuation.control_manager \
     import ControlManager
@@ -21,7 +23,11 @@ from opencda.core.plan.behavior_agent \
     import BehaviorAgent
 from opencda.core.map.map_manager import MapManager
 from opencda.core.common.data_dumper import DataDumper
+from opencda.core.common.misc import draw_trajetory_points
+import pandas as pd
 
+# df = pd.read_csv('Edge.csv')
+# df = pd.read_csv('No_Edge.csv')
 
 class VehicleManager(object):
     """
@@ -77,23 +83,33 @@ class VehicleManager(object):
             vehicle,
             config_yaml,
             application,
+            edge,
             carla_map,
             cav_world,
             current_time='',
             data_dumping=False):
 
+        self.tick = 0
+
         # an unique uuid for this vehicle
         self.vid = str(uuid.uuid1())
         self.vehicle = vehicle
         self.carla_map = carla_map
+        self.car_id = config_yaml['id']
 
-        # retrieve the configure for different modules
+        # retrieve to configure for different modules
         sensing_config = config_yaml['sensing']
         map_config = config_yaml['map_manager']
         behavior_config = config_yaml['behavior']
         control_config = config_yaml['controller']
         v2x_config = config_yaml['v2x']
 
+        if edge:
+            self.df = pd.read_csv('Edge.csv')
+        else:
+            self.df = pd.read_csv('No_Edge.csv')
+
+        self.df_records = pd.DataFrame(columns=['x', 'y', 'id', 'tick'])
         # v2x module
         self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
         # localization module
@@ -124,6 +140,7 @@ class VehicleManager(object):
 
         # Control module
         self.controller = ControlManager(control_config)
+        self.is_manually = behavior_config['is_manually']
 
         if data_dumping:
             self.data_dumper = DataDumper(self.perception_manager,
@@ -195,7 +212,39 @@ class VehicleManager(object):
         """
         # visualize the bev map if needed
         self.map_manager.run_step()
-        target_speed, target_pos = self.agent.run_step(target_speed)
+
+        if self.is_manually:
+            """
+            # The original version
+            target_pos = carla.Location(
+                x=self.df.iloc[self.tick][self.car_id * 4], y=self.df.iloc[self.tick][self.car_id * 4 + 1],
+                z=self.df.iloc[self.tick][self.car_id * 4 + 2])
+            target_speed = self.df.iloc[self.tick][self.car_id * 4 + 3]
+            """
+
+            target_pos = deque()
+            target_speed = deque()
+            for i in range(5):   # config_yaml['prediction_horizon']
+                tem_pos = carla.Transform(carla.Location(
+                    x=self.df.iloc[self.tick+i][self.car_id * 4], y=self.df.iloc[self.tick+i][self.car_id * 4 + 1],
+                    z=self.df.iloc[self.tick+i][self.car_id * 4 + 2]))
+                tem_speed = self.df.iloc[self.tick+i][self.car_id * 4 + 3]
+                target_pos.append(tem_pos)
+                target_speed.append(tem_speed)
+                # here the target_pos is Transform class
+
+        else:
+            target_speed, target_pos = self.agent.run_step(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
+
+        # list_row = {"x": self.localizer.get_ego_pos().location.x, "y": self.localizer.get_ego_pos().location.y, "id": self.car_id, "tick": self.tick}
+        # self.df_records = self.df_records.append(list_row, ignore_index=True)
+        # if 199 == self.tick:
+        #     self.df_records.to_csv(str(self.car_id) + "traj.csv", index=False)
+
+        # localizer.get_ego_pos()
+        # print(target_speed)
+        # print(self.localizer.get_ego_spd())
+
         control = self.controller.run_step(target_speed, target_pos)
 
         # dump data
@@ -204,12 +253,15 @@ class VehicleManager(object):
                                       self.localizer,
                                       self.agent)
 
+        self.tick = self.tick + 1
+
         return control
 
     def destroy(self):
         """
         Destroy the actor vehicle
         """
+
         self.perception_manager.destroy()
         self.localizer.destroy()
         self.vehicle.destroy()
