@@ -18,7 +18,7 @@ The default algorithm to fuse the gps and imu data is the Kalman Filter. It take
 and return the corrected `x, y, z` coordinates.
 
 ```python
-from eidrive.core.sensing.localization.kalman_filter import KalmanFilter
+from EIdrive.core.sensing.localization.kalman_filter import KalmanFilter
 
 
 class LocalizationManager(object):
@@ -34,8 +34,8 @@ then he/she just needs to create a `localization_manager.py` under `opencda/cust
 folder and initializes the `CustomizedLocalizationManager` with Extended Kalman Filter:
 
 ```python
-from eidrive.core.sensing.localization.localization_manager import LocalizationManager
-from eidrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
+from EIdrive.core.sensing.localization.localization_manager import LocalizationManager
+from EIdrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
 
 
 class CustomizedLocalizationManager(LocalizationManager):
@@ -47,8 +47,8 @@ class CustomizedLocalizationManager(LocalizationManager):
 Then go to `VehicleManager` class, import this customized module and set it as the localizer.
 
 ```python
-from eidrive.core.sensing.localization.localization_manager import LocalizationManager
-from eidrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
+from EIdrive.core.sensing.localization.localization_manager import LocalizationManager
+from EIdrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
 
 
 class VehicleManager(object):
@@ -69,9 +69,9 @@ To customize your own object detection algorithms, create a `perception_manager.
 
 ```python
 import cv2
-from eidrive.core.sensing.perception.perception_manager import PerceptionManager
-from eidrive.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
-from eidrive.core.sensing.perception.static_obstacle import TrafficLight
+from EIdrive.core.sensing.perception.perception_manager import PerceptionManager
+from EIdrive.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
+from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
 
 
 class CustomziedPeceptionManager(PerceptionManager):
@@ -116,7 +116,7 @@ To customize your own behavior planning algorithms, create a `behavior_agent.py`
 
 ```python
 import carla.libcarla
-from eidrive.core.plan.behavior_agent import BehaviorAgent
+from EIdrive.core.plan.behavior_agent import BehaviorAgent
 
 
 class CustomizedBehaviorAgent(BehaviorAgent):
@@ -156,7 +156,7 @@ class ControlManager(object):
         controller_type = control_config['type']
         controller = getattr(
             importlib.import_module(
-                "eidrive.core.actuation.%s" %
+                "EIdrive.core.actuation.%s" %
                 controller_type), 'Controller')
         self.controller = controller(control_config['args'])
 

@@ -4,8 +4,8 @@ The `OpenCDA` codebase directory is structured as follows:
 
 ```sh
 OpenCDA
-├── docs  # documents of eidrive, no need to pay attention.
-├── eidrive
+├── docs  # documents of EIdrive, no need to pay attention.
+├── EIdrive
 │   ├── assests  # customized map and sumo xml package.
 │   ├── delete_co_simulation  # source codes for sumo background traffic generation.
 │   ├── core  # the core part of the code

@@ -16,7 +16,7 @@ see how to define parameters related to carla traffic in the yaml file.
 will keep the traffic manager keep running during the simulation loop.
 
 ```python
-import eidrive.scenario_testing.utils.sim_api as sim_api
+import EIdrive.scenario_testing.utils.sim_api as sim_api
 
 # scenario_params are defined in the yaml file
 scenario_manager = sim_api.ScenarioManager(scenario_params,
@@ -69,7 +69,7 @@ To generate the Sumo traffic flow, three things are needed:
   will keep spawning Sumo vechiles as traffic flow.
 
     ```python
-  import eidrive.scenario_testing.utils.cosim_api as sim_api
+  import EIdrive.scenario_testing.utils.cosim_api as sim_api
   
   # there should be a Town06.sumocfg, a Town06.net.xml, and a Town06.rou.xml in
   # Town06 folder

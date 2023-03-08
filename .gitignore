@@ -143,7 +143,7 @@ cython_debug/
 output/
 outputs
 *.pt
-eidrive/evaluation_figures/
+EIdrive/evaluation_figures/
 *.save
 *cache*
 evaluation_outputs/
@@ -152,9 +152,9 @@ video_dumping
 *data_dumping*
  
 # RL logs
-eidrive/scenario_testing/log/
-eidrive/scenario_testing/simple-rl/
-eidrive/scenario_testing/rl_log
-eidrive/simple-rl
+EIdrive/scenario_testing/log/
+EIdrive/scenario_testing/simple-rl/
+EIdrive/scenario_testing/rl_log
+EIdrive/simple-rl
 default_experiment/
 

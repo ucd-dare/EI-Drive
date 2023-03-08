@@ -71,7 +71,7 @@ recommend use conda environment to install.</strong>
 
 ```sh
 conda env create -f environment.yml
-conda activate eidrive
+conda activate EIdrive
 python setup.py develop
 ```
 

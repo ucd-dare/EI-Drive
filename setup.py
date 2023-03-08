@@ -1,6 +1,6 @@
 from os.path import dirname, realpath
 from setuptools import setup, find_packages, Distribution
-from eidrive.version import __version__
+from EIdrive.version import __version__
 
 
 def _read_requirements_file():

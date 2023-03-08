@@ -16,8 +16,8 @@ def arg_parse():
     parser.add_argument('-t', "--test_scenario", required=True, type=str,
                         help='Define the name of the scenario you want to test. The given name must'
                              'match one of the testing scripts(e.g. single_2lanefree_carla) in '
-                             'eidrive/scenario_testing/ folder'
-                             ' as well as the corresponding yaml file in eidrive/scenario_testing/config_yaml.')
+                             'EIdrive/scenario_testing/ folder'
+                             ' as well as the corresponding yaml file in EIdrive/scenario_testing/config_yaml.')
     parser.add_argument("--record", action='store_true', help='whether to record and save the simulation process to'
                                                               '.log file')
     parser.add_argument("--apply_ml",
@@ -59,12 +59,12 @@ if __name__ == '__main__':
 # # License: TDG-Attribution-NonCommercial-NoDistribute
 #
 # import carla
-# import eidrive.scenario_testing.utils.sim_api as sim_api
-# from eidrive.core.common.cav_world import CavWorld
-# from eidrive.scenario_testing.evaluations.evaluate_manager import \
+# import EIdrive.scenario_testing.utils.sim_api as sim_api
+# from EIdrive.core.common.cav_world import CavWorld
+# from EIdrive.scenario_testing.evaluations.evaluate_manager import \
 #     EvaluationManager
-# from eidrive.scenario_testing.utils.yaml_utils import load_yaml
-# from eidrive.core.common.misc import get_speed
+# from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
+# from EIdrive.core.common.misc import get_speed
 #
 # import matplotlib
 # import matplotlib.pyplot as plt

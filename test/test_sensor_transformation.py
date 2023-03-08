@@ -11,13 +11,13 @@ import unittest
 
 import numpy as np
 
-# temporary solution for relative imports in case eidrive is not installed
-# if eidrive is installed, no need to use the following line
+# temporary solution for relative imports in case EIdrive is not installed
+# if EIdrive is installed, no need to use the following line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 import mocked_carla as mcarla
-from eidrive.core.sensing.perception.sensor_transformation import *
+from EIdrive.core.sensing.perception.sensor_transformation import *
 
 
 class TestSensorTransformation(unittest.TestCase):

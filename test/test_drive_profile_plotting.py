@@ -11,14 +11,14 @@ import unittest
 
 import numpy as np
 
-# temporary solution for relative imports in case eidrive is not installed
-# if eidrive is installed, no need to use the following line
+# temporary solution for relative imports in case EIdrive is not installed
+# if EIdrive is installed, no need to use the following line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 import mocked_carla as mcarla
 
-from eidrive.core.plan.drive_profile_plotting import *
+from EIdrive.core.plan.drive_profile_plotting import *
 
 
 class TestDriveProfile(unittest.TestCase):

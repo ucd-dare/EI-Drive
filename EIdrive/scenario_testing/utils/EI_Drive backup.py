@@ -8,12 +8,10 @@ Script to run different scenarios.
 
 import argparse
 import importlib
-import sys
-import time
-
-from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
-from EIdrive.version import __version__
 import os
+import sys
+
+from EIdrive.version import __version__
 
 
 def arg_parse():
@@ -32,9 +30,6 @@ def arg_parse():
     parser.add_argument('-v', "--version", type=str, default='0.9.11',
                         help='Specify the CARLA simulator version, default'
                              'is 0.9.11, 0.9.12 is also supported.')
-    parser.add_argument('--edge', action='store_true',
-                        help='whether to enable edge')
-
 
     opt = parser.parse_args()
     return opt
@@ -42,7 +37,7 @@ def arg_parse():
 
 def main():
     opt = arg_parse()
-    # print("OpenCDA Version: %s" % __version__)
+    print("OpenCDA Version: %s" % __version__)
 
     testing_scenario = importlib.import_module("EIdrive.scenario_testing.%s" % opt.test_scenario)
 
