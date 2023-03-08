@@ -30,7 +30,7 @@ and construct the scenario through `opencda.sim_api`.
 The users need to first load the yaml file into a dictionary, and initialize the `ScenarioManager`.
 
 ```python
-import opencda.scenario_testing.utils.sim_api as sim_api
+import eidrive.scenario_testing.utils.sim_api as sim_api
 
 # Aad yaml file into a dictionary
 scenario_params = load_yaml(config_yaml)
@@ -66,9 +66,11 @@ traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
 ```
 
 Finally, create the `EvaluationManager`
+
 ```python
-from opencda.scenario_testing.evaluations.evaluate_manager import EvaluationManager
-eval_manager = \
+from eidrive.scenario_testing.evaluations.evaluate_manager import EvaluationManager
+
+eval_manager =
     EvaluationManager(scenario_manager.cav_world,
                       script_name='platoon_joining_town06_carla',
                       current_time=scenario_params['current_time'])
@@ -81,17 +83,17 @@ Instead of using `ScenarioManager`, `CoScenarioManager` is used to control the t
 [Traffic Generation under Sumo](traffic_generation.html#sumo-traffic-management-co-simulation) section to see more details.
 
 ```python
-import opencda.scenario_testing.utils.cosim_api as sim_api
+import eidrive.scenario_testing.utils.cosim_api as sim_api
 
 # there should be a Town06.sumocfg, a Town06.net.xml, and a Town06.rou.xml in
 # Town06 folder
 sumo_cfg = 'Town06'
 
 # create co-simulation scenario manager
-scenario_manager = \
+scenario_manager =
     sim_api.CoScenarioManager(scenario_params,
                               opt.apply_ml,
-                               town='Town06',
+                              town='Town06',
                               cav_world=cav_world,
                               sumo_file_parent_path=sumo_cfg)
 ```

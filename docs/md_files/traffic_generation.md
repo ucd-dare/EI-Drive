@@ -14,8 +14,10 @@ in yaml file </strong> and call the APIs in `opencda.scenario_testing.utils.sim_
 see how to define parameters related to carla traffic in the yaml file.
 * Utilizing `ScenarioManager` to generate CARLA traffic flow is easy. It just takes 3 lines of codes. `scenario_manager.tick()`
 will keep the traffic manager keep running during the simulation loop.
+
 ```python
-import opencda.scenario_testing.utils.sim_api as sim_api
+import eidrive.scenario_testing.utils.sim_api as sim_api
+
 # scenario_params are defined in the yaml file
 scenario_manager = sim_api.ScenarioManager(scenario_params,
                                            opt.apply_ml,
@@ -65,9 +67,9 @@ To generate the Sumo traffic flow, three things are needed:
 * Use `CoScenarioManager` to load sumo files and create sumo traffic flow. During initialization, 
   `CoscenarioManager` will setup the Sumo server. During the `tick()` function, `CoScenarioManager` 
   will keep spawning Sumo vechiles as traffic flow.
-  
+
     ```python
-  import opencda.scenario_testing.utils.cosim_api as sim_api
+  import eidrive.scenario_testing.utils.cosim_api as sim_api
   
   # there should be a Town06.sumocfg, a Town06.net.xml, and a Town06.rou.xml in
   # Town06 folder

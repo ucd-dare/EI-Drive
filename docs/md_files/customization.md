@@ -18,13 +18,14 @@ The default algorithm to fuse the gps and imu data is the Kalman Filter. It take
 and return the corrected `x, y, z` coordinates.
 
 ```python
-from opencda.core.sensing.localization.kalman_filter import KalmanFilter
+from eidrive.core.sensing.localization.kalman_filter import KalmanFilter
+
 
 class LocalizationManager(object):
-     def __init__(self, vehicle, config_yaml, carla_map):
+    def __init__(self, vehicle, config_yaml, carla_map):
         self.kf = KalmanFilter(self.dt)
-     
-     def localize(self):
+
+    def localize(self):
         ...
         corrected_cords = self.kf(x, y, z, speed, yaw, imu_yaw_rate)
 ```
@@ -33,8 +34,9 @@ then he/she just needs to create a `localization_manager.py` under `opencda/cust
 folder and initializes the `CustomizedLocalizationManager` with Extended Kalman Filter:
 
 ```python
-from opencda.core.sensing.localization.localization_manager import LocalizationManager
-from opencda.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
+from eidrive.core.sensing.localization.localization_manager import LocalizationManager
+from eidrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
+
 
 class CustomizedLocalizationManager(LocalizationManager):
     def __init__(self, vehicle, config_yaml, carla_map):
@@ -43,9 +45,11 @@ class CustomizedLocalizationManager(LocalizationManager):
 ```
 
 Then go to `VehicleManager` class, import this customized module and set it as the localizer.
+
 ```python
-from opencda.core.sensing.localization.localization_manager import LocalizationManager
-from opencda.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
+from eidrive.core.sensing.localization.localization_manager import LocalizationManager
+from eidrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
+
 
 class VehicleManager(object):
     def __init__(self, vehicle, config_yaml, application, carla_map, cav_world):
@@ -61,23 +65,23 @@ for the downstream modules.
 The class `PerceptionManager` is responsible for perception related task. Right now it supports vehicle detection and traffic light detection. The core function `detect(ego_pos)` takes the ego position from localization module as the input, and return a dictionary `objects` whose keys are the object categories and the values are each object's attributes (e.g. 3d poses, static or dynamic) under world coordinate system in this category.
 
 To customize your own object detection algorithms, create a `perception_manager.py` under
-`opencda/customize/core/sensing/perception/` folder. 
+`opencda/customize/core/sensing/perception/` folder.
 
 ```python
 import cv2
-from opencda.core.sensing.perception.perception_manager import PerceptionManager
-from opencda.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
-from opencda.core.sensing.perception.static_obstacle import TrafficLight
+from eidrive.core.sensing.perception.perception_manager import PerceptionManager
+from eidrive.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
+from eidrive.core.sensing.perception.static_obstacle import TrafficLight
+
 
 class CustomziedPeceptionManager(PerceptionManager):
-     def __init__(self, vehicle, config_yaml, cav_world, data_dump=False):
+    def __init__(self, vehicle, config_yaml, cav_world, data_dump=False):
         super(CustomizedLocalizationManager, self).__init__(vehicle, config_yaml, cav_world, data_dump)
-     
-     def detect(self, ego_pos):
+
+    def detect(self, ego_pos):
         objects = {'vehicles': [],
                    'traffic_lights': [],
-                   'other_objects_you_wanna_add' : []}
-
+                   'other_objects_you_wanna_add': []}
 
         # retrieve current rgb images from all cameras
         rgb_images = []
@@ -85,19 +89,19 @@ class CustomziedPeceptionManager(PerceptionManager):
             while rgb_camera.image is None:
                 continue
             rgb_images.append(cv2.cvtColor(np.array(rgb_camera.image),
-                    cv2.COLOR_BGR2RGB))
-        
+                                           cv2.COLOR_BGR2RGB))
+
         # retrieve lidar data from the sensor
         lidar_data = self.lidar.data
-        
+
         ########################################
         # this is where you put your algorithm #
         ########################################
         objects = your_algorithm(rgb_images, lidar_data)
         assert type(objects['vehicles']) == ObstacleVehicle
         assert type(objects['traffic_lights']) == TrafficLight
-         
-     return objects
+
+    return objects
 
 ```
 ---
@@ -112,7 +116,7 @@ To customize your own behavior planning algorithms, create a `behavior_agent.py`
 
 ```python
 import carla.libcarla
-from opencda.core.plan.behavior_agent import BehaviorAgent
+from eidrive.core.plan.behavior_agent import BehaviorAgent
 
 
 class CustomizedBehaviorAgent(BehaviorAgent):
@@ -132,7 +136,7 @@ class CustomizedBehaviorAgent(BehaviorAgent):
         target_speed, target_loc = your_plan_algorithm()
         assert type(target_speed) == float
         assert type(target_loc) == carla.Location
-        
+
         return target_speed, target_loc
 ```
 ---
@@ -152,7 +156,7 @@ class ControlManager(object):
         controller_type = control_config['type']
         controller = getattr(
             importlib.import_module(
-                "opencda.core.actuation.%s" %
+                "eidrive.core.actuation.%s" %
                 controller_type), 'Controller')
         self.controller = controller(control_config['args'])
 

@@ -9,12 +9,12 @@ import os
 import sys
 import unittest
 
-# temporary solution for relative imports in case opencda is not installed
-# if opencda is installed, no need to use the following line
+# temporary solution for relative imports in case eidrive is not installed
+# if eidrive is installed, no need to use the following line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from opencda.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
+from eidrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
 
 
 class testKalmanFilter(unittest.TestCase):

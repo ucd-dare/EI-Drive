@@ -4,13 +4,13 @@ The `OpenCDA` codebase directory is structured as follows:
 
 ```sh
 OpenCDA
-├── docs  # documents of opencda, no need to pay attention.
-├── opencda
+├── docs  # documents of eidrive, no need to pay attention.
+├── eidrive
 │   ├── assests  # customized map and sumo xml package.
-│   ├── co_simulation  # source codes for sumo background traffic generation.
+│   ├── delete_co_simulation  # source codes for sumo background traffic generation.
 │   ├── core  # the core part of the code
 │   │   └── actutation # implementation of control algorithms
-│   │   ├── application # implementation of cooperative driving applications
+│   │   ├── delete_application # implementation of cooperative driving applications
 │   │   ├── common # base class and communication class for cavs
 │   │   ├── map # HDMap manager
 │   │   ├── plan # planning algorithms

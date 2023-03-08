@@ -3,12 +3,12 @@
 # License: TDG-Attribution-NonCommercial-NoDistribute
 
 import carla
-import opencda.scenario_testing.utils.sim_api as sim_api
-from opencda.core.common.cav_world import CavWorld
-from opencda.scenario_testing.evaluations.evaluate_manager import \
+import eidrive.scenario_testing.utils.sim_api as sim_api
+from eidrive.core.common.cav_world import CavWorld
+from eidrive.scenario_testing.evaluations.evaluate_manager import \
     EvaluationManager
-from opencda.scenario_testing.utils.yaml_utils import load_yaml
-from opencda.core.common.misc import get_speed
+from eidrive.scenario_testing.utils.yaml_utils import load_yaml
+from eidrive.core.common.misc import get_speed
 
 import matplotlib
 import matplotlib.pyplot as plt

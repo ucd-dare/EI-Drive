@@ -18,20 +18,21 @@ The workflow of opencda can be summarized as follows.
 * Now all the CAVs and traffic flow are generated, thus we will enter the simulation loop. At the beginning of each simulation
 step, ` scenario_manager.tick()` will be called to tick the server. Then all the CAVs will update the surrounding information and execute a single step. The single CAVs may join the platoon in the middle of the travel, so we need to check whether any single CAV has joined a platoon and remove it from the `single_cav_list` if so.
 
-
 ```python
-from opencda.scenario_testing.utils.customized_map_api import customized_map_helper
+from eidrive.scenario_testing.utils.customized_map_api import customized_map_helper
+
+
 def run_scenario(opt, config_yaml):
     scenario_params = load_yaml(config_yaml)
     xodr_path = "path/to/customized_map.xodr"
     # create CAV world
     cav_world = CavWorld(opt.apply_ml)
     # create scenario manager
-    scenario_manager = \
-    sim_api.ScenarioManager(scenario_params,opt.apply_ml,xodr_path=xodr_path,cav_world=cav_world)
+    scenario_manager =
+        sim_api.ScenarioManager(scenario_params, opt.apply_ml, xodr_path=xodr_path, cav_world=cav_world)
     # create a list of single CAV
-    single_cav_list = \
-    scenario_manager.create_vehicle_manager(['platooning'],map_helper=customized_map_helper)
+    single_cav_list =
+        scenario_manager.create_vehicle_manager(['platooning'], map_helper=customized_map_helper)
     # create platoon members
     platoon_list = scenario_manager.create_platoon_manager(data_dump=False)
     # create background traffic in carla
@@ -47,13 +48,13 @@ def run_scenario(opt, config_yaml):
         for i, single_cav in enumerate(single_cav_list):
             # If the CAV is merged into one of the platoon, then we should let platoon manage it.
             # Thus we should remove them from single_cav_list
-          	if single_cav.v2x_manager.in_platoon():
+            if single_cav.v2x_manager.in_platoon():
                 single_cav_list.pop(i)
             # If the CAV is not contained in any platoon, then we should update the vehicle.
-            else:
-                single_cav.update_info()
-                control = single_cav.run_step()
-                single_cav.vehicle.apply_control(control)
+        else:
+            single_cav.update_info()
+            control = single_cav.run_step()
+            single_cav.vehicle.apply_control(control)
 ```
 
 ### CavWorld
