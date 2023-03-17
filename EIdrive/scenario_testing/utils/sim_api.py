@@ -124,7 +124,7 @@ def multi_class_vehicle_blueprint_filter(label, blueprint_library, bp_meta):
 
 class ScenarioManager:
     """
-    The manager that controls simulation construction, backgound traffic
+    The manager that controls simulation construction, background traffic
     generation and CAVs spawning.
 
     Parameters
@@ -336,13 +336,21 @@ class ScenarioManager:
 
             self.world.tick()
 
-            destination = carla.Location(x=cav_config['destination'][0],
-                                         y=cav_config['destination'][1],
-                                         z=cav_config['destination'][2])
+            # destination = carla.Location(x=cav_config['destination'][0],
+            #                              y=cav_config['destination'][1],
+            #                              z=cav_config['destination'][2])
+
+            destinations = []
+            for destination in cav_config['destination']:
+                location = carla.Location(x=destination[0],
+                                          y=destination[1],
+                                          z=destination[2])
+                destinations.append(location)
+
             vehicle_manager.update_info()
             vehicle_manager.set_destination(
                 vehicle_manager.vehicle.get_location(),
-                destination,
+                destinations,
                 clean=True)
 
             single_cav_list.append(vehicle_manager)
