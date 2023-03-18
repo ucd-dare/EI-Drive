@@ -26,7 +26,7 @@ class SpectatorController(object):
         self.spectator = spectator
 
 
-    def bird_view_following(self, ego_vehicle_transform, altitude=65, bird_pitch=-90):
+    def bird_view_following(self, ego_vehicle_transform, altitude=80, bird_pitch=-90):
         """
         Set the spectator to follow a vehicle and provide bird view.
 
@@ -36,7 +36,8 @@ class SpectatorController(object):
         The transform class contain all the position information of vehicle.
 
         """
-        bird_view_ego_transform = ego_vehicle_transform
+        bird_view_ego_transform = carla.Transform()
+        bird_view_ego_transform.location = ego_vehicle_transform.location
         bird_view_ego_transform.location.z = bird_view_ego_transform.location.z + altitude
         bird_view_ego_transform.rotation.pitch = bird_pitch
         self.spectator.set_transform(bird_view_ego_transform)
