@@ -43,24 +43,24 @@ player_ids = []
 
 
 def run_scenario(opt, config_yaml):
+    scenario_params = load_yaml(config_yaml)
+
+    # if not opt.edge:
+    #     config_yaml['sensing']['edge'] = not config_yaml['sensing']['edge']
+
+    # create CAV world
+    cav_world = CavWorld(opt.apply_ml)
+    # create scenario manager
+    scenario_manager = sim_api.ScenarioManager(scenario_params,
+                                                opt.apply_ml,
+                                                opt.edge,
+                                                opt.version,
+                                                town='Town06',
+                                                cav_world=cav_world)
+    # single_cav_list = \
+    #     scenario_manager.create_vehicle_manager(application=['single'])
+
     try:
-        scenario_params = load_yaml(config_yaml)
-
-        # if not opt.edge:
-        #     config_yaml['sensing']['edge'] = not config_yaml['sensing']['edge']
-
-        # create CAV world
-        cav_world = CavWorld(opt.apply_ml)
-        # create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
-                                                   opt.edge,
-                                                   opt.version,
-                                                   town='Town06',
-                                                   cav_world=cav_world)
-        single_cav_list = \
-            scenario_manager.create_vehicle_manager(application=['single'])
-
         spectator = scenario_manager.world.get_spectator()
         spectator.set_transform(carla.Transform(
           carla.Location(
@@ -101,20 +101,20 @@ def run_scenario(opt, config_yaml):
             scenario_manager.tick()
 
             # run step
-            for i, single_cav in enumerate(single_cav_list):
-                single_cav.update_info()
+            # for i, single_cav in enumerate(single_cav_list):
+            #     single_cav.update_info()
                 
-            control = single_cav.run_step()
-            player.apply_control(control)
-            single_cav.vehicle.apply_control(control)
+            # control = single_cav.run_step()
+            player.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
+            # single_cav.vehicle.apply_control(control)
             spec_controller.bird_view_following(player.get_transform())
 
             # draw figures
             t = t + 1
-
     finally:
 
         scenario_manager.close()
 
-        for v in single_cav_list:
-            v.destroy()
+        # for v in single_cav_list:
+        #     v.destroy()
+        player.destory()
