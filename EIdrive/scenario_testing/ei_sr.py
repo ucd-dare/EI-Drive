@@ -1,129 +1,79 @@
+# -*- coding: utf-8 -*-
+# License: TDG-Attribution-NonCommercial-NoDistrib
+
+import math
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
-from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
 
+import psutil
 import time
 from multiprocessing import Process
-import logging
 
 import scenario_runner as sr
 
-
-class SRArguments:
-    additionalScenario = ''
-    agent = None
-    agentConfig = ''
-    configFile = ''
-    debug = False
-    file = False
-    host = '127.0.0.1'
-    json = False
-    junit = False
-    list = False
-    openscenario = None
-    penscenarioparams = None
-    output = False
-    outputDir = ''
-    port = '2000'
-    randomize = False
-    record = ''
-    reloadWorld = False
-    repetitions = 1
-    route = None
-    scenario = 'FollowLeadingVehicle_1'
-    sync = False
-    timeout = 20.0
-    trafficManagerPort = '8000'
-    trafficManagerSeed = '0'
-    waitForEgo = False
-
-    def __init__(self):
-        pass
-
-
-def exec_sr():
+def exec_scenario_runner(scenario_params):
     # Initialize and execute scenario-runner
-    scenario_runner = sr.ScenarioRunner(SRArguments())
+    print(scenario_params.scenario)
+    scenario_runner = sr.ScenarioRunner(scenario_params.scenario)
     scenario_runner.run()
+    scenario_runner.destroy()
 
 
-def exec_ei(opt, config_yaml):
-    # Initialize and execute EI-Driver
-    scenario_params = load_yaml(config_yaml)
-    # Create CAV world
-    cav_world = CavWorld(opt.apply_ml)
-    # Create scenario manager
-    scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                               opt.apply_ml,
-                                               opt.edge,
-                                               opt.version,
-                                               town='Town01',
-                                               cav_world=cav_world)
-    logging.debug("Senario manager created")
-    world = scenario_manager.world
-    logging.debug("World obtained", world)
-    spectator = world.get_spectator()
-    spec_controller = SpectatorController(spectator)
-
-    player = None
-
-    while player is None:
-        print("Waiting for the ego vehicle...")
-        time.sleep(1)
-        possible_vehicles = world.get_actors().filter('vehicle.*')
-        for vehicle in possible_vehicles:
-            if vehicle.attributes['role_name'] == 'hero':
-                player = vehicle
-                print("Ego vehicle found")
-                break
-    key_listener = KeyListener()
-    key_listener.start()
-    timestep = 0
-    while True:
-        if key_listener.keys['esc']:
-            break
-        if key_listener.keys['p']:
-            time.sleep(0.5)
-            continue
-
-        scenario_manager.tick()
-        spec_controller.bird_view_following(
-            player.get_transform(), altitude=75)
-
-        if timestep < 50:
-            control = carla.VehicleControl(throttle=0.50000, steer=0, brake=0.000000, hand_brake=False,
-                                           reverse=False, manual_gear_shift=False, gear=0)
-
-        player.apply_control(control)
-        timestep += 1
-        time.sleep(0.03)
-
-
-def run_scenario(opt, config_yaml):
+def exec_control(scenario_params):
     scenario_runner = None
     cav_world = None
     scenario_manager = None
+    client = None
 
     try:
-        # Create a background process to init and execute scenario runner
-        sr_process = Process(target=exec_sr, args=())
-        # Create a parallel process to init and run EI-Drive
-        ei_process = Process(target=exec_ei, args=(opt, config_yaml, ))
+        client_host = scenario_params.world.client_host
+        client_port = scenario_params.world.client_port
+        client = carla.Client(client_host, client_port)
+        world = client.get_world()
 
-        sr_process.start()
-        ei_process.start()
+        print("Controller prepared")
+        player = None
+        leading = None
 
-        sr_process.join()
-        ei_process.join()
+        while player is None:
+            print("Waiting for the ego vehicle...")
+            time.sleep(1)
+            possible_vehicles = world.get_actors().filter('vehicle.*')
+            for vehicle in possible_vehicles:
+                if vehicle.attributes['role_name'] == 'hero':
+                    print("Ego vehicle found")
+                    player = vehicle
+                if vehicle.attributes['role_name'] == 'scenario':
+                    print("Leading vehicle found")
+                    leading = vehicle
+                
+        spectator = player.get_world().get_spectator()
+        spec_controller = SpectatorController(spectator)
+        
+        timestep = 0
+        while True:
+            world.tick()
+            spec_controller.bird_view_following(
+                player.get_transform(), altitude=75)
+            
+            control = leading.get_control()
+            distance = leading.get_location().distance(player.get_location())
+            velocity = math.sqrt(player.get_velocity().x ** 2 + player.get_velocity().y ** 2)
+            if timestep < 50:
+                control = carla.VehicleControl(throttle=0.50000, steer=0, brake=0.000000, hand_brake=False,
+                                            reverse=False, manual_gear_shift=False, gear=0)
+            elif distance < 1.5 * velocity:
+                control = carla.VehicleControl(throttle=0, steer=0, brake=1.0, hand_brake=True,
+                                            reverse=False, manual_gear_shift=False, gear=0)
+            
 
-    except Exception as e:
-        print("Error: {}".format(e))
-
+            player.apply_control(control)
+            timestep += 1
+            time.sleep(0.05)
     finally:
-        print("Cleaning up...")
         print("Destroying cav_world...")
         if cav_world is not None:
             cav_world.destroy()
@@ -134,3 +84,44 @@ def run_scenario(opt, config_yaml):
         if scenario_runner is not None:
             scenario_runner.destroy()
             del scenario_runner
+
+
+def run_scenario(opt, scenario_params):
+    try:
+        # Create CAV world
+        cav_world = CavWorld(opt.apply_ml)
+        # Create scenario manager
+        sim_api.ScenarioManager(scenario_params,
+                                opt.apply_ml,
+                                opt.edge,
+                                opt.version,
+                                town=scenario_params.scenario.town,
+                                cav_world=cav_world)
+        print("Senario manager created")
+
+        # Create a background process to init and execute scenario runner
+        sr_process = Process(target=exec_scenario_runner, args=(scenario_params, ))
+        # Create a parallel process to init and run EI-Drive
+        ei_process = Process(target=exec_control, args=(scenario_params, ))
+
+        sr_process.start()
+        ei_process.start()
+        
+        key_listener = KeyListener()
+        key_listener.start()
+        
+        while True:
+            if key_listener.keys['esc']:
+                sr_process.kill()
+                ei_process.kill()
+                # Terminate the main process
+                break
+            if key_listener.keys['p']:
+                psutil.Process(sr_process.pid).suspend()
+                psutil.Process(ei_process.pid).suspend()
+            if not key_listener.keys['p']:
+                psutil.Process(sr_process.pid).resume()
+                psutil.Process(ei_process.pid).resume()
+
+    except Exception as e:
+        print("Error: {}".format(e))

@@ -10,6 +10,7 @@ import argparse
 import importlib
 import sys
 import time
+from omegaconf import OmegaConf
 
 from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
 from EIdrive.version import __version__
@@ -42,18 +43,32 @@ def arg_parse():
 
 def main():
     opt = arg_parse()
-    # print("OpenCDA Version: %s" % __version__)
 
-    testing_scenario = importlib.import_module("EIdrive.scenario_testing.%s" % opt.test_scenario)
-
+    # set the default yaml file
+    default_yaml = config_yaml = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'EIdrive/scenario_testing/config_yaml/default.yaml')
+    # set the yaml file for the specific testing scenario
     config_yaml = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                'EIdrive/scenario_testing/config_yaml/%s.yaml' % opt.test_scenario)
-    if not os.path.isfile(config_yaml):
-        sys.exit("EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % opt.test_cenario)
+    # load the default yaml file and the scenario yaml file as dictionaries
+    default_dict = OmegaConf.load(default_yaml)
+    scene_dict = OmegaConf.load(config_yaml)
+    # merge the dictionaries
+    scene_dict = OmegaConf.merge(default_dict, scene_dict)
 
+    # import the testing script
+    testing_scenario = importlib.import_module(
+        "EIdrive.scenario_testing.%s" % opt.test_scenario)
+    # check if the yaml file for the specific testing scenario exists
+    if not os.path.isfile(config_yaml):
+        sys.exit(
+            "EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % opt.test_cenario)
+
+    # get the function for running the scenario from the testing script
     scenario_runner = getattr(testing_scenario, 'run_scenario')
-    # run scenario testing
-    scenario_runner(opt, config_yaml)
+    # run the scenario testing
+    scenario_runner(opt, scene_dict)
 
 
 if __name__ == '__main__':

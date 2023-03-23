@@ -7,7 +7,6 @@ import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
 from EIdrive.scenario_testing.evaluations.evaluate_manager import \
     EvaluationManager
-from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
 from EIdrive.core.common.misc import get_speed
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 
@@ -51,9 +50,8 @@ def get_latency(single_cav_list):
     return latencies
 
 
-def run_scenario(opt, config_yaml):
+def run_scenario(opt, scenario_params):
     try:
-        scenario_params = load_yaml(config_yaml)
 
         # if not opt.edge:
         #     config_yaml['sensing']['edge'] = not config_yaml['sensing']['edge']
