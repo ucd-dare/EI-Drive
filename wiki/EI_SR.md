@@ -30,5 +30,5 @@ $ python EI_Drive.py --t ei_sr -v 0.9.14
 ```bash
 # Execute in the shell or put in .bashrc
 export PYTHONPATH="$HOME/scenario_runner:$PYTHONPATH"
-export SCENARIO_RUNNER_ROOT="$HOME/scenario_runner
+export SCENARIO_RUNNER_ROOT="$HOME/scenario_runner"
 ```
