@@ -113,6 +113,7 @@ vehicle_base:
       light_dist_thresh: 20
 
   behavior:
+    is_manually: False
     max_speed: 111 # maximum speed, km/h
     tailgate_speed: 121 # when a vehicles needs to be close to another vehicle asap
     speed_lim_dist: 3 # max_speed - speed_lim_dist = target speed

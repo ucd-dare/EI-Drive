@@ -386,10 +386,10 @@ class PerceptionManager:
         self.id = infra_id if infra_id is not None else vehicle.id
 
         self.activate = config_yaml['activate']
-        self.camera_visualize = config_yaml['camera_visualize']
-        self.camera_num = min(config_yaml['camera_num'], 4)
-        self.lidar_visualize = config_yaml['lidar_visualize']
-        self.global_position = config_yaml['global_position'] \
+        self.camera_visualize = config_yaml['camera']['visualize']
+        self.camera_num = min(config_yaml['camera']['num'], 4)
+        self.lidar_visualize = config_yaml['lidar']['visualize']
+        self.global_position = config_yaml['global']['position'] \
             if 'global_position' in config_yaml else None
 
 

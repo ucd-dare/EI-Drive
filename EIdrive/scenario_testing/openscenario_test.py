@@ -1,9 +1,6 @@
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
-from EIdrive.scenario_testing.evaluations.evaluate_manager import \
-    EvaluationManager
-from EIdrive.core.common.misc import get_speed
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
 

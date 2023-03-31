@@ -93,7 +93,7 @@ class VehicleManager(object):
         self.vid = str(uuid.uuid1())
         self.vehicle = vehicle
         self.carla_map = carla_map
-        self.car_id = config_yaml['id']
+        self.car_id = config_yaml['id'] if 'id' in config_yaml else None
 
         # retrieve to configure for different modules
         sensing_config = config_yaml['sensing']
