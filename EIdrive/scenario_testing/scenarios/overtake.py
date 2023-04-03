@@ -8,27 +8,23 @@ that is ahead of the ego vehicle and at a lower speed. There are two fearless pe
 that suddenly appear in front of the ego vehicle and the ego vehicle has to avoid a collision
 """
 
-import random
 import py_trees
 import carla
 
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from srunner.scenariomanager.scenarioatomics.atomic_behaviors import (ActorTransformSetter,
-                                                                      StopVehicle,
-                                                                      LaneChange,
                                                                       WaypointFollower,
                                                                       Idle)
 from srunner.scenariomanager.scenarioatomics.atomic_criteria import CollisionTest
-from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import DriveDistance, InTriggerDistanceToLocation, InTriggerDistanceToVehicle, StandStill
+from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import DriveDistance, InTriggerDistanceToLocation
 from srunner.scenarios.basic_scenario import BasicScenario
 
 
 class Overtake(BasicScenario):
 
     """
-    The class spawns two leading vehicles and two pedestrians in front of the ego vehicle.
-    The ego vehicle is driving behind a fast car that will change its lane
-    to overtake the slower leading vehicle.
+    The class spawns two background vehicles and two pedestrians in front of the ego vehicle.
+    The ego vehicle is driving behind and overtaking the fast vehicle ahead
 
     self.other_actors[0] = fast car
     self.other_actors[1] = slow car
@@ -49,19 +45,10 @@ class Overtake(BasicScenario):
         self._reference_waypoint = self._map.get_waypoint(
             config.trigger_points[0].location)
 
-        self._fast_vehicle_velocity = 100
-        self._slow_vehicle_velocity = 0
+        self._fast_vehicle_velocity = 30
+        self._slow_vehicle_velocity = 20
         self._pedestrian_velocity = 5
-        self._change_lane_velocity = 15
-
-        self._fast_vehicle_distance = 20
-        self._slow_vehicle_distance = 100
-        self._pedestrian_distance = 140
-
-        self._trigger_distance = 30
-        self._max_brake = 1
-        self.direction = 'left'  # direction of lane change
-        self.lane_check = 'true'  # check whether a lane change is possible
+        self._trigger_distance = 35
 
         super(Overtake, self).__init__("Overtake",
                                        ego_vehicles,
@@ -85,7 +72,6 @@ class Overtake(BasicScenario):
                            fast_car_transform.location.y,
                            fast_car_transform.location.z + 501),
             fast_car_transform.rotation)
-
         # Transformation that renders the slow vehicle visible
         slow_car_transform = self.other_actors[1].get_transform()
         self.slow_car_visible = carla.Transform(
@@ -107,10 +93,23 @@ class Overtake(BasicScenario):
                            pedestrian_transform_2.location.y,
                            pedestrian_transform_2.location.z + 501),
             pedestrian_transform_2.rotation)
+
+        # Trigger location for the actors
+        self.fast_vehicle_trigger_location = carla.Location(
+            fast_car_transform.location.x,
+            fast_car_transform.location.y,
+            fast_car_transform.location.z + 501,
+        )
+        self.slow_vehicle_trigger_location = carla.Location(
+            slow_car_transform.location.x,
+            slow_car_transform.location.y,
+            slow_car_transform.location.z + 501,
+        )
         self.pedestrian_trigger_location = carla.Location(
-          (pedestrian_transform_1.location.x + pedestrian_transform_2.location.x) / 2,
-          pedestrian_transform_1.location.y,
-          pedestrian_transform_1.location.z + 501,
+            (pedestrian_transform_1.location.x +
+             pedestrian_transform_2.location.x) / 2,
+            pedestrian_transform_1.location.y,
+            pedestrian_transform_1.location.z + 501,
         )
 
         self._pedestrian_target_1 = carla.Location(
@@ -127,39 +126,36 @@ class Overtake(BasicScenario):
     def _create_behavior(self):
         # Slow vehicle behaviors
         sequence_slow_vehicle = py_trees.composites.Sequence("Slow Vehicle")
+        trigger_slow_vehicle = InTriggerDistanceToLocation(
+            self.ego_vehicles[0], self.slow_vehicle_trigger_location, self._trigger_distance)
         set_slow_visible = ActorTransformSetter(
             self.other_actors[1], self.slow_car_visible)
+        slow_vehicle_drive = WaypointFollower(
+            self.other_actors[1], self._slow_vehicle_velocity)
         sequence_slow_vehicle.add_child(set_slow_visible)
-        # Brake. Avoid rolling backwards
-        brake = StopVehicle(self.other_actors[1], self._max_brake)
-        sequence_slow_vehicle.add_child(brake)
+        sequence_slow_vehicle.add_child(trigger_slow_vehicle)
+        sequence_slow_vehicle.add_child(slow_vehicle_drive)
         sequence_slow_vehicle.add_child(Idle())
 
         # Fast vehicle behaviors
         sequence_fast_vehicle = py_trees.composites.Sequence("Fast Vehicle")
+        trigger_fast_vehicle = InTriggerDistanceToLocation(
+            self.ego_vehicles[0], self.fast_vehicle_trigger_location, self._trigger_distance)
         set_fast_visible = ActorTransformSetter(
             self.other_actors[0], self.fast_car_visible)
-        # Fast vehicle driving towards slow vehicle
-        drive = py_trees.composites.Parallel("DrivingTowardsSlowVehicle",
-                                             policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
-        follow_waypoint = WaypointFollower(
+        fast_vehicle_drive = WaypointFollower(
             self.other_actors[0], self._fast_vehicle_velocity)
-        distance_to_vehicle = InTriggerDistanceToVehicle(
-            self.other_actors[1], self.other_actors[0], self._trigger_distance)
-        drive.add_child(follow_waypoint)
-        drive.add_child(distance_to_vehicle)
-        # Change lane
-        change_lane = LaneChange(
-            self.other_actors[0], distance_other_lane=200)
+        # Drive fast vehicle
         sequence_fast_vehicle.add_child(set_fast_visible)
-        sequence_fast_vehicle.add_child(drive)
-        sequence_fast_vehicle.add_child(change_lane)
+        sequence_fast_vehicle.add_child(trigger_fast_vehicle)
+        sequence_fast_vehicle.add_child(fast_vehicle_drive)
         sequence_fast_vehicle.add_child(Idle())
 
         # Pedestrian behaviors
-        sequence_pedestrians = py_trees.composites.Sequence("Pedestrians", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
-        trigger_pedestrian_visible = InTriggerDistanceToLocation(self.ego_vehicles[0], self.pedestrian_trigger_location, 15)
-        pedestrians_move = py_trees.composites.Parallel("Pedestrians Move", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
+        sequence_pedestrians = py_trees.composites.Sequence(
+            "Pedestrians", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
+        trigger_slow_vehicle = InTriggerDistanceToLocation(
+            self.ego_vehicles[0], self.pedestrian_trigger_location, 15)
         # Pedestrian 1 behaviors
         sequence_pedestrian_1 = py_trees.composites.Sequence("Pedestrian 1")
         set_pedestrian_visible_1 = ActorTransformSetter(
@@ -167,8 +163,9 @@ class Overtake(BasicScenario):
         walk_1 = WaypointFollower(
             self.other_actors[2], self._pedestrian_velocity, [self._pedestrian_target_1])
         sequence_pedestrian_1.add_child(set_pedestrian_visible_1)
+        sequence_pedestrian_1.add_child(trigger_slow_vehicle)
         sequence_pedestrian_1.add_child(walk_1)
-        
+
         # Pedestrian 2 behaviors
         sequence_pedestrian_2 = py_trees.composites.Sequence("Pedestrian 2")
         set_pedestrian_visible_2 = ActorTransformSetter(
@@ -176,11 +173,13 @@ class Overtake(BasicScenario):
         walk_2 = WaypointFollower(
             self.other_actors[3], self._pedestrian_velocity, [self._pedestrian_target_2])
         sequence_pedestrian_2.add_child(set_pedestrian_visible_2)
+        sequence_pedestrian_2.add_child(trigger_slow_vehicle)
         sequence_pedestrian_2.add_child(walk_2)
-        
+
+        pedestrians_move = py_trees.composites.Parallel(
+            "Pedestrians Move", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
         pedestrians_move.add_child(sequence_pedestrian_1)
         pedestrians_move.add_child(sequence_pedestrian_2)
-        sequence_pedestrians.add_child(trigger_pedestrian_visible)
         sequence_pedestrians.add_child(pedestrians_move)
 
         # End condition

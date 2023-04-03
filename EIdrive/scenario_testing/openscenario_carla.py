@@ -74,7 +74,7 @@ def run_scenario(opt, scenario_params):
 
         spectator = ego_vehicle.get_world().get_spectator()
         # Bird view following
-        spectator_altitude = 80
+        spectator_altitude = 50
         spectator_bird_pitch = -90
 
         while True:
