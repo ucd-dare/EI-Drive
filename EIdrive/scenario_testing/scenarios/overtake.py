@@ -3,7 +3,7 @@
 """
 Overtake Scenario:
 
-The scripts simulate a scenario where an ego vehicle has to overtake a leading vehicle
+The scripts simulate a scenario where an ego vehicle has to overtake a background vehicle
 that is ahead of the ego vehicle and at a lower speed. There are two fearless pedestrians
 that suddenly appear in front of the ego vehicle and the ego vehicle has to avoid a collision
 """
