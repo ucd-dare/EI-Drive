@@ -61,7 +61,6 @@ try:
 except IndexError:
     pass
 
-
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
@@ -100,6 +99,7 @@ try:
     from pygame.locals import K_b
     from pygame.locals import K_c
     from pygame.locals import K_d
+    from pygame.locals import K_e
     from pygame.locals import K_g
     from pygame.locals import K_h
     from pygame.locals import K_n
@@ -215,7 +215,8 @@ class World(object):
         self.player_max_speed_fast = 3.713
 
         self.player = self.world.get_spectator()
-        self.player.set_transform(carla.Transform(carla.Location(x=0, y=0, z=150), carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+        self.player.set_transform(
+            carla.Transform(carla.Location(x=0, y=0, z=250), carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.set_sensor()
         actor_type = get_actor_display_name(self.player)
@@ -225,6 +226,16 @@ class World(object):
             self.world.tick()
         else:
             self.world.wait_for_tick()
+
+    def zoom_in(self):
+        location = self.player.get_transform().location
+        location.z = location.z - 5
+        self.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+
+    def zoom_out(self):
+        location = self.player.get_transform().location
+        location.z = location.z + 5
+        self.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
 
     def load_map_layer(self, unload=False):
         selected = self.map_layer_names[self.current_map_layer]
@@ -253,7 +264,9 @@ class World(object):
 
 class KeyboardControl(object):
     """Class that handles keyboard input."""
+
     def __init__(self, world):
+        self.world = world
         world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
     def parse_events(self, client, world, clock, sync_mode):
@@ -351,35 +364,54 @@ class KeyboardControl(object):
                     else:
                         world.recording_start += 1
                     world.hud.notification("Recording start time is %d" % (world.recording_start))
-
+        self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
 
     def _parse_vehicle_keys(self, keys, milliseconds):
-        if keys[K_UP] or keys[K_w]:
-            self._control.throttle = min(self._control.throttle + 0.01, 1.00)
-        else:
-            self._control.throttle = 0.0
+        location = self.world.player.get_transform().location
+        if keys[K_s]:
+            location.x = location.x - location.z * 0.01
+            self.world.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+        elif keys[K_w]:
+            location.x = location.x + location.z * 0.01
+            self.world.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+        elif keys[K_a]:
+            location.y = location.y - location.z * 0.01
+            self.world.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+        elif keys[K_d]:
+            location.y = location.y + location.z * 0.01
+            self.world.player.set_transform(carla.Transform(location, carla.Rotation(pitch=-90, yaw=0.0, roll=0.0)))
+        elif keys[K_e]:
+            self.world.zoom_out()
+        elif keys[K_q]:
+            self.world.zoom_in()
 
-        if keys[K_DOWN] or keys[K_s]:
-            self._control.brake = min(self._control.brake + 0.2, 1)
-        else:
-            self._control.brake = 0
 
-        steer_increment = 5e-4 * milliseconds
-        if keys[K_LEFT] or keys[K_a]:
-            if self._steer_cache > 0:
-                self._steer_cache = 0
-            else:
-                self._steer_cache -= steer_increment
-        elif keys[K_RIGHT] or keys[K_d]:
-            if self._steer_cache < 0:
-                self._steer_cache = 0
-            else:
-                self._steer_cache += steer_increment
-        else:
-            self._steer_cache = 0.0
-        self._steer_cache = min(0.7, max(-0.7, self._steer_cache))
-        self._control.steer = round(self._steer_cache, 1)
-        self._control.hand_brake = keys[K_SPACE]
+        # if keys[K_UP] or keys[K_w]:
+        #     self._control.throttle = min(self._control.throttle + 0.01, 1.00)
+        # else:
+        #     self._control.throttle = 0.0
+
+        # if keys[K_DOWN] or keys[K_s]:
+        #     self._control.brake = min(self._control.brake + 0.2, 1)
+        # else:
+        #     self._control.brake = 0
+        #
+        # steer_increment = 5e-4 * milliseconds
+        # if keys[K_LEFT] or keys[K_a]:
+        #     if self._steer_cache > 0:
+        #         self._steer_cache = 0
+        #     else:
+        #         self._steer_cache -= steer_increment
+        # elif keys[K_RIGHT] or keys[K_d]:
+        #     if self._steer_cache < 0:
+        #         self._steer_cache = 0
+        #     else:
+        #         self._steer_cache += steer_increment
+        # else:
+        #     self._steer_cache = 0.0
+        # self._steer_cache = min(0.7, max(-0.7, self._steer_cache))
+        # self._control.steer = round(self._steer_cache, 1)
+        # self._control.hand_brake = keys[K_SPACE]
 
     def _parse_walker_keys(self, keys, milliseconds, world):
         self._control.speed = 0.0
@@ -435,7 +467,15 @@ class HUD(object):
         self._notifications.tick(world, clock)
         if not self._show_info:
             return
-        t = world.player.get_transform()
+        # t = world.player.get_transform()
+        x_spec = world.player.get_transform().location.x
+        y_spec = world.player.get_transform().location.y
+        h_spec = world.player.get_transform().location.z
+        # t = np.copy(pygame.mouse.get_pos())
+        # t[0] = (t[0] - 1920) / 1920 * height + world.player.get_transform().location.x
+        # t[1] = (t[1] - 1080) / 1080 * height + world.player.get_transform().location.y
+        world.world.debug.draw_point(carla.Location(x=x_spec * 1.0, y=y_spec * 1.0, z=0.5), size=0.1,
+                                     color=carla.Color(255, 0, 0), life_time=0.05)
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
@@ -443,8 +483,9 @@ class HUD(object):
             'Map:     % 20s' % world.map.name.split('/')[-1],
             'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
             '',
-            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'Height:  % 18.0f m' % t.location.z,
+            # 'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (x_spec, y_spec)),
+            'Height:  % 18.0f m' % h_spec,
             '']
 
     def toggle_info(self):
@@ -464,6 +505,7 @@ class HUD(object):
             v_offset = 4
             bar_h_offset = 100
             bar_width = 106
+            # pygame.draw.circle(display, (255, 50, 0), (1920, 1080), 5)
             for item in self._info_text:
                 if v_offset + 18 > self.dim[1]:
                     break
@@ -606,7 +648,7 @@ def game_loop(args):
         display = pygame.display.set_mode(
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
-        display.fill((0,0,0))
+        display.fill((0, 0, 0))
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
@@ -695,5 +737,4 @@ def main():
 
 
 if __name__ == '__main__':
-
     main()
