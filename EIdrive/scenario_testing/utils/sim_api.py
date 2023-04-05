@@ -265,7 +265,7 @@ class ScenarioManager:
         )
         return weather
 
-    def create_vehicle_manager(self, application,
+    def create_vehicle_manager(self, application=['single'],
                                map_helper=None,
                                data_dump=False):
         """
@@ -299,7 +299,10 @@ class ScenarioManager:
 
         for i, cav_config in enumerate(
                 self.scenario_params['scenario']['single_cav_list']):
-
+            platoon_base = OmegaConf.create({'platoon': self.scenario_params.get('platoon_base',{})})
+            cav_config = OmegaConf.merge(self.scenario_params['vehicle_base'],
+                                        platoon_base,
+                                        cav_config)
             # if the spawn position is a single scalar, we need to use map
             # helper to transfer to spawn transform
             if 'spawn_special' not in cav_config:
@@ -326,13 +329,13 @@ class ScenarioManager:
                 cav_vehicle_bp.set_attribute('color', '0, 0, 0')
             vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
 
-            cav_config['sensing']['perception']['vid'] = cav_config['id']
+            if 'id' in cav_config:
+                cav_config['sensing']['perception']['vid'] = cav_config['id']
 
             # create vehicle manager for each cav
             vehicle_manager = VehicleManager(
                 vehicle, cav_config, application, self.edge,
                 self.carla_map, self.cav_world,
-                current_time=self.scenario_params['current_time'],
                 data_dumping=data_dump)
 
             self.world.tick()
@@ -351,7 +354,7 @@ class ScenarioManager:
             vehicle_manager.update_info()
             vehicle_manager.set_destination(
                 vehicle_manager.vehicle.get_location(),
-                destinations,
+                destinations[-1],
                 clean=True)
 
             single_cav_list.append(vehicle_manager)
@@ -389,13 +392,17 @@ class ScenarioManager:
 
         self.world.tick()
 
-        destination = carla.Location(x=cav_config['destination'][0],
-                                     y=cav_config['destination'][1],
-                                     z=cav_config['destination'][2])
+        destinations = []
+        for destination in cav_config['destination']:
+            location = carla.Location(x=destination[0],
+                                        y=destination[1],
+                                        z=destination[2])
+            destinations.append(location)
+            
         vehicle_manager.update_info()
         vehicle_manager.set_destination(
             vehicle_manager.vehicle.get_location(),
-            destination,
+            destinations,
             clean=True)
 
         return [vehicle_manager]

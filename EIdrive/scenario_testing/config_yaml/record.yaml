@@ -1,0 +1,27 @@
+description: |-
+  Author: Wei Shao <phdweishao@gmail.com>
+  Content: Test configurations for `openscenario_carla` that incorporates ScenarioRunner
+
+# Carla server settings
+
+world:
+  sync_mode: true
+  client_host: &host localhost
+  client_port: &port 2000
+
+# Parameters needed for ScenarioRunner
+scenario_runner:
+  routesConfig: '/home/ucdavis/project/EI-Drive/EIdrive/scenario_testing/scenarios/lara_routes.xml'
+  # Absolute path needed here
+  routeId: '2'
+
+# Define OpenCDA scenario
+scenario:
+  single_cav_list:
+    - name: cav1
+      v2x:
+        enabled: false
+      behavior:
+        local_planner:
+          debug_trajectory: false
+          debug: false

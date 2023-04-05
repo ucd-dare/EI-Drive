@@ -1,4 +1,6 @@
 .DS_Store
+out/
+*.png
 
 __pycache__/
 *.py[cod]
