@@ -402,7 +402,8 @@ class ScenarioManager:
         vehicle_manager.update_info()
         vehicle_manager.set_destination(
             vehicle_manager.vehicle.get_location(),
-            destinations,
+            # TODO: enable multiple destinations in EI-Drive Planner
+            destinations[-1],
             clean=True)
 
         return [vehicle_manager]

@@ -1,6 +1,6 @@
 description: |-
   Author: Wei Shao <phdweishao@gmail.com>
-  Content: Test configurations for `openscenario_carla` that incorporates ScenarioRunner
+  Content: Record sensor and ground-truth data along driving routes
 
 # Carla server settings
 
@@ -14,6 +14,12 @@ scenario_runner:
   routesConfig: '/home/ucdavis/project/EI-Drive/EIdrive/scenario_testing/scenarios/lara_routes.xml'
   # Absolute path needed here
   routeId: '2'
+  # Set 0 to record permanently
+  max_record_ticks: 10
+
+vehicle_base:
+  behavior:
+    max_speed: 20
 
 # Define OpenCDA scenario
 scenario:
