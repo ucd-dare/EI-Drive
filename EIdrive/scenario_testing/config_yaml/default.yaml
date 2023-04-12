@@ -8,6 +8,7 @@ world:
   sync_mode: true
   client_host: localhost
   client_port: 2000
+  no_rendering_mode: false
   fixed_delta_seconds: 0.05
   seed: 11 # seed for numpy and random
   weather:
@@ -120,7 +121,7 @@ vehicle_base:
     speed_decrease: 15 # used in car following mode to decrease speed for distance keeping
     safety_time: 4 # ttc safety thresholding for decreasing speed
     emergency_param: 0.4 # used to identify whether a emergency stop needed
-    ignore_traffic_light: true # whether to ignore traffic light
+    ignore_traffic_light: false # whether to ignore traffic light
     overtake_allowed: true # whether overtake allowed, typically false for platoon leader
     collision_time_ahead: 1.5 # used for collision checking
     overtake_counter_recover: 35 # the vehicle can not do another overtake during next certain steps

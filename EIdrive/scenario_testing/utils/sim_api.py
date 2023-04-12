@@ -203,6 +203,8 @@ class ScenarioManager:
 
         self.origin_settings = self.world.get_settings()
         new_settings = self.world.get_settings()
+        
+        new_settings.no_rendering_mode = simulation_config['no_rendering_mode']
 
         if simulation_config['sync_mode']:
             new_settings.synchronous_mode = True
