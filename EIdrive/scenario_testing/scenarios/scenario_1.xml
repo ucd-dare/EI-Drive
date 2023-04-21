@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <scenarios>
-    <scenario name="Blind_overtake_1" type="Overtake" town="Town01">
+    <scenario name="Scenario_1" type="Scenario_1" town="Town01">
         <ego_vehicle x="315.4" y="195.4" z="0.3" yaw="180" model="vehicle.nissan.patrol" />
         <other_actor x="298.2" y="195.4" z="-500" yaw="180" model="vehicle.carlamotors.firetruck" />
         <other_actor x="266.1" y="199.0" z="-500" yaw="0" model="vehicle.nissan.seat.leon" />

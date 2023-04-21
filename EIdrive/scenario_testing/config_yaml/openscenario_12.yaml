@@ -11,13 +11,13 @@ world:
 
 # Parameters needed for ScenarioRunner
 scenario_runner:
-  town: town01
+  town: town06
 
   # E.g., for the Overtake scenario
-  scenario: Blind_overtake_1
+  scenario: Scenario_12
   num_actors: 2
-  configFile: './EIdrive/scenario_testing/scenarios/Blind overtake.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/scenarios/blind overtake.py'
+  configFile: './EIdrive/scenario_testing/scenarios/scenario_12.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/scenarios/scenario_12.py'
 
   # The following shows how to configure a A-to-B simple scenario
 #  : AtoB_1
@@ -56,10 +56,19 @@ scenario_runner:
 scenario:
   single_cav_list:
     - name: cav1
-      destination: [[200.2, 195.4, 0.5]]
+      destination: [[138.0, 48.8, 0.5]]
       v2x:
         enabled: false
       behavior:
         local_planner:
           debug_trajectory: false
           debug: false
+
+vehicle_base: &vehicle_base
+  sensing: &base_sensing
+#    edge: true
+    perception: &base_perception
+      lidar: # lidar sensor configuration, check CARLA sensor reference for more details
+        visualize: true # whether to visualize lidar points using open3d
+  behavior: &base_behavior
+    max_speed: 25 # maximum speed, 60km/h
