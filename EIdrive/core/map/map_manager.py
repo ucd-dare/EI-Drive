@@ -262,15 +262,15 @@ class MapManager(object):
         """
         associate_tl_id = ''
 
-        # for tl_id, tl_content in self.traffic_light_info.items():
-        #     trigger_poly = tl_content['corners']
-        #     # use Path to do fast computation
-        #     trigger_path = Path(trigger_poly.boundary)
-        #     # check if any point in the middle line inside the trigger area
-        #     check_array = trigger_path.contains_points(mid_lane[:, :2])
-        #
-        #     if check_array.any():
-        #         associate_tl_id = tl_id
+        for tl_id, tl_content in self.traffic_light_info.items():
+            trigger_poly = tl_content['corners']
+            # use Path to do fast computation
+            trigger_path = Path(trigger_poly.boundary)
+            # check if any point in the middle line inside the trigger area
+            check_array = trigger_path.contains_points(mid_lane[:, :2])
+
+            if check_array.any():
+                associate_tl_id = tl_id
         return associate_tl_id
 
     def generate_lane_cross_info(self):
