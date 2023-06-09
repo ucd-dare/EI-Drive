@@ -1,4 +1,8 @@
+import os
+import re
+import time
 import carla
+import random
 import pandas as pd
 from tqdm import tqdm
 from multiprocessing import Pool
@@ -12,18 +16,27 @@ from EIdrive.core.common.cav_world import CavWorld
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 
 
+def find_weather_presets():
+    rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
+    def name(x): return ' '.join(m.group(0) for m in rgx.finditer(x))
+    presets = [x for x in dir(carla.WeatherParameters)
+               if re.match('[A-Z].+', x)]
+    return [(getattr(carla.WeatherParameters, x), name(x)) for x in presets]
+
+
 class Tracer():
-    def __init__(self, scenario_manager, scenario_params, route_config):
+    def __init__(self, opt, scenario_manager, scenario_params, route_config):
         self.scenario_manager = scenario_manager
         self.route_config = route_config
         self.max_record_ticks = scenario_params.scenario_runner.max_record_ticks
         cav_params = scenario_params['scenario']['single_cav_list'][0]
 
         self.world = scenario_manager.world
-        self.world.on_tick(self._capture_vehicle_movement)
         _, self.route = interpolate_trajectory(
             self.world, route_config.trajectory)
         src = self.route[0][0]
+
+        random.seed(time.time())
 
         cav_params['spawn_position'] = [src.location.x, src.location.y, src.location.z + 0.5,
                                         src.rotation.roll, src.rotation.yaw, src.rotation.pitch]
@@ -43,22 +56,32 @@ class Tracer():
         self.dataset_sensor = {}
         # Data collected from servers: movement
         self.dataset_server = {}
+        self.EXPORT_PATH_PREFIX = f'./out_/{opt.route_id}_{opt.weather}'
+        if os.path.exists(self.EXPORT_PATH_PREFIX):
+            os.system(f'rm -rf {self.EXPORT_PATH_PREFIX}')
+
+        weathers = find_weather_presets()
+        self.world.set_weather(weathers[int(opt.weather)][0])
+        
+        self._init_background_actors()
+        self.world.on_tick(self._capture_vehicle_movement)
 
     def _init_sensors(self):
         left_camera_trans = carla.Transform(
-            carla.Location(x=0.5, z=2.1), carla.Rotation(yaw=-35))
+            carla.Location(x=1.0, z=2.1), carla.Rotation(yaw=-35))
         right_camera_trans = carla.Transform(
-            carla.Location(x=0.5, z=2.1), carla.Rotation(yaw=35))
+            carla.Location(x=1.0, z=2.1), carla.Rotation(yaw=35))
 
         camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
-        camera_bp.set_attribute('image_size_x', '800')
-        camera_bp.set_attribute('image_size_y', '600')
-        camera_bp.set_attribute('sensor_tick', '0.5')
+        camera_bp.set_attribute('image_size_x', '320')
+        camera_bp.set_attribute('image_size_y', '240')
+        camera_bp.set_attribute('sensor_tick', '0.05')
         self.left_camera = self.world.spawn_actor(
             camera_bp, left_camera_trans, attach_to=self.ego_vehicle)
         self.right_camera = self.world.spawn_actor(
             camera_bp, right_camera_trans, attach_to=self.ego_vehicle)
 
+        self.sensor_queue = []
         self.sensor_list = [self.left_camera, self.right_camera]
         self.sensor_names = ['left_camera', 'right_camera']
 
@@ -67,12 +90,33 @@ class Tracer():
         self.right_camera.listen(
             lambda data: self._camera_listener(self.sensor_names[1])(data))
 
+    def _init_background_actors(self):
+        spawn_points = self.world.get_map().get_spawn_points()
+        vehicle_blueprints = [vehicle for vehicle in self.world.get_blueprint_library().filter('*vehicle*')
+                                if int(vehicle.get_attribute('number_of_wheels')) > 3]
+        
+        for actor in self.world.get_actors():
+            if 'vehicle' in actor.type_id and actor.id != self.ego_vehicle.id:
+                actor.destroy()
+
+        for _ in range(0, 10):
+            vehicle = self.world.try_spawn_actor(random.choice(
+                vehicle_blueprints), random.choice(spawn_points))
+            if vehicle is not None:
+                vehicle.set_autopilot(True)
+        for actor in self.world.get_actors().filter('*vehicle*'):
+            if actor.id != self.ego_vehicle.id:
+                actor.set_autopilot(True)
+
     def _magnitute(self, vector):
         return (vector.x**2 + vector.y**2 + vector.z**2)**0.5
 
     def _capture_vehicle_movement(self, world_snapshot):
         if world_snapshot is None:
             print('World snapshot is currently unavailable. Skip the frame.')
+            return
+        if self.ego_vehicle is None:
+            print('Ego vehicle is currently unavailable. Skip the frame.')
             return
         vehicle = world_snapshot.find(self.ego_vehicle.id)
         if vehicle is None:
@@ -134,11 +178,17 @@ class Tracer():
         return _callback
 
     def _capture_sensor_data(self, sensor_name, sensor_data):
+        self.sensor_queue.append((sensor_name, sensor_data))
+    
+    def _update_sensor_data(self, sensor_name, sensor_data):
         if not sensor_data.frame in self.dataset_sensor:
             self.dataset_sensor[sensor_data.frame] = {
                 'frame': sensor_data.frame,
                 sensor_name: sensor_data,
             }
+            for sensor_name in self.sensor_names:
+                if not sensor_name in self.dataset_sensor[sensor_data.frame]:
+                    self.dataset_sensor[sensor_data.frame][sensor_name] = None
         else:
             self.dataset_sensor[sensor_data.frame][sensor_name] = sensor_data
 
@@ -152,10 +202,12 @@ class Tracer():
         self.spectator.set_transform(view_transform)
 
     def _get_save_path(self, sensor_name, frame):
-        return f'./out/{sensor_name}/%06d.png' % frame
+        return os.path.join(self.EXPORT_PATH_PREFIX, f'{sensor_name}/%06d.png' % frame)
 
     def _save_sensor_image(self, args):
         sensor_data, save_path = args
+        if sensor_data is None or save_path is None:
+            return
         sensor_data.save_to_disk(save_path)
 
     def _save_sensor_images(self, dataset_sensor):
@@ -166,7 +218,7 @@ class Tracer():
                 sensor_data = self.dataset_sensor[frame][sensor_name]
                 save_path = self._get_save_path(sensor_name, frame)
                 process_args.append((sensor_data, save_path))
-        with Pool() as pool:
+        with Pool(processes=24) as pool:
             pool.map(self._save_sensor_image, process_args)
 
         for frame, data in tqdm(dataset_sensor.items()):
@@ -175,7 +227,7 @@ class Tracer():
 
         print('Sensor images saved.')
 
-    def _export_dataset(self):
+    def export_dataset(self):
         MOVEMENT_DATA = ['frame', 'location_x', 'location_y', 'location_z',
                          'rotation_roll', 'rotation_pitch', 'rotation_yaw',
                          'velocity_x', 'velocity_y', 'velocity_z', 'velocity_magnitude',
@@ -184,6 +236,13 @@ class Tracer():
         CONTROL_DATA = ['throttle', 'steer', 'brake', 'hand_brake', 'reverse',
                         'manual_gear_shift', 'gear']
         SENSOR_DATA = self.sensor_names
+        
+        print('Client frame count:', len(self.dataset_server))
+        print('Server frame count:', len(self.dataset_client))
+        print('Sensor frame count:', len(self.sensor_queue))
+        
+        for (sensor_name, sensor_data) in self.sensor_queue:
+            self._update_sensor_data(sensor_name, sensor_data)
 
         self._save_sensor_images(self.dataset_sensor)
 
@@ -195,7 +254,7 @@ class Tracer():
                     **self.dataset_server[frame], **self.dataset_client[frame], **self.dataset_sensor[frame]}
                 df = df.append(data, ignore_index=True)
 
-        df.to_csv(f'./out/dataset.csv', index=False)
+        df.to_csv(os.path.join(self.EXPORT_PATH_PREFIX, 'dataset.csv'), index=False)
         print('Dataset exported.')
 
     def trace_route(self):
@@ -222,10 +281,9 @@ class Tracer():
 
             timestep += 1
 
-            if (not self.max_record_ticks <= 0 and timestep == self.max_record_ticks):
+            if (self.max_record_ticks > 0 and timestep == self.max_record_ticks):
+                print(f'{self.EXPORT_PATH_PREFIX} max record ticks reached')
                 break
-
-        self._export_dataset()
 
 
 def run_scenario(opt, scenario_params):
@@ -235,9 +293,9 @@ def run_scenario(opt, scenario_params):
 
     try:
         route_config = RouteParser.parse_routes_file(
-            scenario_params.scenario_runner.routesConfig,
+            scenario_params.scenario_runner.routes_config,
             None,
-            scenario_params.scenario_runner.routeId)[0]
+            opt.route_id)[0]
         # Create CAV world
         cav_world = CavWorld(opt.apply_ml)
         # Create scenario manager
@@ -247,10 +305,13 @@ def run_scenario(opt, scenario_params):
                                                    town=route_config.town,
                                                    cav_world=cav_world)
 
-        tracer = Tracer(scenario_manager, scenario_params, route_config)
+        tracer = Tracer(opt, scenario_manager, scenario_params, route_config)
         tracer.trace_route()
 
     finally:
+        if tracer != None:
+            tracer.export_dataset()
+            
         if cav_world is not None:
             cav_world.destroy()
         print("Destroyed cav_world")
@@ -260,3 +321,4 @@ def run_scenario(opt, scenario_params):
         if scenario_runner is not None:
             scenario_runner.destroy()
         print("Destroyed scenario_runner")
+        
