@@ -91,7 +91,7 @@ def run_scenario(opt, scenario_params):
         eval_manager = \
             EvaluationManager(scenario_manager.cav_world,
                               script_name='demo',
-                              current_time=scenario_params['current_time'])
+                              current_time='')
         spectator = scenario_manager.world.get_spectator()
 
         # run steps
