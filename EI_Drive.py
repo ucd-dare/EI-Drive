@@ -9,7 +9,9 @@ Script to run different scenarios.
 import argparse
 import importlib
 import sys
+import hydra
 import time
+from omegaconf import DictConfig, OmegaConf
 from omegaconf import OmegaConf
 
 from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
@@ -36,13 +38,14 @@ def arg_parse():
     parser.add_argument('--edge', action='store_true',
                         help='whether to enable edge')
 
-
     opt = parser.parse_args()
     return opt
 
 
-def main():
-    opt = arg_parse()
+@hydra.main(version_base=None, config_path='EIdrive/scenario_testing/config_yaml', config_name='default')
+def main(cfg: DictConfig) -> None:
+    # opt = arg_parse()
+    print(OmegaConf.to_yaml(cfg))
 
     # set the default yaml file
     default_yaml = config_yaml = os.path.join(
@@ -50,7 +53,7 @@ def main():
         'EIdrive/scenario_testing/config_yaml/default.yaml')
     # set the yaml file for the specific testing scenario
     config_yaml = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               'EIdrive/scenario_testing/config_yaml/%s.yaml' % opt.test_scenario)
+                               'EIdrive/scenario_testing/config_yaml/%s.yaml' % cfg.test_scenario)
     # load the default yaml file and the scenario yaml file as dictionaries
     default_dict = OmegaConf.load(default_yaml)
     scene_dict = OmegaConf.load(config_yaml)
@@ -59,16 +62,16 @@ def main():
 
     # import the testing script
     testing_scenario = importlib.import_module(
-        "EIdrive.scenario_testing.%s" % opt.test_scenario)
+        "EIdrive.scenario_testing.%s" % cfg.test_scenario)
     # check if the yaml file for the specific testing scenario exists
     if not os.path.isfile(config_yaml):
         sys.exit(
-            "EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % opt.test_cenario)
+            "EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % cfg.test_cenario)
 
     # get the function for running the scenario from the testing script
     scenario_runner = getattr(testing_scenario, 'run_scenario')
     # run the scenario testing
-    scenario_runner(opt, scene_dict)
+    scenario_runner(cfg, scene_dict)
 
 
 if __name__ == '__main__':
