@@ -3,7 +3,6 @@ version: 0.9.14
 apply_ml: false
 edge: false
 
-
 description: |-
   Copyright 2021 <UCLA Mobility Lab>
   Author: Runsheng Xu <rxx3386@ucla.edu>

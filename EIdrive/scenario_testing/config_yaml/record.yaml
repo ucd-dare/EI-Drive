@@ -11,9 +11,8 @@ world:
 
 # Parameters needed for ScenarioRunner
 scenario_runner:
-  routes_config: '/home/dechen/EI-Drive/routes.xml'
   # Absolute path needed here
-  route_id: '0'
+  routes_config: '/home/dechen/EI-Drive/routes.xml'
   # Set 0 to record permanently
   max_record_ticks: 7000
 
