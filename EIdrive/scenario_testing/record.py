@@ -10,6 +10,7 @@ from multiprocessing.pool import ThreadPool as Pool
 
 from srunner.tools.route_parser import RouteParser
 from srunner.tools.route_manipulation import interpolate_trajectory
+from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
@@ -26,23 +27,21 @@ def find_weather_presets():
 
 class Tracer():
     def __init__(self, opt, scenario_manager, scenario_params, route_config):
+        random.seed(time.time())
         self.scenario_manager = scenario_manager
         self.route_config = route_config
         self.max_record_ticks = scenario_params.scenario_runner.max_record_ticks
         cav_params = scenario_params['scenario']['single_cav_list'][0]
 
         self.world = scenario_manager.world
-        _, self.route = interpolate_trajectory(
-            self.world, route_config.trajectory)
+
+        CarlaDataProvider.set_world(self.world)
+        _, self.route = interpolate_trajectory(route_config.trajectory)
         src = self.route[0][0]
-
-        random.seed(time.time())
-
         cav_params['spawn_position'] = [src.location.x, src.location.y, src.location.z + 0.5,
                                         src.rotation.roll, src.rotation.yaw, src.rotation.pitch]
         cav_params['destination'] = [
             (waypoint[0].location.x, waypoint[0].location.y, waypoint[0].location.z) for waypoint in self.route[1:]]
-
         single_cav_list = self.scenario_manager.create_vehicle_manager()
         self.single_cav = single_cav_list[0]
         self.ego_vehicle = self.single_cav.vehicle
@@ -62,7 +61,6 @@ class Tracer():
 
         weathers = find_weather_presets()
         self.world.set_weather(weathers[int(opt.weather)][0])
-        
         self._init_background_actors()
         self.world.on_tick(self._capture_vehicle_movement)
 
@@ -290,6 +288,7 @@ def run_scenario(opt, scenario_params):
     scenario_runner = None
     cav_world = None
     scenario_manager = None
+    tracer = None
 
     try:
         route_config = RouteParser.parse_routes_file(

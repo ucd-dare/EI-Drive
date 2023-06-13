@@ -19,9 +19,6 @@ import os
 
 @hydra.main(version_base=None, config_path='EIdrive/scenario_testing/config_yaml', config_name='default')
 def main(cfg: DictConfig) -> None:
-    # opt = arg_parse()
-    print(OmegaConf.to_yaml(cfg))
-
     # set the default yaml file
     default_yaml = config_yaml = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),

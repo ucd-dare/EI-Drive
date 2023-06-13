@@ -1,7 +1,9 @@
-test_scenario: openscenario_11
+test_scenario: record
 version: 0.9.14
 apply_ml: false
 edge: false
+weather: 0
+route_id: 0
 
 description: |-
   Copyright 2021 <UCLA Mobility Lab>

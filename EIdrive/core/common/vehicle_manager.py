@@ -102,10 +102,10 @@ class VehicleManager(object):
         control_config = config_yaml['controller']
         v2x_config = config_yaml['v2x']
 
-        if edge:
-            self.df = pd.read_csv('Edge.csv')
-        else:
-            self.df = pd.read_csv('No_Edge.csv')
+        # if edge:
+        #     self.df = pd.read_csv('Edge.csv')
+        # else:
+        #     self.df = pd.read_csv('No_Edge.csv')
 
         self.df_records = pd.DataFrame(columns=['x', 'y', 'id', 'tick'])
         # v2x module
