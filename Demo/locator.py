@@ -706,7 +706,7 @@ def main():
         help='TCP port to listen to (default: 2000)')
     argparser.add_argument(
         '--map',
-        default='town03',
+        default='town06',
         help='Town map name')
     argparser.add_argument(
         '--res',

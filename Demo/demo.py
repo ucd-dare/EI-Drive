@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Script to run different scenarios.
+Script to run different test_scenario.
 """
 
 # Author: Wei Shao <phdweishao@gmail.com>
