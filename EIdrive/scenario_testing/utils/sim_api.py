@@ -142,9 +142,6 @@ class ScenarioManager:
     town : str
         Town name if not using customized map, eg. 'Town06'.
 
-    apply_ml : bool
-        Whether need to load dl/ml model(pytorch required) in this simulation.
-
     Attributes
     ----------
     client : carla.client
@@ -165,7 +162,6 @@ class ScenarioManager:
     """
 
     def __init__(self, scenario_params,
-                 apply_ml,
                  edge=False,
                  carla_version='0.9.13',
                  xodr_path=None,
@@ -237,7 +233,6 @@ class ScenarioManager:
 
         self.cav_world = cav_world
         self.carla_map = self.world.get_map()
-        self.apply_ml = apply_ml
         self.edge = edge
 
     @staticmethod

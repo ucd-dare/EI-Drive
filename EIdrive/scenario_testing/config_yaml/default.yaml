@@ -1,6 +1,5 @@
-test_scenario: openscenario_11
+test_scenario: openscenario_1
 version: 0.9.14
-apply_ml: false
 edge: false
 
 # define carla simulation setting

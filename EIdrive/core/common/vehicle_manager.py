@@ -2,9 +2,6 @@
 """
 Basic class of CAV
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
 import uuid
 import carla
 from collections import deque
@@ -24,8 +21,6 @@ from EIdrive.core.common.data_dumper import DataDumper
 from EIdrive.core.common.misc import draw_trajetory_points
 import pandas as pd
 
-# df = pd.read_csv('Edge.csv')
-# df = pd.read_csv('No_Edge.csv')
 
 class VehicleManager(object):
     """
@@ -200,14 +195,6 @@ class VehicleManager(object):
         self.map_manager.run_step()
 
         if self.is_manually:
-            """
-            # The original version
-            target_pos = carla.Location(
-                x=self.df.iloc[self.tick][self.car_id * 4], y=self.df.iloc[self.tick][self.car_id * 4 + 1],
-                z=self.df.iloc[self.tick][self.car_id * 4 + 2])
-            target_speed = self.df.iloc[self.tick][self.car_id * 4 + 3]
-            """
-
             target_pos = deque()
             target_speed = deque()
             for i in range(5):   # config_yaml['prediction_horizon']
@@ -229,15 +216,6 @@ class VehicleManager(object):
 
         else:
             target_speed, target_pos = self.agent.run_step(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
-
-        # list_row = {"x": self.localizer.get_ego_pos().location.x, "y": self.localizer.get_ego_pos().location.y, "id": self.car_id, "tick": self.tick}
-        # self.df_records = self.df_records.append(list_row, ignore_index=True)
-        # if 199 == self.tick:
-        #     self.df_records.to_csv(str(self.car_id) + "traj.csv", index=False)
-
-        # localizer.get_ego_pos()
-        # print(target_speed)
-        # print(self.localizer.get_ego_spd())
 
         control = self.controller.run_step(target_speed, target_pos)
 
