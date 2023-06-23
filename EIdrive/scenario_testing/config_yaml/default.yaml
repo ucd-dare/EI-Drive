@@ -1,6 +1,7 @@
-test_scenario: openscenario_1
+test_scenario: demo
 version: 0.9.14
 edge: false
+record: false
 
 # define carla simulation setting
 world:

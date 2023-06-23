@@ -213,7 +213,6 @@ class VehicleManager(object):
                 target_pos.append(tem_pos)  # here the target_pos is Transform class
                 target_speed.append(tem_speed)
 
-
         else:
             target_speed, target_pos = self.agent.run_step(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
 

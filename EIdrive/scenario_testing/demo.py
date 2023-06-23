@@ -23,21 +23,6 @@ from pynput import keyboard
 
 player_ids = []
 
-# def get_latency(single_cav_list):
-#     latencies = []
-#     points = []
-#     for vm in single_cav_list:
-#         loc_vehicle = vm.vehicle.get_transform()
-#         x = loc_vehicle.location.x
-#         y = loc_vehicle.location.y
-#         points.append([x, y])
-#     for i, point_a in enumerate(points):
-#         for j, point_b in enumerate(points):
-#             if i > j:
-#                 latency = math.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_a[1]) ** 2)
-#                 latencies.append(latency)
-#     return latencies
-
 
 def get_latency(single_cav_list):
     latencies = []
@@ -67,10 +52,9 @@ def run_scenario(opt, scenario_params):
             df = pd.concat(frames)
 
         # create CAV world
-        cav_world = CavWorld(opt.apply_ml)
+        cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
                                                    opt.edge,
                                                    opt.version,
                                                    town='Town06',
@@ -213,13 +197,6 @@ def run_scenario(opt, scenario_params):
                             color=carla.Color(0, 255, 0),
                             life_time=0.1)
 
-                # df_temp3 = df[(df['tick'] == t + 5) | (df['tick'] == t + 14)]
-                # for k in range(6):
-                #     scenario_manager.world.debug.draw_line(
-                #         carla.Location(x=df_temp3.iloc[2 * k][0], y=df_temp3.iloc[2 * k][1], z=0.5),
-                #         carla.Location(x=df_temp3.iloc[2 * k + 1][0], y=df_temp3.iloc[2 * k + 1][1], z=0.5),
-                #         thickness=0.1, color=(0, 255, 0), life_time=0.1)
-
                 # compute latency
                 car0 = single_cav_list[0].vehicle.get_transform()
                 car1 = single_cav_list[1].vehicle.get_transform()
@@ -236,9 +213,6 @@ def run_scenario(opt, scenario_params):
                 latency_list[0].append(latency01)
                 latency_list[1].append(latency02)
                 latency_list[2].append(latency12)
-            # latencies = get_latency(single_cav_list)
-            # for i in range(latencies):
-            #     latency_list.append()
 
             # run step
             for i, single_cav in enumerate(single_cav_list):
