@@ -42,36 +42,42 @@ def arg_parse():
     return opt
 
 
-@hydra.main(version_base=None, config_path='EIdrive/scenario_testing/config_yaml', config_name='default')
+@hydra.main(version_base=None, config_path='EIdrive/scenario_testing/config_yaml', config_name='config')
 def main(cfg: DictConfig) -> None:
     # opt = arg_parse()
-    print(OmegaConf.to_yaml(cfg))
+    # print(OmegaConf.to_yaml(cfg.test_scenario))
 
     # set the default yaml file
     default_yaml = config_yaml = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         'EIdrive/scenario_testing/config_yaml/default.yaml')
     # set the yaml file for the specific testing scenario
-    config_yaml = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               'EIdrive/scenario_testing/config_yaml/%s.yaml' % cfg.test_scenario)
+    # config_yaml = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+    #                            'EIdrive/scenario_testing/config_yaml/%s.yaml' % cfg.test_scenario)
+
     # load the default yaml file and the scenario yaml file as dictionaries
     default_dict = OmegaConf.load(default_yaml)
-    scene_dict = OmegaConf.load(config_yaml)
+    # scene_dict = OmegaConf.load(config_yaml)
+    scene_dict = OmegaConf.create(cfg.test_scenario)
+    scene_dict = OmegaConf.merge(scene_dict, OmegaConf.create(cfg.world))
+    print(scene_dict)
     # merge the dictionaries
     scene_dict = OmegaConf.merge(default_dict, scene_dict)
+    print(scene_dict)
+
 
     # import the testing script
     testing_scenario = importlib.import_module(
-        "EIdrive.scenario_testing.%s" % cfg.test_scenario)
+        "EIdrive.scenario_testing.%s" % scene_dict.test_scenario)
     # check if the yaml file for the specific testing scenario exists
-    if not os.path.isfile(config_yaml):
-        sys.exit(
-            "EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % cfg.test_cenario)
+    # if not os.path.isfile(config_yaml):
+    #     sys.exit(
+    #         "EIdrive/scenario_testing/config_yaml/%s.yaml not found!" % cfg.test_cenario)
 
     # get the function for running the scenario from the testing script
     scenario_runner = getattr(testing_scenario, 'run_scenario')
     # run the scenario testing
-    scenario_runner(cfg, scene_dict)
+    scenario_runner(scene_dict)
 
 
 if __name__ == '__main__':

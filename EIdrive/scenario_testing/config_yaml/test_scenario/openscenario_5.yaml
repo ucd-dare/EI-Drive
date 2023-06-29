@@ -1,6 +1,7 @@
-description: |-
-  Author: Hanchu Zhou <hczhou@ucdavis.edu>
-  Content: The configurations for openscenario that incorporates ScenarioRunner
+version: 0.9.14
+edge: false
+record: false
+test_scenario: openscenario_5
 
 # Carla server settings
 
@@ -12,10 +13,10 @@ world:
 # Parameters needed for ScenarioRunner
 scenario_runner:
   town: town03
-  scenario: Scenario_2
+  scenario: Scenario_5
   num_actors: 2
-  configFile: './EIdrive/scenario_testing/test_scenario/scenario_2.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_2.py'
+  configFile: './EIdrive/scenario_testing/test_scenario/scenario_5.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_5.py'
   host: *host
   port: *port
   timeout: 10
@@ -44,7 +45,7 @@ scenario_runner:
 scenario:
   single_cav_list:
     - name: cav1
-      destination: [[-28.8, 134.7, 0.5]]
+      destination: [[-121.8, 129.5, 0.5]]
       v2x:
         enabled: false
       behavior:
@@ -58,3 +59,5 @@ vehicle_base: &vehicle_base
     perception: &base_perception
       lidar: # lidar sensor configuration, check CARLA sensor reference for more details
         visualize: true # whether to visualize lidar points using open3d
+  behavior: &base_behavior
+    max_speed: 16 # maximum speed, 60km/h

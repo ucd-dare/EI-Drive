@@ -1,7 +1,7 @@
-description: |-
-  Author: Wei Shao <phdweishao@gmail.com>
-  Content: This is the scenario testing configuration file for multiple vehicles perception/localization/behavior/control
-           testing at crossroads.
+version: 0.9.14
+edge: false
+record: false
+test_scenario: demo_loop
 
 # define carla simulation setting
 world:
@@ -30,7 +30,7 @@ vehicle_base: &vehicle_base
       camera:
         visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
         num: 1 # how many cameras are mounted on the vehicle. Maximum 3(frontal, left and right cameras)
-      lidar: # lidar sensor configuration, check CARLA sensor reference for more details
+      lidar:
         visualize: false # whether to visualize lidar points using open3d
         channels: 32
         range: 50
@@ -43,7 +43,7 @@ vehicle_base: &vehicle_base
         dropoff_zero_intensity: 0.0
         noise_stddev: 0.0
     localization: &base_localize
-      activate: true # when not activated, ego position will be retrieved from server directly
+      activate: false # when not activated, ego position will be retrieved from server directly
       dt: *delta # used for kalman filter
       gnss: # gnss sensor configuration
         noise_alt_stddev: 0.001
@@ -62,8 +62,8 @@ vehicle_base: &vehicle_base
     visualize: false
     activate: false
   behavior: &base_behavior
-    is_manually: True
-    max_speed: 80 # maximum speed, 60km/h
+    is_manually: False
+    max_speed: 20 # maximum speed, 60km/h
     tailgate_speed: 121 # when a vehicle needs to be close to another vehicle asap
     speed_lim_dist: 3 # max_speed - speed_lim_dist = target speed
     speed_decrease: 15 # used in car following mode to decrease speed for distance keeping
@@ -137,9 +137,8 @@ scenario:
   single_cav_list: # this is for merging vehicle or single cav without v2x
     - <<: *vehicle_base
       id: 0
-#      spawn_position: [-39.1, 45.35, 0.3, 0, 0, 0]
-      spawn_position: [-38.1, 46.35, 0.3, 0, 0, 0]
-      destination: [[66.1, 45.5, 0.3]]
+      spawn_position: [-68.8, 48.9, 0.3, 0, 0, 0]
+      destination: [[330, 48.8, 0.3], [300, 48.8, 0.3], [200, 48.8, 0.3], [77.2, 48.8, 0.3]]
       v2x:
         <<: *base_v2x
         communication_range: 45
@@ -149,87 +148,8 @@ scenario:
           <<: *base_local_planner
           debug_trajectory: true
           debug: true
-    - <<: *vehicle_base
-      id: 1
-      spawn_position: [-5.7, 9, 0.3, 0, 90, 0]
-      destination: [[-5.7, 103.1, 0.3]]
-      v2x:
-        <<: *base_v2x
-        communication_range: 45
-      behavior:
-        <<: *base_behavior
-        local_planner:
-          <<: *base_local_planner
-          debug_trajectory: true
-          debug: true
-    - <<: *vehicle_base
-      id: 2
-      spawn_position: [2.4, 80, 0.3, 0, 270, 0]
-      destination: [[-40, 42, 0.3]]
-      v2x:
-        <<: *base_v2x
-        communication_range: 45
-      behavior:
-        <<: *base_behavior
-        local_planner:
-          <<: *base_local_planner
-          debug_trajectory: true
-          debug: true
-    - <<: *vehicle_base
-      id: 3
-      spawn_position: [ -50, 49, 0.3, 0, 0, 0 ]
-      destination: [[ 100, 49, 0.3 ]]
-      v2x:
-        <<: *base_v2x
-        communication_range: 45
-      behavior:
-        <<: *base_behavior
-        local_planner:
-          <<: *base_local_planner
-      sensing:
-        <<: *base_sensing
-        perception:
-          <<: *base_perception
-          camera:
-            visualize: 0
-            num: 0
 
-    - <<: *vehicle_base
-      id: 4
-      spawn_position: [ -9.2, 0, 0.3, 0, 90, 0 ]
-      destination: [[ -9.2, 150, 0.3 ]]
-      v2x:
-        <<: *base_v2x
-        communication_range: 45
-      behavior:
-        <<: *base_behavior
-        local_planner:
-          <<: *base_local_planner
-      sensing:
-        <<: *base_sensing
-        perception:
-          <<: *base_perception
-          camera:
-            visualize: 0
-            num: 0
-    - <<: *vehicle_base
-      id: 5
-      spawn_position: [ 5.7, 70, 0.3, 0, 270, 0 ]
-      destination: [[ 5.7, -50, 0.3 ]]
-      v2x:
-        <<: *base_v2x
-        communication_range: 45
-      behavior:
-        <<: *base_behavior
-        local_planner:
-          <<: *base_local_planner
-      sensing:
-        <<: *base_sensing
-        perception:
-          <<: *base_perception
-          camera:
-            visualize: 0
-            num: 0
+
 #    - <<: *vehicle_base
 #      id: 6
 #      spawn_position: [-90, 45, 0.3, 0, 0, 0]

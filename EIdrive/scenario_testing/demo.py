@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Wei Shao <phdweishao@gmail.com>
-# License: TDG-Attribution-NonCommercial-NoDistribute
-
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
@@ -35,13 +31,13 @@ def get_latency(single_cav_list):
     return latencies
 
 
-def run_scenario(opt, scenario_params):
+def run_scenario(scenario_params):
     try:
 
-        # if not opt.edge:
+        # if not scenario_params.edge:
         #     config_yaml['sensing']['edge'] = not config_yaml['sensing']['edge']
 
-        if opt.edge:
+        if scenario_params.edge:
             df0 = pd.read_csv('0traj.csv')
             df1 = pd.read_csv('1traj.csv')
             df2 = pd.read_csv('2traj.csv')
@@ -55,11 +51,10 @@ def run_scenario(opt, scenario_params):
         cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.edge,
-                                                   opt.version,
+                                                   scenario_params.edge,
                                                    town='Town06',
                                                    cav_world=cav_world)
-        if opt.record:
+        if scenario_params.record:
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
@@ -98,7 +93,7 @@ def run_scenario(opt, scenario_params):
             if kl.keys['p']:
                 continue
             # draw edge
-            if t % 5 == 1 and opt.edge:
+            if t % 5 == 1 and scenario_params.edge:
                 scenario_manager.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -123,7 +118,7 @@ def run_scenario(opt, scenario_params):
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-            elif not opt.edge:
+            elif not scenario_params.edge:
                 scenario_manager.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -165,7 +160,7 @@ def run_scenario(opt, scenario_params):
 
             # draw trajectory
 
-            if opt.edge:
+            if scenario_params.edge:
                 if t < 185:
                     df_temp = df[(df['tick'] == t + 8) | (df['tick'] == t + 11) | (df['tick'] == t + 14)]
                     for k in range(18):
@@ -245,7 +240,7 @@ def run_scenario(opt, scenario_params):
             ax.set_xlabel("Game World Time(s)", fontsize=20)
             ax.set_ylabel("Vehicle Speed(km/h)", fontsize=20)
 
-            if opt.edge:
+            if scenario_params.edge:
                 plt.figure(2)
                 if t == 0:
                     mngr = plt.get_current_fig_manager()
@@ -269,7 +264,7 @@ def run_scenario(opt, scenario_params):
 
     finally:
         # eval_manager.evaluate()
-        if opt.record:
+        if scenario_params.record:
             scenario_manager.client.stop_recorder()
 
         scenario_manager.close()

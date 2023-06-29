@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Wei Shao <phdweishao@gmail.com>
-# License: TDG-Attribution-NonCommercial-NoDistribute
-
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
@@ -25,22 +21,20 @@ from pynput import keyboard
 player_ids = []
 
 
-def run_scenario(opt, scenario_params):
+def run_scenario(scenario_params):
     scenario_runner = None
     cav_world = None
     scenario_manager = None
 
     try:
         # create CAV world
-        cav_world = CavWorld(opt.apply_ml)
+        cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
-                                                   opt.edge,
-                                                   opt.version,
+                                                   scenario_params.edge,
                                                    town='town06',
                                                    cav_world=cav_world)
-        if opt.record:
+        if scenario_params.record:
             scenario_manager.client.start_recorder("demo_loop.log", True)
 
         single_cav_list = scenario_manager.create_vehicle_manager(application=['single'])

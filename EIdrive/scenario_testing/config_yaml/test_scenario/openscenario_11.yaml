@@ -1,9 +1,10 @@
-description: |-
-  Author: Hanchu Zhou <hczhou@ucdavis.edu>
-  Content: The configurations for openscenario that incorporates ScenarioRunner
+version: 0.9.14
+edge: false
+record: false
+test_scenario: openscenario_11
 
 # Carla server settings
-
+#
 world:
   sync_mode: true
   client_host: &host localhost
@@ -11,11 +12,11 @@ world:
 
 # Parameters needed for ScenarioRunner
 scenario_runner:
-  town: town03
-  scenario: Scenario_9
+  town: town05
+  scenario: Scenario_11
   num_actors: 2
-  configFile: './EIdrive/scenario_testing/test_scenario/scenario_9.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_9.py'
+  configFile: './EIdrive/scenario_testing/test_scenario/scenario_11.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_11.py'
   host: *host
   port: *port
   timeout: 10
@@ -44,7 +45,7 @@ scenario_runner:
 scenario:
   single_cav_list:
     - name: cav1
-      destination: [[-30.2, 134.7, 0.5]]
+      destination: [[155.0, -70.5, 0.5]]
       v2x:
         enabled: false
       behavior:

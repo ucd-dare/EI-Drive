@@ -163,12 +163,11 @@ class ScenarioManager:
 
     def __init__(self, scenario_params,
                  edge=False,
-                 carla_version='0.9.13',
                  xodr_path=None,
                  town=None,
                  cav_world=None):
         self.scenario_params = scenario_params
-        self.carla_version = carla_version
+        self.carla_version = scenario_params.version
 
         simulation_config = scenario_params['world']
 

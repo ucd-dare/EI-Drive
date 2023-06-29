@@ -31,7 +31,7 @@ def exec_scenario_runner(scenario_params):
     scenario_runner.destroy()
 
 
-def run_scenario(opt, scenario_params):
+def run_scenario(scenario_params):
     scenario_runner = None
     cav_world = None
     scenario_manager = None
@@ -41,7 +41,7 @@ def run_scenario(opt, scenario_params):
         cav_world = CavWorld()
         # Create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.version,
+                                                   scenario_params.version,
                                                    town=scenario_params.scenario_runner.town,
                                                    cav_world=cav_world)
 

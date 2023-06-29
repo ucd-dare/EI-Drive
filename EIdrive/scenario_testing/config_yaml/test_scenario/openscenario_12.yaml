@@ -1,6 +1,7 @@
-description: |-
-  Author: Hanchu Zhou <hczhou@ucdavis.edu>
-  Content: The configurations for openscenario that incorporates ScenarioRunner
+version: 0.9.14
+edge: false
+record: false
+test_scenario: openscenario_12
 
 # Carla server settings
 
