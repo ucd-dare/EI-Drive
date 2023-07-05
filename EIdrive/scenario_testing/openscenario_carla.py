@@ -29,18 +29,17 @@ def exec_scenario_runner(scenario_params):
     scenario_runner.destroy()
 
 
-def run_scenario(opt, scenario_params):
+def run_scenario(scenario_params):
     scenario_runner = None
     cav_world = None
     scenario_manager = None
 
     try:
         # Create CAV world
-        cav_world = CavWorld(opt.apply_ml)
+        cav_world = CavWorld()
         # Create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
-                                                   opt.version,
+                                                   scenario_params.version,
                                                    town=scenario_params.scenario_runner.town,
                                                    cav_world=cav_world)
 
@@ -68,7 +67,7 @@ def run_scenario(opt, scenario_params):
             num_actors = len(vehicles) + len(walkers)
         print(f'Found all {num_actors} actors')
 
-        single_cav_list = scenario_manager.create_vehicle_manager_from_scenario_runner(
+        single_cav_list = scenario_manager.create_vehicle_agent_from_scenario_runner(
             vehicle=ego_vehicle,
         )
 

@@ -43,7 +43,7 @@ def run_scenario(opt, config_yaml):
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
-            scenario_manager.create_vehicle_manager(application=['single'])
+            scenario_manager.create_vehicle_agent(application=['single'])
 
         for vm in single_cav_list:
             player_ids.append(vm.vehicle.id)

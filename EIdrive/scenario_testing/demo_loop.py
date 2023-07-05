@@ -37,7 +37,7 @@ def run_scenario(scenario_params):
         if scenario_params.record:
             scenario_manager.client.start_recorder("demo_loop.log", True)
 
-        single_cav_list = scenario_manager.create_vehicle_manager(application=['single'])
+        single_cav_list = scenario_manager.create_vehicle_agent(application=['single'])
 
         # create evaluation manager
         eval_manager = \

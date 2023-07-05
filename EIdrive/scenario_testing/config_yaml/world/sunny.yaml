@@ -3,7 +3,7 @@ world:
   client_host: localhost
   client_port: 2000
   no_rendering_mode: false
-  fixed_delta_seconds: 0.05
+  fixed_delta_seconds: &delta 0.05
   seed: 11 # seed for numpy and random
   weather:
     sun_altitude_angle: 90 # 90 is the midday and -90 is the midnight

@@ -18,7 +18,7 @@ import carla
 import numpy as np
 from omegaconf import OmegaConf
 
-from EIdrive.core.common.vehicle_manager import VehicleManager
+from EIdrive.core.common.vehicle_agent import VehicleAgent
 from EIdrive.core.common.rsu_manager import RSUManager
 from EIdrive.core.common.cav_world import CavWorld
 from EIdrive.scenario_testing.utils.customized_map_api import \
@@ -261,9 +261,9 @@ class ScenarioManager:
         )
         return weather
 
-    def create_vehicle_manager(self, application=['single'],
-                               map_helper=None,
-                               data_dump=False):
+    def create_vehicle_agent(self, application=['single'],
+                             map_helper=None,
+                             data_dump=False):
         """
         Create a list of single CAVs.
 
@@ -329,7 +329,7 @@ class ScenarioManager:
                 cav_config['sensing']['perception']['vid'] = cav_config['id']
 
             # create vehicle manager for each cav
-            vehicle_manager = VehicleManager(
+            vehicle_manager = VehicleAgent(
                 vehicle, cav_config, application, self.edge,
                 self.carla_map, self.cav_world,
                 data_dumping=data_dump)
@@ -357,7 +357,7 @@ class ScenarioManager:
 
         return single_cav_list
     
-    def create_vehicle_manager_from_scenario_runner(self, vehicle):
+    def create_vehicle_agent_from_scenario_runner(self, vehicle):
         """
         Create a single CAV with a loaded ego vehicle from SR.
         Different from the create_vehicle_manager API creating Carla vehicle from scratch,
@@ -383,7 +383,7 @@ class ScenarioManager:
         cav_config = OmegaConf.merge(self.scenario_params['vehicle_base'],
                                      platoon_base,
                                      cav_config)
-        vehicle_manager = VehicleManager(
+        vehicle_manager = VehicleAgent(
             vehicle, cav_config, ['single'], False, self.carla_map, self.cav_world)
 
         self.world.tick()

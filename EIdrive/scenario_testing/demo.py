@@ -58,7 +58,7 @@ def run_scenario(scenario_params):
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
-            scenario_manager.create_vehicle_manager(application=['single'])
+            scenario_manager.create_vehicle_agent(application=['single'])
 
         # Record the id of players
         for vm in single_cav_list:

@@ -8,8 +8,6 @@ from collections import deque
 
 from EIdrive.core.actuation.control_manager \
     import ControlManager
-from EIdrive.core.common.v2x_manager \
-    import V2XManager
 from EIdrive.core.sensing.localization.localization_manager \
     import LocalizationManager
 from EIdrive.core.sensing.perception.perception_manager \
@@ -22,7 +20,7 @@ from EIdrive.core.common.misc import draw_trajetory_points
 import pandas as pd
 
 
-class VehicleManager(object):
+class VehicleAgent(object):
     """
     A class manager to embed different modules with vehicle together.
 
@@ -51,9 +49,6 @@ class VehicleManager(object):
 
     Attributes
     ----------
-    v2x_manager : EIdrive object
-        The current V2X manager.
-
     localizer : EIdrive object
         The current localization manager.
 
@@ -103,8 +98,7 @@ class VehicleManager(object):
             self.df = pd.read_csv('No_Edge.csv')
 
         self.df_records = pd.DataFrame(columns=['x', 'y', 'id', 'tick'])
-        # v2x module
-        self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
+
         # localization module
         self.localizer = LocalizationManager(
             vehicle, sensing_config['localization'], carla_map)
@@ -117,7 +111,7 @@ class VehicleManager(object):
                                       carla_map,
                                       map_config)
 
-        self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
+        self.agent = BehaviorAgent(vehicle, carla_map, behavior_config, control_config)
 
         # Control module
         self.controller = ControlManager(control_config)
@@ -179,13 +173,7 @@ class VehicleManager(object):
         # update the ego pose for map manager
         self.map_manager.update_information(ego_pos)
 
-        # update ego position and speed to v2x manager,
-        # and then v2x manager will search the nearby cavs
-        self.v2x_manager.update_info(ego_pos, ego_spd)
-
         self.agent.update_information(ego_pos, ego_spd, objects)
-        # pass position and speed info to controller
-        self.controller.update_info(ego_pos, ego_spd)
 
     def run_step(self, target_speed=None):
         """
@@ -214,9 +202,9 @@ class VehicleManager(object):
                 target_speed.append(tem_speed)
 
         else:
-            target_speed, target_pos = self.agent.run_step(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
+            target_speed, target_pos = self.agent.trajectory_planning(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
 
-        control = self.controller.run_step(target_speed, target_pos)
+        control = self.agent.vehicle_control(target_speed, target_pos)
 
         # dump data
         if self.data_dumper:

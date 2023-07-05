@@ -51,11 +51,11 @@ Afterwards, the platoons and single CAVs will be generated.
 ```python
 # create a list of platoon
 platoon_list = scenario_manager.create_platoon_manager(
-        map_helper=map_api.spawn_helper_2lanefree,
-        data_dump=False)
+    map_helper=map_api.spawn_helper_2lanefree,
+    data_dump=False)
 
 # create a list of single CAV
-single_cav_list = scenario_manager.create_vehicle_manager(application=['single'])
+single_cav_list = scenario_manager.create_vehicle_agent(application=['single'])
 ```
 
 Next, the traffic flow is prodced. Check [CARLA Traffic Generation](traffic_generation.html#carla-traffic-manager) to see more details about CARLA traffic generation.
@@ -110,7 +110,7 @@ Based on whether certain cooperative driving application is activated,
 `VehicleManager` will choose different perception/localization/planning manager.
 
 ```python
-# vehicle_manager.py
+# vehicle_agent.py
 class VehicleManager:
     def __init__(self, vehicle, config_yaml, application, carla_map, cav_world):
         if 'platooning' in application:

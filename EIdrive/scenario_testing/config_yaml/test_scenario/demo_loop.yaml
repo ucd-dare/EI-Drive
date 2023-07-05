@@ -3,24 +3,6 @@ edge: false
 record: false
 test_scenario: demo_loop
 
-# define carla simulation setting
-world:
-  sync_mode: true
-  client_port: 2000
-  fixed_delta_seconds: &delta 0.05
-  seed: 11
-  weather:
-    sun_altitude_angle: 15 # 90 is the midday and -90 is the midnight
-    cloudiness: 0 # 0 is the clean sky and 100 is the thickest cloud
-    precipitation: 0 # rain, 100 is the heaviest rain
-    precipitation_deposits: 0 # Determines the creation of puddles. Values range from 0 to 100, being 0 none at all and 100 a road completely capped with water.
-    wind_intensity: 0 # it will influence the rain
-    fog_density: 0 # fog thickness, 100 is the largest
-    fog_distance: 0  # Fog start distance. Values range from 0 to infinite.
-    fog_falloff: 0 # Density of the fog (as in specific mass) from 0 to infinity. The bigger the value, the more dense and heavy it will be, and the fog will reach smaller heights
-    wetness: 0
-
-
 # First define the basic parameters of the vehicles
 vehicle_base: &vehicle_base
   sensing: &base_sensing
@@ -44,7 +26,7 @@ vehicle_base: &vehicle_base
         noise_stddev: 0.0
     localization: &base_localize
       activate: false # when not activated, ego position will be retrieved from server directly
-      dt: *delta # used for kalman filter
+      dt: 0.05 # used for kalman filter. Same with fixed_delta_seconds
       gnss: # gnss sensor configuration
         noise_alt_stddev: 0.001
         noise_lat_stddev: 2e-6
@@ -94,7 +76,7 @@ vehicle_base: &vehicle_base
         k_d: 0.024
         k_i: 0.032
       dynamic: false # whether use dynamic pid setting
-      dt: *delta # this should be equal to your simulation time-step
+      dt: 0.05 # this should be equal to fixed_delta_seconds
       max_brake: 1.0
       max_throttle: 1.0
       max_steering: 0.3
@@ -148,97 +130,3 @@ scenario:
           <<: *base_local_planner
           debug_trajectory: true
           debug: true
-
-
-#    - <<: *vehicle_base
-#      id: 6
-#      spawn_position: [-90, 45, 0.3, 0, 0, 0]
-#      destination: [ 5.7, -50, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#          debug_trajectory: true
-#          debug: true
-#    - <<: *vehicle_base
-#      id: 7
-#      spawn_position: [ -5.7, -40, 0.3, 0, 90, 0 ]
-#      destination: [ -5.7, 103.1, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#          debug_trajectory: true
-#          debug: true
-#    - <<: *vehicle_base
-#      id: 8
-#      spawn_position: [ 2.4, 130, 0.3, 0, 270, 0 ]
-#      destination: [ -40, 42, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#          debug_trajectory: true
-#          debug: true
-#    - <<: *vehicle_base
-#      id: 9
-#      spawn_position: [ -100, 49, 0.3, 0, 0, 0 ]
-#      destination: [ 100, 49, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#      sensing:
-#        <<: *base_sensing
-#        perception:
-#          <<: *base_perception
-#          camera_visualize: 0
-#          camera_num: 0
-#
-#    - <<: *vehicle_base
-#      id: 10
-#      spawn_position: [ -9.2, -50, 0.3, 0, 90, 0 ]
-#      destination: [ -9.2, 150, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#      sensing:
-#        <<: *base_sensing
-#        perception:
-#          <<: *base_perception
-#          camera_visualize: 0
-#          camera_num: 0
-#    - <<: *vehicle_base
-#      id: 11
-#      spawn_position: [ 5.7, 120, 0.3, 0, 270, 0 ]
-#      destination: [ 5.7, -50, 0.3 ]
-#      v2x:
-#        <<: *base_v2x
-#        communication_range: 45
-#      behavior:
-#        <<: *base_behavior
-#        local_planner:
-#          <<: *base_local_planner
-#      sensing:
-#        <<: *base_sensing
-#        perception:
-#          <<: *base_perception
-#          camera_visualize: 0
-#          camera_num: 0
-

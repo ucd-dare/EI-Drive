@@ -21,6 +21,7 @@ from EIdrive.core.plan.local_planner_behavior import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 from EIdrive.core.plan.global_route_planner_dao import GlobalRoutePlannerDAO
 from EIdrive.core.plan.planer_debug_helper import PlanDebugHelper
+from EIdrive.core.actuation.control_manager import ControlManager
 
 
 class BehaviorAgent(object):
@@ -84,7 +85,7 @@ class BehaviorAgent(object):
         The helper class that help with the debug functions.
     """
 
-    def __init__(self, vehicle, carla_map, config_yaml):
+    def __init__(self, vehicle, carla_map, config_yaml, control_yaml):
 
         self.vehicle = vehicle
         # ego pos(transform) and speed(km/h) retrieved from localization module
@@ -128,6 +129,9 @@ class BehaviorAgent(object):
         self._local_planner = LocalPlanner(
             self, carla_map, config_yaml['local_planner'])
 
+        # controller
+        self.controller = ControlManager(control_yaml)
+
         # special behavior rlated
         self.car_following_flag = False
         # lane change allowed flag
@@ -167,10 +171,13 @@ class BehaviorAgent(object):
         # update the localization info to trajectory planner
         self.get_local_planner().update_information(ego_pos, ego_speed)
 
+        # update the controller
+        self.controller.update_info(ego_pos, ego_speed)
+
         self.objects = objects
         # current version only consider about vehicles
         obstacle_vehicles = objects['vehicles']
-        self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
+        # self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
 
         # update the debug helper
         self.debug_helper.update(ego_speed, self.ttc)
@@ -180,59 +187,6 @@ class BehaviorAgent(object):
         else:
             # This method also includes stop signs and intersections.
             self.light_state = str(self.vehicle.get_traffic_light_state())
-
-    def add_white_list(self, vm):
-        """
-        Add vehicle manager to white list.
-        """
-        self.white_list.append(vm)
-
-    def white_list_match(self, obstacles):
-        """
-        Match the detected obstacles with the white list.
-        Remove the obstacles that are in white list.
-        The white list contains all position of target platoon
-        member for joining.
-
-        Parameters
-        ----------
-        obstacles : list
-            A list of carla.Vehicle or ObstacleVehicle
-
-        Returns
-        -------
-        new_obstacle_list : list
-            The new list of obstacles.
-        """
-        new_obstacle_list = []
-
-        for o in obstacles:
-            flag = False
-            o_x = o.get_location().x
-            o_y = o.get_location().y
-
-            o_waypoint = self._map.get_waypoint(o.get_location())
-            o_lane_id = o_waypoint.lane_id
-
-            for vm in self.white_list:
-                pos = vm.v2x_manager.get_ego_pos()
-                vm_x = pos.location.x
-                vm_y = pos.location.y
-
-                w_waypoint = self._map.get_waypoint(pos.location)
-                w_lane_id = w_waypoint.lane_id
-
-                # if the id is different, then not matched for sure
-                if o_lane_id != w_lane_id:
-                    continue
-
-                if abs(vm_x - o_x) <= 3.0 and abs(vm_y - o_y) <= 3.0:
-                    flag = True
-                    break
-            if not flag:
-                new_obstacle_list.append(o)
-
-        return new_obstacle_list
 
     def set_destination(
             self,
@@ -300,6 +254,7 @@ class BehaviorAgent(object):
 
     def reroute(self, spawn_points):
         """
+        TODO: This function seems to be useless.
         This method implements re-routing for vehicles
         approaching its destination.  It finds a new target and
          computes another path to reach it.
@@ -351,6 +306,7 @@ class BehaviorAgent(object):
 
     def traffic_light_manager(self, waypoint):
         """
+        TODO: This function seems to be useless.
         This method is in charge of behaviors for red lights and stops.
         WARNING: What follows is a proxy to avoid having a car brake after
         running a yellow light. This happens because the car is still under
@@ -390,7 +346,6 @@ class BehaviorAgent(object):
                 else:
                     # indicate no need to stop
                     return 0
-
 
             if not waypoint.is_junction and (
                     self.light_id_to_ignore != light_id or light_id == -1):
@@ -688,10 +643,10 @@ class BehaviorAgent(object):
         # * overtake hasn't happened : if previously we have been doing an overtake, then lane change should not be allowed.
         # * destination is not pushed : if we have been doing destination pushed, then lane change should not be allowed.
         lane_change_enabled_flag = collision_detector_enabled and \
-               self.get_local_planner().lane_id_change and \
-               self.get_local_planner().lane_lateral_change and \
-               self.overtake_counter <= 0 and \
-               not self.destination_push_flag
+                                   self.get_local_planner().lane_id_change and \
+                                   self.get_local_planner().lane_lateral_change and \
+                                   self.overtake_counter <= 0 and \
+                                   not self.destination_push_flag
         if lane_change_enabled_flag:
             lane_change_allowed = lane_change_allowed and self.lane_change_management()
             if not lane_change_allowed:
@@ -738,7 +693,7 @@ class BehaviorAgent(object):
              reset_target.transform.location.z))
         return reset_target
 
-    def run_step(
+    def trajectory_planning(
             self,
             target_speed=None,
             collision_detector_enabled=True,
@@ -815,9 +770,9 @@ class BehaviorAgent(object):
         # Path generation based on the global route
         rx, ry, rk, ryaw = self._local_planner.generate_path()
 
-
         # check whether lane change is allowed
-        self.lane_change_allowed = self.check_lane_change_permission(lane_change_allowed, collision_detector_enabled, rk)
+        self.lane_change_allowed = self.check_lane_change_permission(lane_change_allowed, collision_detector_enabled,
+                                                                     rk)
 
         # 3. Collision check
         is_hazard = False
@@ -878,9 +833,9 @@ class BehaviorAgent(object):
 
         # 7. Car following behavior
         if car_following_flag:
-        #     if distance < max(self.break_distance, 3):
-        #         # TODO: revise the return
-        #         ### return 0, None
+            #     if distance < max(self.break_distance, 3):
+            #         # TODO: revise the return
+            #         ### return 0, None
 
             target_speed = self.car_following_manager(obstacle_vehicle, distance, target_speed)
             target_speed, target_loc = self._local_planner.run_step(
@@ -904,4 +859,6 @@ class BehaviorAgent(object):
         target_speed = np.repeat(target_speed, len(trajectory_buffer))
         return target_speed, trajectory_buffer
 
-
+    def vehicle_control(self, target_speed, trajectory_buffer):
+        control = self.controller.run_step(target_speed, trajectory_buffer)
+        return control

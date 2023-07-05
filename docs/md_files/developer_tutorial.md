@@ -34,7 +34,7 @@ def run_scenario(opt, config_yaml):
 
 # create a list of single CAV
 single_cav_list =
-scenario_manager.create_vehicle_manager(['platooning'], map_helper=customized_map_helper)
+scenario_manager.create_vehicle_agent(['platooning'], map_helper=customized_map_helper)
 # create platoon members
 platoon_list = scenario_manager.create_platoon_manager(data_dump=False)
 # create background traffic in carla

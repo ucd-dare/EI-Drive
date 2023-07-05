@@ -30,7 +30,7 @@ class Tracer():
         cav_params['destination'] = [
             (waypoint[0].location.x, waypoint[0].location.y, waypoint[0].location.z) for waypoint in self.route[1:]]
 
-        single_cav_list = self.scenario_manager.create_vehicle_manager()
+        single_cav_list = self.scenario_manager.create_vehicle_agent()
         self.single_cav = single_cav_list[0]
         self.ego_vehicle = self.single_cav.vehicle
 

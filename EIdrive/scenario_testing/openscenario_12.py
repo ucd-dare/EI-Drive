@@ -69,7 +69,7 @@ def run_scenario(scenario_params):
             num_actors = len(vehicles) + len(walkers)
         print(f'Found all {num_actors} actors')
 
-        single_cav_list = scenario_manager.create_vehicle_manager_from_scenario_runner(
+        single_cav_list = scenario_manager.create_vehicle_agent_from_scenario_runner(
             vehicle=ego_vehicle,
         )
 
