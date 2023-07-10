@@ -13,6 +13,7 @@ import sys
 
 import numpy as np
 import carla
+import importlib
 from collections import deque
 
 from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
@@ -21,7 +22,6 @@ from EIdrive.core.plan.local_planner_behavior import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 from EIdrive.core.plan.global_route_planner_dao import GlobalRoutePlannerDAO
 from EIdrive.core.plan.planer_debug_helper import PlanDebugHelper
-from EIdrive.core.actuation.control_manager import ControlManager
 
 
 class BehaviorAgent(object):
@@ -130,7 +130,12 @@ class BehaviorAgent(object):
             self, carla_map, config_yaml['local_planner'])
 
         # controller
-        self.controller = ControlManager(control_yaml)
+        controller_type = control_yaml['type']
+        controller = getattr(
+            importlib.import_module(
+                "EIdrive.core.actuation.%s" %
+                controller_type), 'Controller')
+        self.controller = controller(control_yaml['args'])
 
         # special behavior rlated
         self.car_following_flag = False
@@ -860,5 +865,20 @@ class BehaviorAgent(object):
         return target_speed, trajectory_buffer
 
     def vehicle_control(self, target_speed, trajectory_buffer):
+        """
+
+        Parameters
+        ----------
+        target_speed: float
+            target_speed for vehicle control.
+
+        trajectory_buffer: deque
+            future trajectory deque.
+
+        Returns
+        -------
+        control: carla.VehicleControl
+            Carla control command.
+        """
         control = self.controller.run_step(target_speed, trajectory_buffer)
         return control

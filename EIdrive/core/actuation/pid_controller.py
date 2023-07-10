@@ -77,11 +77,6 @@ class Controller:
 
         self.dynamic = args['dynamic']
 
-
-
-        # Set up logging to a file
-
-
     def dynamic_pid(self):
         """
         Compute kp, kd, ki based on current speed.
@@ -183,7 +178,7 @@ deque
             _ie = 0.0
 
         return np.clip((self._lat_k_p * _dot) + (self._lat_k_d *
-                       _de) + (self._lat_k_i * _ie), -1.0, 1.0)
+                                                 _de) + (self._lat_k_i * _ie), -1.0, 1.0)
 
     def run_step(self, target_speed, waypoints):
         """
@@ -210,7 +205,6 @@ deque
         else:
             waypoint = waypoints[0].location
             target_speed = target_speed[0]
-
 
         # print('waypoint.x = '+str(waypoint.x))
         control = carla.VehicleControl()

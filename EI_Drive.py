@@ -53,12 +53,13 @@ def main(cfg: DictConfig) -> None:
     scene_dict = OmegaConf.create(cfg.test_scenario)
     scene_dict = OmegaConf.merge(scene_dict, OmegaConf.create(cfg.world))
     print(scene_dict)
+    # print(default_dict)
     # merge the dictionaries
-    scene_dict = OmegaConf.merge(default_dict, scene_dict)
+    # scene_dict = OmegaConf.merge(default_dict, scene_dict)
 
     # import the testing script
     testing_scenario = importlib.import_module(
-        "EIdrive.scenario_testing.%s" % scene_dict.test_scenario)
+        "EIdrive.scenario_testing.%s" % scene_dict.scenario.test_scenario)
 
     # get the function for running the scenario from the testing script
     scenario_runner = getattr(testing_scenario, 'run_scenario')

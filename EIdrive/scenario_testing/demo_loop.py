@@ -31,10 +31,10 @@ def run_scenario(scenario_params):
         cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.edge,
+                                                   scenario_params.common_params.edge,
                                                    town='town06',
                                                    cav_world=cav_world)
-        if scenario_params.record:
+        if scenario_params.common_params.record:
             scenario_manager.client.start_recorder("demo_loop.log", True)
 
         single_cav_list = scenario_manager.create_vehicle_agent(application=['single'])

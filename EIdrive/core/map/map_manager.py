@@ -94,7 +94,7 @@ class MapManager(object):
         self.carla_map = carla_map
         self.center = None
 
-        self.actvate = config['activate']
+        self.activate = config['activate']
         self.visualize = config['visualize']
         self.pixels_per_meter = config['pixels_per_meter']
         self.meter_per_pixel = 1 / self.pixels_per_meter
@@ -151,7 +151,7 @@ class MapManager(object):
         """
         Rasterization + Visualize the bev map if needed.
         """
-        if not self.actvate:
+        if not self.activate:
             return
         self.rasterize_static()
         self.rasterize_dynamic()

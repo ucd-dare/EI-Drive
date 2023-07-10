@@ -1,0 +1,13 @@
+localization: &base_localize
+  activate: false # when not activated, ego position will be retrieved from server directly
+  dt: 0.05 # used for kalman filter. Same with fixed_delta_seconds
+  gnss: # gnss sensor configuration
+    noise_alt_stddev: 0.001
+    noise_lat_stddev: 2e-6
+    noise_lon_stddev: 2e-6
+    heading_direction_stddev: 0.1 # degree
+    speed_stddev: 0.2
+  debug_helper: &loc_debug_helper
+    show_animation: false # whether to show real-time trajectory plotting
+    x_scale: 1.0 # used to multiply with the x coordinate to make the error on x axis clearer
+    y_scale: 100.0 # used to multiply with the y coordinate to make the error on y axis clearer

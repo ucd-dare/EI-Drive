@@ -1,0 +1,19 @@
+controller: &base_controller
+  type: mpc_controller # this has to be exactly the same name as the controller py file
+  args:
+    dt: 0.05 # this should be equal to fixed_delta_seconds
+    max_brake: 1.0
+    max_throttle: 1.0
+    max_steering: 0.3
+    wheelbase: 0.002
+    Q: [ [ 1, 0, 0, 0 ], [ 0, 1, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ] ] # Weight for deviation
+    Q_W: 100
+    R: [ [ 1, 0 ], [ 0, 1 ] ] # Weight for input
+    R_W: 1
+    M: [ [ 1, 0, 0, 0 ], [ 0, 1, 0, 0 ], [ 0, 0, 0, 0 ], [ 0, 0, 0, 0 ] ] # Weight for terminal deviation
+    M_W: 0
+    max_a: 100
+    min_a: -100
+    min_steering: -0.3
+    prediction_horizon: 5
+    time_interval: 0.1

@@ -1,0 +1,44 @@
+test_scenario: demo
+single_cav_list:
+  - id: 0
+    spawn_position: [-38.1, 46.35, 0.3, 0, 0, 0]
+    destination: [[66.1, 45.5, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 1
+    spawn_position: [-5.7, 9, 0.3, 0, 90, 0]
+    destination: [[-5.7, 103.1, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 2
+    spawn_position: [2.4, 80, 0.3, 0, 270, 0]
+    destination: [[-40, 42, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 3
+    spawn_position: [ -50, 49, 0.3, 0, 0, 0 ]
+    destination: [[ 100, 49, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+  - id: 4
+    spawn_position: [ -9.2, 0, 0.3, 0, 90, 0 ]
+    destination: [[ -9.2, 150, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+  - id: 5
+    spawn_position: [ 5.7, 70, 0.3, 0, 270, 0 ]
+    destination: [[ 5.7, -50, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0

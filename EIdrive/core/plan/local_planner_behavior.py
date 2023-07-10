@@ -97,6 +97,7 @@ class LocalPlanner(object):
         self._ego_speed = None
 
         # waypoint pop out thresholding
+        print(type(config_yaml))
         self._min_distance = config_yaml['min_dist']
         self._buffer_size = config_yaml['buffer_size']
 

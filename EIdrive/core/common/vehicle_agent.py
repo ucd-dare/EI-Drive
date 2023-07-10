@@ -6,8 +6,6 @@ import uuid
 import carla
 from collections import deque
 
-from EIdrive.core.actuation.control_manager \
-    import ControlManager
 from EIdrive.core.sensing.localization.localization_manager \
     import LocalizationManager
 from EIdrive.core.sensing.perception.perception_manager \
@@ -86,11 +84,11 @@ class VehicleAgent(object):
         self.car_id = config_yaml['id'] if 'id' in config_yaml else None
 
         # retrieve to configure for different modules
-        sensing_config = config_yaml['sensing']
+        localization_config = config_yaml['localization']
+        perception_config = config_yaml['perception']
         map_config = config_yaml['map_manager']
         behavior_config = config_yaml['behavior']
         control_config = config_yaml['controller']
-        v2x_config = config_yaml['v2x']
 
         if edge:
             self.df = pd.read_csv('Edge.csv')
@@ -101,10 +99,10 @@ class VehicleAgent(object):
 
         # localization module
         self.localizer = LocalizationManager(
-            vehicle, sensing_config['localization'], carla_map)
+            vehicle, localization_config, carla_map)
         # perception module
         self.perception_manager = PerceptionManager(
-            vehicle, sensing_config['perception'], cav_world,
+            vehicle, perception_config, cav_world,
             data_dumping)
         # map manager
         self.map_manager = MapManager(vehicle,
@@ -114,7 +112,6 @@ class VehicleAgent(object):
         self.agent = BehaviorAgent(vehicle, carla_map, behavior_config, control_config)
 
         # Control module
-        self.controller = ControlManager(control_config)
         self.is_manually = behavior_config['is_manually']
 
         if data_dumping:

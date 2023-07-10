@@ -167,7 +167,7 @@ class ScenarioManager:
                  town=None,
                  cav_world=None):
         self.scenario_params = scenario_params
-        self.carla_version = scenario_params.version
+        self.carla_version = scenario_params.common_params.version
 
         simulation_config = scenario_params['world']
 
@@ -198,7 +198,7 @@ class ScenarioManager:
 
         self.origin_settings = self.world.get_settings()
         new_settings = self.world.get_settings()
-        
+
         new_settings.no_rendering_mode = simulation_config['no_rendering_mode']
 
         if simulation_config['sync_mode']:
@@ -295,10 +295,18 @@ class ScenarioManager:
 
         for i, cav_config in enumerate(
                 self.scenario_params['scenario']['single_cav_list']):
-            platoon_base = OmegaConf.create({'platoon': self.scenario_params.get('platoon_base',{})})
-            cav_config = OmegaConf.merge(self.scenario_params['vehicle_base'],
-                                        platoon_base,
-                                        cav_config)
+            print(cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['vehicle_perception'],
+                                         cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['vehicle_localization'],
+                                         cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['behavior'],
+                                         cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['map_manager'],
+                                         cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['controller'],
+                                         cav_config)
+            print(cav_config)
             # if the spawn position is a single scalar, we need to use map
             # helper to transfer to spawn transform
             if 'spawn_special' not in cav_config:
@@ -326,7 +334,7 @@ class ScenarioManager:
             vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
 
             if 'id' in cav_config:
-                cav_config['sensing']['perception']['vid'] = cav_config['id']
+                cav_config['perception']['vid'] = cav_config['id']
 
             # create vehicle manager for each cav
             vehicle_manager = VehicleAgent(
@@ -356,7 +364,7 @@ class ScenarioManager:
             single_cav_list.append(vehicle_manager)
 
         return single_cav_list
-    
+
     def create_vehicle_agent_from_scenario_runner(self, vehicle):
         """
         Create a single CAV with a loaded ego vehicle from SR.
@@ -391,10 +399,10 @@ class ScenarioManager:
         destinations = []
         for destination in cav_config['destination']:
             location = carla.Location(x=destination[0],
-                                        y=destination[1],
-                                        z=destination[2])
+                                      y=destination[1],
+                                      z=destination[2])
             destinations.append(location)
-            
+
         vehicle_manager.update_info()
         vehicle_manager.set_destination(
             vehicle_manager.vehicle.get_location(),
@@ -403,7 +411,6 @@ class ScenarioManager:
             clean=True)
 
         return [vehicle_manager]
-
 
     def create_rsu_manager(self, data_dump):
         """
@@ -551,7 +558,7 @@ class ScenarioManager:
             spawn_num += spawn_range[6]
             x_min, x_max, y_min, y_max = \
                 math.floor(spawn_range[0]), math.ceil(spawn_range[1]), \
-                math.floor(spawn_range[2]), math.ceil(spawn_range[3])
+                    math.floor(spawn_range[2]), math.ceil(spawn_range[3])
 
             for x in range(x_min, x_max, int(spawn_range[4])):
                 for y in range(y_min, y_max, int(spawn_range[5])):
@@ -637,7 +644,7 @@ class ScenarioManager:
             The list that contains all the background traffic vehicles.
         """
         print('Spawning CARLA traffic flow.')
-        traffic_config = self.scenario_params['carla_traffic_manager']
+        traffic_config = self.scenario_params['traffic_manager']['carla_traffic_manager']
         tm = self.client.get_trafficmanager()
 
         tm.set_global_distance_to_leading_vehicle(
