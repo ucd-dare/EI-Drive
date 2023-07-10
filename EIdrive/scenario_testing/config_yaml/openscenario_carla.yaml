@@ -26,7 +26,7 @@ scenario_runner:
 
   configFile: './EIdrive/scenario_testing/scenarios/AtoB.xml'
   # Absolute path needed here
-  additionalScenario: '/home/ucdavis/project/EI-Drive/EIdrive/scenario_testing/scenarios/atob.py'
+  additionalScenario: '/home/ucdavis/Workspace/EI-Drive/EIdrive/scenario_testing/scenarios/atob.py'
 
   host: *host
   port: *port
