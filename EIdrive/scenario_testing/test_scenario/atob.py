@@ -59,6 +59,11 @@ class AtoB(BasicScenario):
         """
         criteria = []
 
+        if self.ego_vehicles[0] is not None:
+            print("HAVE EGO VEHICLE")
+        else:
+            print("NO EGO VEHICLE")
+
         collision_criterion = CollisionTest(self.ego_vehicles[0])
 
         criteria.append(collision_criterion)
