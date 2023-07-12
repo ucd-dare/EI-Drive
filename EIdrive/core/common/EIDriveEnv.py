@@ -22,7 +22,7 @@ import gym
 from gym import spaces
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.common.cav_world import CavWorld
-from EIdrive.core.plan import RL_utils
+# from EIdrive.core.plan import RL_utils
 from collections import deque
 import matplotlib.pyplot as plt
 import torch
@@ -52,7 +52,7 @@ class EIDriveEnv(gym.Env):
         scenario_runner.run()
         scenario_runner.destroy()
 
-    def __init__(self, opt, scenario_params, use_scenario_runner=False):
+    def __init__(self, scenario_params, use_scenario_runner=False):
         super().__init__()
         self.use_scenario_runner=True
         self.discrete = False
@@ -65,22 +65,22 @@ class EIDriveEnv(gym.Env):
         self.terminate_off_road = True
         self.terminate_off_lane = True
         self.scenario_params = scenario_params
-        self.discrete = self.scenario_params['environment']['actions']['discrete']
+        self.discrete = self.scenario_params['RL_environment']['actions']['discrete']
         if self.discrete:
-            self.discrete_size = self.scenario_params['environment']['actions']['n_steering_angles']
-        self.local_steering = self.scenario_params['environment']['actions']['local_steering']
-        self.goal_reached = self.scenario_params['environment']['rewards']['goal_reached']
-        self.terminated = self.scenario_params['environment']['rewards']['terminated']
-        self.timeout = self.scenario_params['environment']['rewards']['timeout']
-        self.max_episode_length = self.scenario_params['environment']['termination']['max_episode_length']
-        self.terminate_off_road = self.scenario_params['environment']['termination']['terminate_off_road']
-        self.terminate_off_lane = self.scenario_params['environment']['termination']['terminate_off_lane']
+            self.discrete_size = self.scenario_params['RL_environment']['actions']['n_steering_angles']
+        self.local_steering = self.scenario_params['RL_environment']['actions']['local_steering']
+        self.goal_reached = self.scenario_params['RL_environment']['rewards']['goal_reached']
+        self.terminated = self.scenario_params['RL_environment']['rewards']['terminated']
+        self.timeout = self.scenario_params['RL_environment']['rewards']['timeout']
+        self.max_episode_length = self.scenario_params['RL_environment']['termination']['max_episode_length']
+        self.terminate_off_road = self.scenario_params['RL_environment']['termination']['terminate_off_road']
+        self.terminate_off_lane = self.scenario_params['RL_environment']['termination']['terminate_off_lane']
         self.dt = self.scenario_params['world']['fixed_delta_seconds']
         self.curr_control = carla.VehicleControl()
         self.parameters = scenario_params['scenario']
 
-        self.cav_world = CavWorld(opt.apply_ml)
-        self.scenario_manager = sim_api.ScenarioManager(scenario_params, opt.apply_ml, opt.edge, opt.version,
+        self.cav_world = CavWorld()
+        self.scenario_manager = sim_api.ScenarioManager(scenario_params, scenario_params.common_params.edge,
                                                         town='Town06', cav_world=self.cav_world)
         self.world = self.scenario_manager.world
         self.map = self.world.get_map()
@@ -89,17 +89,17 @@ class EIDriveEnv(gym.Env):
         self.num_actors = 0
         self.prev_waypoint = None
 
-        self.waypoint_horizon = self.scenario_params['environment']['states']['waypoint_horizon']
-        self.lane_resolution = self.scenario_params['environment']['states']['lane_resolution']
-        self.reward_progress = self.scenario_params['environment']['rewards']['reward_progress']
-        self.crosstrack_error = self.scenario_params['environment']['rewards']['crosstrack_error']
-        self.brake_penalty = self.scenario_params['environment']['rewards']['brake_penalty']
+        self.waypoint_horizon = self.scenario_params['RL_environment']['states']['waypoint_horizon']
+        self.lane_resolution = self.scenario_params['RL_environment']['states']['lane_resolution']
+        self.reward_progress = self.scenario_params['RL_environment']['rewards']['reward_progress']
+        self.crosstrack_error = self.scenario_params['RL_environment']['rewards']['crosstrack_error']
+        self.brake_penalty = self.scenario_params['RL_environment']['rewards']['brake_penalty']
         self.target_speed = 60
 
 
         self.scenario_runner = None
         if self.use_scenario_runner:
-            self.scenario_runner = sr.ScenarioRunner(scenario_params.scenario_runner)
+            self.scenario_runner = sr.ScenarioRunner(scenario_params.scenario.scenario_runner)
             self.scenario_runner.parse_scenarios()
 
 

@@ -112,7 +112,8 @@ class VehicleAgent(object):
         self.agent = BehaviorAgent(vehicle, carla_map, behavior_config, control_config)
 
         # Control module
-        self.is_manually = behavior_config['is_manually']
+        if 'is_manually' in behavior_config:
+            self.is_manually = behavior_config['is_manually']
 
         if data_dumping:
             self.data_dumper = DataDumper(self.perception_manager,
@@ -179,7 +180,7 @@ class VehicleAgent(object):
         # visualize the bev map if needed
         self.map_manager.run_step()
 
-        if self.is_manually:
+        if hasattr(self, 'is_manually') and self.is_manually:
             target_pos = deque()
             target_speed = deque()
             for i in range(5):   # config_yaml['prediction_horizon']

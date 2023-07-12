@@ -364,7 +364,6 @@ class ScenarioManager:
             single_cav_list.append(vehicle_manager)
 
         return single_cav_list
-
     def create_vehicle_agent_from_scenario_runner(self, vehicle):
         """
         Create a single CAV with a loaded ego vehicle from SR.
@@ -386,10 +385,15 @@ class ScenarioManager:
             raise ValueError('Only support one ego vehicle for ScenarioRunner')
 
         cav_config = single_cav_params[0]
-        platoon_base = OmegaConf.create(
-            {'platoon': self.scenario_params.get('platoon_base', {})})
-        cav_config = OmegaConf.merge(self.scenario_params['vehicle_base'],
-                                     platoon_base,
+        cav_config = OmegaConf.merge(self.scenario_params['vehicle_perception'],
+                                     cav_config)
+        cav_config = OmegaConf.merge(self.scenario_params['vehicle_localization'],
+                                     cav_config)
+        cav_config = OmegaConf.merge(self.scenario_params['behavior'],
+                                     cav_config)
+        cav_config = OmegaConf.merge(self.scenario_params['map_manager'],
+                                     cav_config)
+        cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                      cav_config)
         vehicle_manager = VehicleAgent(
             vehicle, cav_config, ['single'], False, self.carla_map, self.cav_world)

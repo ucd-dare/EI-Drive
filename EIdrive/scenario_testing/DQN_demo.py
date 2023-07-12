@@ -6,6 +6,7 @@ from EIdrive.core.common.EIDriveEnv import EIDriveEnv
 from stable_baselines3 import SAC, DQN
 import wandb
 import time
+from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, BaseCallback
 
 
@@ -23,14 +24,15 @@ class TensorBoardCallback(BaseCallback):
         self.logger.record("rewards/average_speed", self.training_env.get_attr("average_speed")[0])
         return True
 
-def run_scenario(opt, config_yaml):
+def run_scenario(config_yaml):
     train = True
     wb = False
-    file_name = config_yaml["environment"]["agent_name"]
-    env = EIDriveEnv(opt, config_yaml, True)
+    file_name = config_yaml["RL_environment"]["agent_name"]
+    env = EIDriveEnv(config_yaml, True)
     #check_env(env)
 
     trained = False
+
     if wb:
         run = wandb.init(
             # set the wandb project where this run will be logged

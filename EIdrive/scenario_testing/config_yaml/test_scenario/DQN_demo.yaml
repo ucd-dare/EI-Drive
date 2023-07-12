@@ -2,9 +2,9 @@ defaults:
   - common_params: common_param
   - vehicle_perception: perception_scenario_false
   - vehicle_localization: localization_demo_false
-  - map_manager: map_activated
+  - map_manager: map_deactivated
   - behavior: behavior_scenario
   - controller: pid_controller
   - traffic_manager: lane_change_false
-  - scenario: openscenario_11
-
+  - scenario: DQN_demo
+  - RL_environment: DQN_env

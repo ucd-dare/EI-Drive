@@ -1,4 +1,4 @@
-  map_manager: &base_map_manager
+map_manager:
     pixels_per_meter: 2
     raster_size: [ 224, 224 ]
     lane_sample_resolution: 0.1
