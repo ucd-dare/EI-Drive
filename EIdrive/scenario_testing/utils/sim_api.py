@@ -295,7 +295,6 @@ class ScenarioManager:
 
         for i, cav_config in enumerate(
                 self.scenario_params['scenario']['single_cav_list']):
-            print(cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['vehicle_perception'],
                                          cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['vehicle_localization'],
@@ -306,7 +305,6 @@ class ScenarioManager:
                                          cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                          cav_config)
-            print(cav_config)
             # if the spawn position is a single scalar, we need to use map
             # helper to transfer to spawn transform
             if 'spawn_special' not in cav_config:
