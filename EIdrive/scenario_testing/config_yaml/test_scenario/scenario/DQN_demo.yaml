@@ -1,0 +1,40 @@
+test_scenario: DQN_demo
+
+single_cav_list:
+  - id: 0
+    spawn_position: [[66.9, 248.2, 1.5, 0, 0, 0], [-241.4, -15.1, 1.5, 180, 0, 0]]
+    destination: [[620, 45.1, 0.3], [620, 45.1, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+
+scenario_runner:
+  town: town06
+  scenario: AtoB_1
+  num_actors: 1
+  configFile: './EIdrive/scenario_testing/test_scenario/AtoB.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/atob.py'
+  host: localhost
+  port: 2000
+  timeout: 10
+  debug: false
+  sync: false
+  repetitions: 1
+  agent: null
+  openscenario: null
+  route: null
+  reloadWorld: false
+  waitForEgo: false
+  trafficManagerPort: '8000'
+  trafficManagerSeed: '0'
+  record: ''
+  agentConfig: ''
+  file: false
+  json: false
+  junit: false
+  list: false
+  penscenarioparams: null
+  output: false
+  outputDir: ''
+  randomize: false

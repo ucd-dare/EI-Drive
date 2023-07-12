@@ -6,4 +6,4 @@ defaults:
   - behavior: behavior_scenario
   - controller: pid_controller
   - traffic_manager: lane_change_false
-  - scenario: openscenario_4
+  - scenario: openscenario_carla

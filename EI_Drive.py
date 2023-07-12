@@ -44,18 +44,8 @@ def arg_parse():
 
 @hydra.main(version_base=None, config_path='EIdrive/scenario_testing/config_yaml', config_name='config')
 def main(cfg: DictConfig) -> None:
-    # set the default yaml file
-    default_yaml = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                'EIdrive/scenario_testing/config_yaml/default.yaml')
-
-    # load the default yaml file and the scenario yaml file as dictionaries
-    default_dict = OmegaConf.load(default_yaml)
     scene_dict = OmegaConf.create(cfg.test_scenario)
     scene_dict = OmegaConf.merge(scene_dict, OmegaConf.create(cfg.world))
-    print(scene_dict)
-    # print(default_dict)
-    # merge the dictionaries
-    # scene_dict = OmegaConf.merge(default_dict, scene_dict)
 
     # import the testing script
     testing_scenario = importlib.import_module(

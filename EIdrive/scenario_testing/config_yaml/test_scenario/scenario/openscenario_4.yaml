@@ -1,0 +1,40 @@
+test_scenario: openscenario_4
+
+single_cav_list:
+  - name: cav1
+    destination: [[150.2, 3.7, 0.5]]
+    behavior:
+      local_planner:
+        debug_trajectory: false
+        debug: false
+
+# Parameters needed for ScenarioRunner
+scenario_runner:
+  town: town03
+  scenario: Scenario_4
+  num_actors: 2
+  configFile: './EIdrive/scenario_testing/test_scenario/scenario_4.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_4.py'
+  host: localhost
+  port: 2000
+  timeout: 10
+  debug: false
+  sync: false
+  repetitions: 1
+  agent: null
+  openscenario: null
+  route: null
+  reloadWorld: false
+  waitForEgo: false
+  trafficManagerPort: '8000'
+  trafficManagerSeed: '0'
+  record: ''
+  agentConfig: ''
+  file: false
+  json: false
+  junit: false
+  list: false
+  penscenarioparams: null
+  output: false
+  outputDir: ''
+  randomize: false

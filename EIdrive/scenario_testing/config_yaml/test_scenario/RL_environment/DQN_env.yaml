@@ -1,0 +1,19 @@
+agent_name: sac_lane_keeping4
+states:
+  waypoint_horizon: 5
+  lane_resolution: 5
+actions:
+  discrete: false
+  n_steering_angles: 7
+  local_steering: true
+rewards:
+  reward_progress: 3
+  crosstrack_error: 0.5
+  brake_penalty: 3
+  terminated: -50
+  timeout: 0
+  goal_reached: 0
+termination:
+  max_episode_length: 1000
+  terminate_off_road: true
+  terminate_off_lane: true

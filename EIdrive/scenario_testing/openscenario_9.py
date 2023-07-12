@@ -25,7 +25,7 @@ def exec_scenario_runner(scenario_params):
     Returns
     -------
     """
-    scenario_runner = sr.ScenarioRunner(scenario_params.scenario_runner)
+    scenario_runner = sr.ScenarioRunner(scenario_params.scenario.scenario_runner)
     scenario_runner.run()
     scenario_runner.destroy()
 
@@ -40,8 +40,8 @@ def run_scenario(scenario_params):
         cav_world = CavWorld()
         # Create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.version,
-                                                   town=scenario_params.scenario_runner.town,
+                                                   scenario_params.common_params.version,
+                                                   town=scenario_params.scenario.scenario_runner.town,
                                                    cav_world=cav_world)
 
         # Create a background process to init and execute scenario runner
@@ -56,7 +56,7 @@ def run_scenario(scenario_params):
         ego_vehicle = None
         num_actors = 0
 
-        while ego_vehicle is None or num_actors < scenario_params.scenario_runner.num_actors:
+        while ego_vehicle is None or num_actors < scenario_params.scenario.scenario_runner.num_actors:
             print("Waiting for the actors")
             time.sleep(2)
             vehicles = world.get_actors().filter('vehicle.*')

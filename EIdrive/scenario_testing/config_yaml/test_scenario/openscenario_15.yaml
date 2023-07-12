@@ -1,56 +1,9 @@
-version: 0.9.14
-edge: false
-record: false
-test_scenario: openscenario_15
-
-# Parameters needed for ScenarioRunner
-scenario_runner:
-  town: town03
-  scenario: Scenario_15
-  num_actors: 2
-  configFile: './EIdrive/scenario_testing/test_scenario/scenario_15.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_15.py'
-  host: localhost
-  port: 2000
-  timeout: 10
-  debug: false
-  sync: false
-  repetitions: 1
-  agent: null
-  openscenario: null
-  route: null
-  reloadWorld: false
-  waitForEgo: false
-  trafficManagerPort: '8000'
-  trafficManagerSeed: '0'
-  record: ''
-  agentConfig: ''
-  file: false
-  json: false
-  junit: false
-  list: false
-  penscenarioparams: null
-  output: false
-  outputDir: ''
-  randomize: false
-
-# Define OpenCDA scenario
-scenario:
-  single_cav_list:
-    - name: cav1
-      destination: [[230.1, 41.5, 0.5]]
-      v2x:
-        enabled: false
-      behavior:
-        local_planner:
-          debug_trajectory: false
-          debug: false
-
-vehicle_base: &vehicle_base
-  sensing: &base_sensing
-#    edge: true
-    perception: &base_perception
-      lidar: # lidar sensor configuration, check CARLA sensor reference for more details
-        visualize: true # whether to visualize lidar points using open3d
-  behavior: &base_behavior
-    max_speed: 34 # maximum speed, 60km/h
+defaults:
+  - common_params: common_param
+  - vehicle_perception: perception_scenario_false
+  - vehicle_localization: localization_demo_false
+  - map_manager: map_activated
+  - behavior: behavior_scenario
+  - controller: pid_controller
+  - traffic_manager: lane_change_false
+  - scenario: openscenario_15

@@ -1,0 +1,6 @@
+map_manager:
+    pixels_per_meter: 2
+    raster_size: [ 224, 224 ]
+    lane_sample_resolution: 0.1
+    visualize: true
+    activate: true
