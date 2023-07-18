@@ -33,33 +33,23 @@ def get_latency(single_cav_list):
 
 def run_scenario(scenario_params):
     try:
-
-        # if not scenario_params.edge:
-        #     config_yaml['sensing']['edge'] = not config_yaml['sensing']['edge']
-
-        if scenario_params.common_params.edge:
-            # Todo: do not show them in code.
-            df0 = pd.read_csv('0traj.csv')
-            df1 = pd.read_csv('1traj.csv')
-            df2 = pd.read_csv('2traj.csv')
-            df3 = pd.read_csv('3traj.csv')
-            df4 = pd.read_csv('4traj.csv')
-            df5 = pd.read_csv('5traj.csv')
-            frames = [df0, df1, df2, df3, df4, df5]
+        if scenario_params.scenario.edge:
+            path = scenario_params.scenario.manual_path
+            frames = [pd.read_csv(f'{i}{path}') for i in range(6)]
             df = pd.concat(frames)
 
         # create CAV world
         cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.common_params.edge,
+                                                   scenario_params.scenario.edge,
                                                    town='Town06',
                                                    cav_world=cav_world)
         if scenario_params.common_params.record:
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
-            scenario_manager.create_vehicle_agent(application=['single'])
+            scenario_manager.create_vehicle_agent(application=['single'], data_dump=False)
 
         # Record the id of players
         for vm in single_cav_list:
@@ -94,7 +84,7 @@ def run_scenario(scenario_params):
             if kl.keys['p']:
                 continue
             # draw edge
-            if t % 5 == 1 and scenario_params.common_params.edge:
+            if t % 5 == 1 and scenario_params.scenario.edge:
                 scenario_manager.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -119,7 +109,7 @@ def run_scenario(scenario_params):
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-            elif not scenario_params.common_params.edge:
+            elif not scenario_params.scenario.edge:
                 scenario_manager.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -145,7 +135,7 @@ def run_scenario(scenario_params):
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
 
-            scenario_manager.tick()
+            scenario_manager.tick(single_cav_list)
 
             # zoom in/out spectator
             if t < 60:
@@ -161,7 +151,7 @@ def run_scenario(scenario_params):
 
             # draw trajectory
 
-            if scenario_params.common_params.edge:
+            if scenario_params.scenario.edge:
                 if t < 185:
                     df_temp = df[(df['tick'] == t + 8) | (df['tick'] == t + 11) | (df['tick'] == t + 14)]
                     for k in range(18):
@@ -212,11 +202,7 @@ def run_scenario(scenario_params):
 
             # run step
             for i, single_cav in enumerate(single_cav_list):
-                single_cav.update_info()
                 v_speeds_list[i].append(get_speed(single_cav.vehicle))
-                control = single_cav.run_step()
-
-                single_cav.vehicle.apply_control(control)
 
             # draw figures
             matplotlib.use('TkAgg')
@@ -241,7 +227,7 @@ def run_scenario(scenario_params):
             ax.set_xlabel("Game World Time(s)", fontsize=20)
             ax.set_ylabel("Vehicle Speed(km/h)", fontsize=20)
 
-            if scenario_params.common_params.edge:
+            if scenario_params.scenario.edge:
                 plt.figure(2)
                 if t == 0:
                     mngr = plt.get_current_fig_manager()

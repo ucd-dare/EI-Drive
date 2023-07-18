@@ -82,6 +82,7 @@ class VehicleAgent(object):
         self.vehicle = vehicle
         self.carla_map = carla_map
         self.car_id = config_yaml['id'] if 'id' in config_yaml else None
+        self.manual_horizon = config_yaml.manual_horizon if 'manual_horizon' in config_yaml else None
 
         # retrieve to configure for different modules
         localization_config = config_yaml['localization']
@@ -173,46 +174,47 @@ class VehicleAgent(object):
 
         self.agent.update_information(ego_pos, ego_spd, objects)
 
-    def run_step(self, target_speed=None):
-        """
-        Execute one step of navigation.
-        """
-        # visualize the bev map if needed
-        self.map_manager.run_step()
-
-        if hasattr(self, 'is_manually') and self.is_manually:
-            target_pos = deque()
-            target_speed = deque()
-            for i in range(5):   # config_yaml['prediction_horizon']
-                if self.tick + i <= self.df.shape[0] - 1:
-                    tem_pos = carla.Transform(carla.Location(
-                        x=self.df.iloc[self.tick+i][self.car_id * 4],
-                        y=self.df.iloc[self.tick+i][self.car_id * 4 + 1],
-                        z=self.df.iloc[self.tick+i][self.car_id * 4 + 2]))
-                    tem_speed = self.df.iloc[self.tick+i][self.car_id * 4 + 3]
-                else:
-                    tem_pos = carla.Transform(carla.Location(
-                        x=self.df.iloc[-1][self.car_id * 4],
-                        y=self.df.iloc[-1][self.car_id * 4 + 1],
-                        z=self.df.iloc[-1][self.car_id * 4 + 2]))
-                    tem_speed = self.df.iloc[-1][self.car_id * 4 + 3]
-                target_pos.append(tem_pos)  # here the target_pos is Transform class
-                target_speed.append(tem_speed)
-
-        else:
-            target_speed, target_pos = self.agent.trajectory_planning(target_speed)    # target_pos is trajectory buffer, target_pos[i][0].location is Location class
-
-        control = self.agent.vehicle_control(target_speed, target_pos)
-
-        # dump data
-        if self.data_dumper:
-            self.data_dumper.run_step(self.perception_manager,
-                                      self.localizer,
-                                      self.agent)
-
-        self.tick = self.tick + 1
-
-        return control
+    # def run_step(self, target_speed=None):
+    #     """
+    #     Execute one step of navigation.
+    #     """
+    #     # visualize the bev map if needed
+    #     self.map_manager.run_step()
+    #
+    #     if hasattr(self, 'is_manually') and self.is_manually:
+    #         target_pos = deque()
+    #         target_speed = deque()
+    #         for i in range(5):  # config_yaml['prediction_horizon']
+    #             if self.tick + i <= self.df.shape[0] - 1:
+    #                 tem_pos = carla.Transform(carla.Location(
+    #                     x=self.df.iloc[self.tick + i][self.car_id * 4],
+    #                     y=self.df.iloc[self.tick + i][self.car_id * 4 + 1],
+    #                     z=self.df.iloc[self.tick + i][self.car_id * 4 + 2]))
+    #                 tem_speed = self.df.iloc[self.tick + i][self.car_id * 4 + 3]
+    #             else:
+    #                 tem_pos = carla.Transform(carla.Location(
+    #                     x=self.df.iloc[-1][self.car_id * 4],
+    #                     y=self.df.iloc[-1][self.car_id * 4 + 1],
+    #                     z=self.df.iloc[-1][self.car_id * 4 + 2]))
+    #                 tem_speed = self.df.iloc[-1][self.car_id * 4 + 3]
+    #             target_pos.append(tem_pos)  # here the target_pos is Transform class
+    #             target_speed.append(tem_speed)
+    #
+    #     else:
+    #         target_speed, target_pos = self.agent.trajectory_planning(
+    #             target_speed)  # target_pos is trajectory buffer, target_pos[i][0].location is Location class
+    #
+    #     control = self.agent.vehicle_control(target_speed, target_pos)
+    #
+    #     # dump data
+    #     if self.data_dumper:
+    #         self.data_dumper.save_data(self.perception_manager,
+    #                                    self.localizer,
+    #                                    self.agent)
+    #
+    #     self.tick = self.tick + 1
+    #
+    #     return control
 
     def destroy(self):
         """

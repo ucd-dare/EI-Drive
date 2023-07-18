@@ -5,18 +5,18 @@ Utilize scenario manager to manage CARLA simulation construction. This script
 is used for carla simulation only, and if you want to manage the Co-simulation,
 please use cosim_api.py.
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import math
 import random
 import sys
 import json
+import cv2
 from random import shuffle
 
 import carla
 import numpy as np
 from omegaconf import OmegaConf
+from collections import deque
 
 from EIdrive.core.common.vehicle_agent import VehicleAgent
 from EIdrive.core.common.rsu_manager import RSUManager
@@ -121,6 +121,56 @@ def multi_class_vehicle_blueprint_filter(label, blueprint_library, bp_meta):
         for k, v in bp_meta.items() if v["class"] == label
     ]
     return blueprints
+
+
+def map_visualize(cav):
+    if not cav.map_manager.activate:
+        return
+    cav.map_manager.rasterize_static()
+    cav.map_manager.rasterize_dynamic()
+    if cav.map_manager.visualize:
+        cv2.imshow('the bev map of agent %s' % cav.map_manager.agent_id,
+                   cav.map_manager.vis_bev)
+        cv2.waitKey(1)
+
+
+def calculateVehicleControl(cav):
+    """
+    Calculate the control that should be applied to the vehicle.
+    """
+    target_pos = deque()
+    target_speed = deque()
+
+    if hasattr(cav, 'is_manually') and cav.is_manually:
+        for i in range(cav.manual_horizon):
+            if cav.tick + i <= cav.df.shape[0] - 1:
+                tem_pos = carla.Transform(carla.Location(
+                    x=cav.df.iloc[cav.tick + i][cav.car_id * 4],
+                    y=cav.df.iloc[cav.tick + i][cav.car_id * 4 + 1],
+                    z=cav.df.iloc[cav.tick + i][cav.car_id * 4 + 2]))
+                tem_speed = cav.df.iloc[cav.tick + i][cav.car_id * 4 + 3]
+            else:
+                tem_pos = carla.Transform(carla.Location(
+                    x=cav.df.iloc[-1][cav.car_id * 4],
+                    y=cav.df.iloc[-1][cav.car_id * 4 + 1],
+                    z=cav.df.iloc[-1][cav.car_id * 4 + 2]))
+                tem_speed = cav.df.iloc[-1][cav.car_id * 4 + 3]
+            target_pos.append(tem_pos)  # here the target_pos is Transform class
+            target_speed.append(tem_speed)
+
+    else:
+        # target_pos is trajectory buffer
+        target_speed, target_pos = cav.agent.trajectory_planning(target_speed)
+
+    control = cav.agent.vehicle_control(target_speed, target_pos)
+
+    # dump data
+    if cav.data_dumper:
+        cav.data_dumper.save_data(cav.perception_manager, cav.localizer, cav.agent)
+
+    cav.tick = cav.tick + 1
+
+    return control
 
 
 class ScenarioManager:
@@ -305,6 +355,8 @@ class ScenarioManager:
                                          cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                          cav_config)
+            cav_config = OmegaConf.merge(self.scenario_params['scenario'],
+                                         cav_config)
             # if the spawn position is a single scalar, we need to use map
             # helper to transfer to spawn transform
             if 'spawn_special' not in cav_config:
@@ -342,10 +394,6 @@ class ScenarioManager:
 
             self.world.tick()
 
-            # destination = carla.Location(x=cav_config['destination'][0],
-            #                              y=cav_config['destination'][1],
-            #                              z=cav_config['destination'][2])
-
             destinations = []
             for destination in cav_config['destination']:
                 location = carla.Location(x=destination[0],
@@ -362,6 +410,7 @@ class ScenarioManager:
             single_cav_list.append(vehicle_manager)
 
         return single_cav_list
+
     def create_vehicle_agent_from_scenario_runner(self, vehicle):
         """
         Create a single CAV with a loaded ego vehicle from SR.
@@ -669,11 +718,18 @@ class ScenarioManager:
         print('CARLA traffic flow generated.')
         return tm, bg_list
 
-    def tick(self):
+    def tick(self, single_cav_list):
         """
-        Tick the server.
+        Tick the server and run all the agents.
         """
         self.world.tick()
+
+        # apply control for every vehicle
+        for i, single_cav in enumerate(single_cav_list):
+            single_cav.update_info()
+            map_visualize(single_cav)   # visualize the BEV map
+            control = calculateVehicleControl(single_cav)
+            single_cav.vehicle.apply_control(control)
 
     def destroyActors(self):
         """

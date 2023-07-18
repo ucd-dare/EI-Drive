@@ -31,13 +31,12 @@ def run_scenario(scenario_params):
         cav_world = CavWorld()
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.common_params.edge,
                                                    town='town06',
                                                    cav_world=cav_world)
         if scenario_params.common_params.record:
             scenario_manager.client.start_recorder("demo_loop.log", True)
 
-        single_cav_list = scenario_manager.create_vehicle_agent(application=['single'])
+        single_cav_list = scenario_manager.create_vehicle_agent(application=['single'], data_dump=False)
 
         # create evaluation manager
         eval_manager = \
@@ -60,15 +59,9 @@ def run_scenario(scenario_params):
             if kl.keys['p']:
                 continue
 
-            scenario_manager.tick()
+            scenario_manager.tick(single_cav_list)
 
             spec_controller.bird_view_following(single_cav_list[0].vehicle.get_transform())
-
-            # run step
-            for i, single_cav in enumerate(single_cav_list):
-                single_cav.update_info()
-                control = single_cav.run_step()
-                single_cav.vehicle.apply_control(control)
 
             t = t + 1
 

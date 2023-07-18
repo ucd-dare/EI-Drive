@@ -2,10 +2,6 @@
 """
 Dumping sensor data.
 """
-
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
 import os
 
 import cv2
@@ -41,7 +37,7 @@ class DataDumper(object):
     lidar ; EIdrive object
         The lidar manager from perception manager.
 
-    save_parent_folder : str
+    save_folder_path : str
         The parent folder to save all data related to a specific vehicle.
 
     count : int
@@ -60,23 +56,19 @@ class DataDumper(object):
 
         self.save_time = save_time
         self.vehicle_id = vehicle_id
-
-        current_path = os.path.dirname(os.path.realpath(__file__))
-        self.save_parent_folder = \
-            os.path.join(current_path,
-                         '../../../data_dumping',
-                         save_time,
-                         str(self.vehicle_id))
-
-        if not os.path.exists(self.save_parent_folder):
-            os.makedirs(self.save_parent_folder)
-
         self.count = 0
 
-    def run_step(self,
-                 perception_manager,
-                 localization_manager,
-                 behavior_agent):
+        current_path = os.path.dirname(os.path.realpath(__file__))
+        self.save_folder_path = \
+            os.path.join(current_path, '../../../data_dumping', save_time, str(self.vehicle_id))
+
+        if not os.path.exists(self.save_folder_path):
+            os.makedirs(self.save_folder_path)
+
+    def save_data(self,
+                  perception_manager,
+                  localization_manager,
+                  behavior_agent):
         """
         Dump data at running time.
 
@@ -91,13 +83,10 @@ class DataDumper(object):
         behavior_agent : EIdrive object
             Open
         """
-        self.count += 1
-        # we ignore the first 60 steps
-        if self.count < 60:
-            return
+        self.count = self.count + 1
 
-        # 10hz
-        if self.count % 2 != 0:
+        # we ignore the first 60 steps and make it 10hz
+        if self.count < 60 or self.count % 2 != 0:
             return
 
         self.save_rgb_image()
@@ -111,37 +100,28 @@ class DataDumper(object):
         Save camera rgb images to disk.
         """
         for (i, camera) in enumerate(self.rgb_camera):
-
-            frame = camera.frame
-            image = camera.image
-
-            image_name = '%06d' % frame + '_' + 'camera%d' % i + '.png'
-
-            cv2.imwrite(os.path.join(self.save_parent_folder, image_name),
-                        image)
+            image_name = '%06d' % camera.frame + '_' + 'camera%d' % i + '.png'
+            cv2.imwrite(os.path.join(self.save_folder_path, image_name), camera.image)
 
     def save_lidar_points(self):
         """
         Save 3D lidar points to disk.
         """
-        point_cloud = self.lidar.data
-        frame = self.lidar.frame
-
-        point_xyz = point_cloud[:, :-1]
-        point_intensity = point_cloud[:, -1]
-        point_intensity = np.c_[
-            point_intensity,
-            np.zeros_like(point_intensity),
-            np.zeros_like(point_intensity)
+        position = self.lidar.data[:, :-1]
+        intensity = self.lidar.data[:, -1]
+        intensity = np.c_[
+            intensity,
+            np.zeros_like(intensity),
+            np.zeros_like(intensity)
         ]
 
         o3d_pcd = o3d.geometry.PointCloud()
-        o3d_pcd.points = o3d.utility.Vector3dVector(point_xyz)
-        o3d_pcd.colors = o3d.utility.Vector3dVector(point_intensity)
+        o3d_pcd.points = o3d.utility.Vector3dVector(position)
+        o3d_pcd.colors = o3d.utility.Vector3dVector(intensity)
 
-        # write to pcd file
-        pcd_name = '%06d' % frame + '.pcd'
-        o3d.io.write_point_cloud(os.path.join(self.save_parent_folder,
+        # save in pcd file
+        pcd_name = '%06d' % self.lidar.frame + '.pcd'
+        o3d.io.write_point_cloud(os.path.join(self.save_folder_path,
                                               pcd_name),
                                  pointcloud=o3d_pcd,
                                  write_ascii=True)
@@ -165,14 +145,11 @@ class DataDumper(object):
         behavior_agent : EIdrive object
             OpenCDA behavior agent.
         """
-        frame = self.lidar.frame
-
         dump_yml = {}
         vehicle_dict = {}
 
         # dump obstacle vehicles first
-        objects = perception_manager.objects
-        vehicle_list = objects['vehicles']
+        vehicle_list = perception_manager.objects['vehicles']
 
         for veh in vehicle_list:
             veh_carla_id = veh.carla_id
@@ -225,7 +202,7 @@ class DataDumper(object):
             true_ego_pos.rotation.yaw,
             true_ego_pos.rotation.pitch]})
         dump_yml.update({'ego_speed':
-                        float(localization_manager.get_ego_spd())})
+                             float(localization_manager.get_ego_spd())})
 
         # dump lidar sensor coordinates under world coordinate system
         lidar_transformation = self.lidar.sensor.get_transform()
@@ -285,8 +262,8 @@ class DataDumper(object):
             dump_yml.update({'plan_trajectory': trajectory_list})
             dump_yml.update({'RSU': False})
 
-        yml_name = '%06d' % frame + '.yaml'
-        save_path = os.path.join(self.save_parent_folder,
+        yml_name = '%06d' % self.lidar.frame + '.yaml'
+        save_path = os.path.join(self.save_folder_path,
                                  yml_name)
 
         save_yaml(dump_yml, save_path)

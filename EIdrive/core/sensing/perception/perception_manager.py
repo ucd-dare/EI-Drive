@@ -305,7 +305,7 @@ class SemanticLidarSensor:
         else:
             self.sensor = world.spawn_actor(blueprint, spawn_point)
 
-        self.car_id = config_yaml['vid']
+        # self.car_id = config_yaml['vid']
         # lidar data
         self.points = None
         self.obj_idx = None

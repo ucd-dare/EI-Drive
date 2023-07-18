@@ -49,6 +49,7 @@ class RSUManager(object):
     data_dumper : EIdrive object
         Used for dumping sensor data.
     """
+
     def __init__(
             self,
             carla_world,
@@ -115,9 +116,9 @@ class RSUManager(object):
         """
         # dump data
         if self.data_dumper:
-            self.data_dumper.run_step(self.perception_manager,
-                                      self.localizer,
-                                      None)
+            self.data_dumper.save_data(self.perception_manager,
+                                       self.localizer,
+                                       None)
 
     def destroy(self):
         """
