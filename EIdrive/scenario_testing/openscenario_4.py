@@ -87,7 +87,7 @@ def run_scenario(scenario_params):
             if not key_listener.keys['p']:
                 psutil.Process(sr_process.pid).resume()
 
-            scenario_manager.tick()
+            scenario_manager.tick(single_cav_list)
             ego_cav = single_cav_list[0].vehicle
 
             # Bird view following
@@ -97,11 +97,6 @@ def run_scenario(scenario_params):
             view_transform.rotation.pitch = spectator_bird_pitch
             spectator.set_transform(view_transform)
 
-            # Apply the control to the ego vehicle
-            for _, single_cav in enumerate(single_cav_list):
-                single_cav.update_info()
-                control = single_cav.run_step()
-                single_cav.vehicle.apply_control(control)
             time.sleep(0.01)
 
     finally:
