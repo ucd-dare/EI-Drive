@@ -124,13 +124,13 @@ def multi_class_vehicle_blueprint_filter(label, blueprint_library, bp_meta):
 
 
 def map_visualize(cav):
-    if not cav.map_manager.activate:
+    if not cav.gamemap.activate:
         return
-    cav.map_manager.rasterize_static()
-    cav.map_manager.rasterize_dynamic()
-    if cav.map_manager.visualize:
-        cv2.imshow('the bev map of agent %s' % cav.map_manager.agent_id,
-                   cav.map_manager.vis_bev)
+    cav.gamemap.rasterize_static()
+    cav.gamemap.rasterize_dynamic()
+    if cav.gamemap.visualize:
+        cv2.imshow('the bev map of agent %s' % cav.gamemap.agent_id,
+                   cav.gamemap.vis_bev)
         cv2.waitKey(1)
 
 
@@ -173,7 +173,7 @@ def calculateVehicleControl(cav):
     return control
 
 
-class ScenarioManager:
+class GameWorld:
     """
     The manager that controls simulation construction, background traffic
     generation and CAVs spawning.
@@ -351,7 +351,7 @@ class ScenarioManager:
                                          cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['behavior'],
                                          cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['map_manager'],
+            cav_config = OmegaConf.merge(self.scenario_params['game_map'],
                                          cav_config)
             cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                          cav_config)
@@ -438,7 +438,7 @@ class ScenarioManager:
                                      cav_config)
         cav_config = OmegaConf.merge(self.scenario_params['behavior'],
                                      cav_config)
-        cav_config = OmegaConf.merge(self.scenario_params['map_manager'],
+        cav_config = OmegaConf.merge(self.scenario_params['game_map'],
                                      cav_config)
         cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                      cav_config)

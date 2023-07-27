@@ -6,12 +6,12 @@ Customized Localization Module.
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
 from EIdrive.core.sensing.localization.localization_manager \
-    import LocalizationManager
+    import Localizer
 from EIdrive.customize.core.sensing.localization.extented_kalman_filter \
     import ExtentedKalmanFilter
 
 
-class CustomizedLocalizationManager(LocalizationManager):
+class CustomizedLocalizer(Localizer):
     """Customized Localization module to replace the default module.
 
     Parameters
@@ -30,7 +30,7 @@ class CustomizedLocalizationManager(LocalizationManager):
 
     def __init__(self, vehicle, config_yaml, carla_map):
         super(
-            CustomizedLocalizationManager,
+            CustomizedLocalizer,
             self).__init__(
             vehicle,
             config_yaml,

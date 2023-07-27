@@ -19,7 +19,7 @@
 #  localization_demo_true: Ego position will be retrieved by localization.
 #
 #
-#  4. map_manager: This module is responsible for managing the traffic map.
+#  4. game_map: This module is responsible for managing the traffic map.
 #  Modules
 #  ----------
 #  map_activated: Turn on the traffic map.
@@ -30,7 +30,8 @@
 #  Modules
 #  ----------
 #  behavior_demo: The planner will do planning for the vehicles.
-#  map_deactivated: The trajectories will be provided manually from files.
+#  behavior_demo_manual: The trajectories will be provided manually from files.
+#  behavior_scenario: For OpenScenario.
 #
 #
 #  6. controller: This module is responsible for controlling the vehicle's movement based on planning trajectory.
@@ -59,8 +60,8 @@ defaults:
   - common_params: common_param
   - vehicle_perception: perception_demo_false
   - vehicle_localization: localization_demo_true
-  - map_manager: map_deactivated
-  - behavior: behavior_demo_manual
+  - game_map: map_deactivated
+  - behavior: behavior_demo
   - controller: pid_controller
   - traffic_manager: lane_change_false
   - scenario: demo

@@ -34,11 +34,11 @@ def run_scenario(opt, config_yaml):
         # create CAV world
         cav_world = CavWorld(opt.apply_ml)
         # create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
-                                                   opt.version,
-                                                   town='Town06',
-                                                   cav_world=cav_world)
+        scenario_manager = sim_api.GameWorld(scenario_params,
+                                             opt.apply_ml,
+                                             opt.version,
+                                             town='Town06',
+                                             cav_world=cav_world)
         if opt.record:
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)

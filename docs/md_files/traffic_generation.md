@@ -19,10 +19,10 @@ will keep the traffic manager keep running during the simulation loop.
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 
 # scenario_params are defined in the yaml file
-scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                           opt.apply_ml,
-                                           xodr_path=xodr_path,
-                                           cav_world=cav_world)
+scenario_manager = sim_api.GameWorld(scenario_params,
+                                     opt.apply_ml,
+                                     xodr_path=xodr_path,
+                                     cav_world=cav_world)
 # create background traffic in carla
 traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
 

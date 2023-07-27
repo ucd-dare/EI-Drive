@@ -34,11 +34,11 @@ then he/she just needs to create a `localization_manager.py` under `opencda/cust
 folder and initializes the `CustomizedLocalizationManager` with Extended Kalman Filter:
 
 ```python
-from EIdrive.core.sensing.localization.localization_manager import LocalizationManager
+from EIdrive.core.sensing.localization.localization_manager import Localizer
 from EIdrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
 
 
-class CustomizedLocalizationManager(LocalizationManager):
+class CustomizedLocalizationManager(Localizer):
     def __init__(self, vehicle, config_yaml, carla_map):
         super(CustomizedLocalizationManager, self).__init__(vehicle, config_yaml, carla_map)
         self.kf = ExtentedKalmanFilter(self.dt)
@@ -47,14 +47,14 @@ class CustomizedLocalizationManager(LocalizationManager):
 Then go to `VehicleManager` class, import this customized module and set it as the localizer.
 
 ```python
-from EIdrive.core.sensing.localization.localization_manager import LocalizationManager
-from EIdrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
+from EIdrive.core.sensing.localization.localization_manager import Localizer
+from EIdrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizer
 
 
 class VehicleManager(object):
     def __init__(self, vehicle, config_yaml, application, carla_map, cav_world):
-        # self.localizer = LocalizationManager(vehicle, sensing_config['localization'], carla_map)
-        self.localizer = CustomizedLocalizationManager(vehicle, sensing_config['localization'], carla_map)
+        # self.localizer = Localizer(vehicle, sensing_config['localization'], carla_map)
+        self.localizer = CustomizedLocalizer(vehicle, sensing_config['localization'], carla_map)
 ```
 If the users want to modify more (e.g. change the data pre-processing), as long as they remember to fill `self._ego_pos`
 and `self._speed` in the `localize()` function under `CustomizedLocalizationManager`, it will not cause any problem
@@ -69,12 +69,12 @@ To customize your own object detection algorithms, create a `perception_manager.
 
 ```python
 import cv2
-from EIdrive.core.sensing.perception.perception_manager import PerceptionManager
+from EIdrive.core.sensing.perception.perception import Perception
 from EIdrive.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
 from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
 
 
-class CustomziedPeceptionManager(PerceptionManager):
+class CustomziedPeceptionManager(Perception):
     def __init__(self, vehicle, config_yaml, cav_world, data_dump=False):
         super(CustomizedLocalizationManager, self).__init__(vehicle, config_yaml, cav_world, data_dump)
 
@@ -116,10 +116,10 @@ To customize your own behavior planning algorithms, create a `behavior_agent.py`
 
 ```python
 import carla.libcarla
-from EIdrive.core.plan.behavior_agent import BehaviorAgent
+from EIdrive.core.plan.behavior_agent import AgentBehavior
 
 
-class CustomizedBehaviorAgent(BehaviorAgent):
+class CustomizedBehaviorAgent(AgentBehavior):
     def __init__(self, vehicle, carla_map, config_yaml):
         ...
 

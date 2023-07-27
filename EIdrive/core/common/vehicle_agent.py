@@ -7,12 +7,12 @@ import carla
 from collections import deque
 
 from EIdrive.core.sensing.localization.localization_manager \
-    import LocalizationManager
-from EIdrive.core.sensing.perception.perception_manager \
-    import PerceptionManager
+    import Localizer
+from EIdrive.core.sensing.perception.perception \
+    import Perception
 from EIdrive.core.plan.behavior_agent \
-    import BehaviorAgent
-from EIdrive.core.map.map_manager import MapManager
+    import AgentBehavior
+from EIdrive.core.map.game_map import GameMap
 from EIdrive.core.common.data_dumper import DataDumper
 from EIdrive.core.common.misc import draw_trajetory_points
 import pandas as pd
@@ -87,7 +87,7 @@ class VehicleAgent(object):
         # retrieve to configure for different modules
         localization_config = config_yaml['localization']
         perception_config = config_yaml['perception']
-        map_config = config_yaml['map_manager']
+        map_config = config_yaml['game_map']
         behavior_config = config_yaml['behavior']
         control_config = config_yaml['controller']
 
@@ -99,18 +99,18 @@ class VehicleAgent(object):
         self.df_records = pd.DataFrame(columns=['x', 'y', 'id', 'tick'])
 
         # localization module
-        self.localizer = LocalizationManager(
+        self.localizer = Localizer(
             vehicle, localization_config, carla_map)
         # perception module
-        self.perception_manager = PerceptionManager(
+        self.perception_manager = Perception(
             vehicle, perception_config, cav_world,
             data_dumping)
         # map manager
-        self.map_manager = MapManager(vehicle,
-                                      carla_map,
-                                      map_config)
+        self.gamemap = GameMap(vehicle,
+                               carla_map,
+                               map_config)
 
-        self.agent = BehaviorAgent(vehicle, carla_map, behavior_config, control_config)
+        self.agent = AgentBehavior(vehicle, carla_map, behavior_config, control_config)
 
         # Control module
         if 'is_manually' in behavior_config:
@@ -170,7 +170,7 @@ class VehicleAgent(object):
         objects = self.perception_manager.detect(ego_pos)
 
         # update the ego pose for map manager
-        self.map_manager.update_information(ego_pos)
+        self.gamemap.update_information(ego_pos)
 
         self.agent.update_information(ego_pos, ego_spd, objects)
 
@@ -179,7 +179,7 @@ class VehicleAgent(object):
     #     Execute one step of navigation.
     #     """
     #     # visualize the bev map if needed
-    #     self.map_manager.run_step()
+    #     self.game_map.run_step()
     #
     #     if hasattr(self, 'is_manually') and self.is_manually:
     #         target_pos = deque()
@@ -224,4 +224,4 @@ class VehicleAgent(object):
         self.perception_manager.destroy()
         self.localizer.destroy()
         self.vehicle.destroy()
-        self.map_manager.destroy()
+        self.gamemap.destroy()

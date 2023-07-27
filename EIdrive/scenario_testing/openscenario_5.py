@@ -32,16 +32,16 @@ def exec_scenario_runner(scenario_params):
 def run_scenario(scenario_params):
     scenario_runner = None
     cav_world = None
-    scenario_manager = None
+    gameworld = None
 
     try:
         # Create CAV world
         cav_world = CavWorld()
         # Create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.common_params.version,
-                                                   town=scenario_params.scenario.scenario_runner.town,
-                                                   cav_world=cav_world)
+        gameworld = sim_api.GameWorld(scenario_params,
+                                             scenario_params.common_params.version,
+                                             town=scenario_params.scenario.scenario_runner.town,
+                                             cav_world=cav_world)
 
         # Create a background process to init and execute scenario runner
         sr_process = Process(target=exec_scenario_runner,
@@ -51,7 +51,7 @@ def run_scenario(scenario_params):
         key_listener = KeyListener()
         key_listener.start()
 
-        world = scenario_manager.world
+        world = gameworld.world
         ego_vehicle = None
         num_actors = 0
 
@@ -67,7 +67,7 @@ def run_scenario(scenario_params):
             num_actors = len(vehicles) + len(walkers)
         print(f'Found all {num_actors} actors')
 
-        single_cav_list = scenario_manager.create_vehicle_agent_from_scenario_runner(
+        single_cav_list = gameworld.create_vehicle_agent_from_scenario_runner(
             vehicle=ego_vehicle,
         )
 
@@ -87,7 +87,7 @@ def run_scenario(scenario_params):
             if not key_listener.keys['p']:
                 psutil.Process(sr_process.pid).resume()
 
-            scenario_manager.tick(single_cav_list)
+            gameworld.tick(single_cav_list)
             ego_cav = single_cav_list[0].vehicle
 
             # Bird view following
@@ -103,9 +103,9 @@ def run_scenario(scenario_params):
         if cav_world is not None:
             cav_world.destroy()
         print("Destroyed cav_world")
-        if scenario_manager is not None:
-            scenario_manager.close()
-        print("Destroyed scenario_manager")
+        if gameworld is not None:
+            gameworld.close()
+        print("Destroyed gameworld")
         if scenario_runner is not None:
             scenario_runner.destroy()
         print("Destroyed scenario_runner")

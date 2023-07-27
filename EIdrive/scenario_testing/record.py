@@ -231,7 +231,7 @@ class Tracer():
 def run_scenario(opt, scenario_params):
     scenario_runner = None
     cav_world = None
-    scenario_manager = None
+    gameworld = None
 
     try:
         route_config = RouteParser.parse_routes_file(
@@ -241,22 +241,22 @@ def run_scenario(opt, scenario_params):
         # Create CAV world
         cav_world = CavWorld(opt.apply_ml)
         # Create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   opt.apply_ml,
-                                                   opt.version,
-                                                   town=route_config.town,
-                                                   cav_world=cav_world)
+        gameworld = sim_api.GameWorld(scenario_params,
+                                             opt.apply_ml,
+                                             opt.version,
+                                             town=route_config.town,
+                                             cav_world=cav_world)
 
-        tracer = Tracer(scenario_manager, scenario_params, route_config)
+        tracer = Tracer(gameworld, scenario_params, route_config)
         tracer.trace_route()
 
     finally:
         if cav_world is not None:
             cav_world.destroy()
         print("Destroyed cav_world")
-        if scenario_manager is not None:
-            scenario_manager.close()
-        print("Destroyed scenario_manager")
+        if gameworld is not None:
+            gameworld.close()
+        print("Destroyed gameworld")
         if scenario_runner is not None:
             scenario_runner.destroy()
         print("Destroyed scenario_runner")

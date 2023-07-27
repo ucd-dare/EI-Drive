@@ -20,7 +20,7 @@ from EIdrive.core.map.map_drawing import \
     cv2_subpixel, draw_agent, draw_road, draw_lane
 
 
-class MapManager(object):
+class GameMap(object):
     """
     This class is used to manage HD Map. We emulate the style of Lyft dataset.
     todo: Currently mainly used for map rasterization.
@@ -144,18 +144,18 @@ class MapManager(object):
         """
         self.center = ego_pose
 
-    def run_step(self):
-        """
-        Rasterization + Visualize the bev map if needed.
-        """
-        if not self.activate:
-            return
-        self.rasterize_static()
-        self.rasterize_dynamic()
-        if self.visualize:
-            cv2.imshow('the bev map of agent %s' % self.agent_id,
-                       self.vis_bev)
-            cv2.waitKey(1)
+    # def run_step(self):
+    #     """
+    #     Rasterization + Visualize the bev map if needed.
+    #     """
+    #     if not self.activate:
+    #         return
+    #     self.rasterize_static()
+    #     self.rasterize_dynamic()
+    #     if self.visualize:
+    #         cv2.imshow('the bev map of agent %s' % self.agent_id,
+    #                    self.vis_bev)
+    #         cv2.waitKey(1)
 
     @staticmethod
     def get_bounds(left_lane, right_lane):
@@ -562,8 +562,7 @@ class MapManager(object):
         for idx, lane_idx in enumerate(lane_indices):
             lane_idx = self.bound_info['lanes']['ids'][lane_idx]
             lane_info = self.lane_info[lane_idx]
-            xyz_left, xyz_right = \
-                lane_info['xyz_left'], lane_info['xyz_right']
+            xyz_left, xyz_right = lane_info['xyz_left'], lane_info['xyz_right']
 
             # generate lane area
             lane_area = self.generate_lane_area(xyz_left, xyz_right)

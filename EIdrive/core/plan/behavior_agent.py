@@ -17,16 +17,16 @@ import importlib
 from collections import deque
 
 from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
-from EIdrive.core.plan.collision_check import CollisionChecker
+from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_planner_behavior import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 from EIdrive.core.plan.global_route_planner_dao import GlobalRoutePlannerDAO
 from EIdrive.core.plan.planer_debug_helper import PlanDebugHelper
 
 
-class BehaviorAgent(object):
+class AgentBehavior(object):
     """
-    A modulized version of carla BehaviorAgent.
+    A modulized version of carla AgentBehavior.
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ class BehaviorAgent(object):
     break_distance : float
         The current distance needed for ego vehicle to reach a steady stop.
 
-    _collision_check : collisionchecker
+    _collision_detector : collisiondetetor
         A collision check class to estimate the collision with front obstacle.
 
     ignore_traffic_light : boolean
@@ -105,7 +105,7 @@ class BehaviorAgent(object):
         self.break_distance = 0
         self.ttc = 1000
         # collision checker
-        self._collision_check = CollisionChecker(
+        self._collision_detector = CollisionDetector(
             time_ahead=config_yaml['collision_time_ahead'])
         self.ignore_traffic_light = config_yaml['ignore_traffic_light']
         self.overtake_allowed = config_yaml['overtake_allowed']
@@ -137,7 +137,7 @@ class BehaviorAgent(object):
                 controller_type), 'Controller')
         self.controller = controller(control_yaml['args'])
 
-        # special behavior rlated
+        # special behavior related
         self.car_following_flag = False
         # lane change allowed flag
         self.lane_change_allowed = True
@@ -391,7 +391,7 @@ class BehaviorAgent(object):
         target_vehicle = None
 
         for vehicle in self.obstacle_vehicles:
-            collision_free = self._collision_check.collision_circle_check(
+            collision_free = self._collision_detector.circle_collision_check(
                 rx, ry, ryaw, vehicle, self._ego_speed / 3.6, self._map,
                 adjacent_check=adjacent_check)
             if not collision_free:
@@ -441,10 +441,10 @@ class BehaviorAgent(object):
                 left_wpt.lane_type == carla.LaneType.Driving:
             # this not the real plan path, but just a quick path to check
             # collision
-            rx, ry, ryaw = self._collision_check.adjacent_lane_collision_check(
-                ego_loc=self._ego_pos.location, target_wpt=left_wpt,
-                carla_map=self._map,
-                overtake=True, world=self.vehicle.get_world())
+            rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
+                ego_loc=self._ego_pos.location,
+                target_wpt=left_wpt,
+                overtake=True)
             vehicle_state, _, _ = self.collision_manager(
                 rx, ry, ryaw, self._map.get_waypoint(
                     self._ego_pos.location), True)
@@ -469,12 +469,10 @@ class BehaviorAgent(object):
                 right_wpt and \
                 obstacle_vehicle_wpt.lane_id * right_wpt.lane_id > 0 \
                 and right_wpt.lane_type == carla.LaneType.Driving:
-            rx, ry, ryaw = self._collision_check.adjacent_lane_collision_check(
+            rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
                 ego_loc=self._ego_pos.location,
                 target_wpt=right_wpt,
-                overtake=True,
-                carla_map=self._map,
-                world=self.vehicle.get_world())
+                overtake=True)
 
             vehicle_state, _, _ = self.collision_manager(
                 rx, ry, ryaw, self._map.get_waypoint(
@@ -518,12 +516,10 @@ class BehaviorAgent(object):
         if not target_wpt:
             return True
 
-        rx, ry, ryaw = self._collision_check.adjacent_lane_collision_check(
+        rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
             ego_loc=self._ego_pos.location,
             target_wpt=target_wpt,
-            overtake=False,
-            carla_map=self._map,
-            world=self.vehicle.get_world())
+            overtake=False)
         vehicle_state, _, _ = self.collision_manager(
             rx, ry, ryaw, self._map.get_waypoint(
                 self._ego_pos.location), adjacent_check=True)

@@ -6,8 +6,8 @@ Basic class for RSU(Roadside Unit) management.
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
 from EIdrive.core.common.data_dumper import DataDumper
-from EIdrive.core.sensing.perception.perception_manager import \
-    PerceptionManager
+from EIdrive.core.sensing.perception.perception import \
+    Perception
 from EIdrive.core.sensing.localization.rsu_localization_manager import \
     LocalizationManager
 
@@ -81,12 +81,12 @@ class RSUManager(object):
                                              sensing_config['localization'],
                                              self.carla_map)
         # perception module
-        self.perception_manager = PerceptionManager(vehicle=None,
-                                                    config_yaml=sensing_config['perception'],
-                                                    cav_world=cav_world,
-                                                    carla_world=carla_world,
-                                                    data_dump=data_dumping,
-                                                    infra_id=self.rid)
+        self.perception_manager = Perception(vehicle=None,
+                                             config_yaml=sensing_config['perception'],
+                                             cav_world=cav_world,
+                                             carla_world=carla_world,
+                                             data_dump=data_dumping,
+                                             infra_id=self.rid)
         if data_dumping:
             self.data_dumper = DataDumper(self.perception_manager,
                                           self.rid,

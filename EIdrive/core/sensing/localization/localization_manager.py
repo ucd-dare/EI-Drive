@@ -139,7 +139,7 @@ class ImuSensor(object):
         self.compass = sensor_data.compass
 
 
-class LocalizationManager(object):
+class Localizer(object):
     """
     Default localization module.
 

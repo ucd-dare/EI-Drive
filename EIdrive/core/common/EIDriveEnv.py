@@ -80,8 +80,8 @@ class EIDriveEnv(gym.Env):
         self.parameters = scenario_params['scenario']
 
         self.cav_world = CavWorld()
-        self.scenario_manager = sim_api.ScenarioManager(scenario_params, scenario_params.common_params.edge,
-                                                        town='Town06', cav_world=self.cav_world)
+        self.scenario_manager = sim_api.GameWorld(scenario_params, scenario_params.common_params.edge,
+                                                  town='Town06', cav_world=self.cav_world)
         self.world = self.scenario_manager.world
         self.map = self.world.get_map()
         self.ego_vehicle = None

@@ -41,28 +41,28 @@ def run_scenario(scenario_params):
         # create CAV world
         cav_world = CavWorld()
         # create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   scenario_params.scenario.edge,
-                                                   town='Town06',
-                                                   cav_world=cav_world)
+        gameworld = sim_api.GameWorld(scenario_params,
+                                      scenario_params.scenario.edge,
+                                      town='Town06',
+                                      cav_world=cav_world)
         if scenario_params.common_params.record:
-            scenario_manager.client. \
+            gameworld.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
-            scenario_manager.create_vehicle_agent(application=['single'], data_dump=False)
+            gameworld.create_vehicle_agent(application=['single'], data_dump=False)
 
         # Record the id of players
         for vm in single_cav_list:
             player_ids.append(vm.vehicle.id)
         # create background traffic in carla
         traffic_manager, bg_veh_list = \
-            scenario_manager.create_traffic_carla()
+            gameworld.create_traffic_carla()
         # create evaluation manager
         eval_manager = \
-            EvaluationManager(scenario_manager.cav_world,
+            EvaluationManager(gameworld.cav_world,
                               script_name='demo',
                               current_time='')
-        spectator = scenario_manager.world.get_spectator()
+        spectator = gameworld.world.get_spectator()
 
         # run steps
         v_speeds_list = []
@@ -85,57 +85,57 @@ def run_scenario(scenario_params):
                 continue
             # draw edge
             if t % 5 == 1 and scenario_params.scenario.edge:
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
                     size=0.5,  # initial 0.2
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=57, z=0.2),
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=22, z=0.2),
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=67, z=0.2),
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
             elif not scenario_params.scenario.edge:
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
                     size=0.5,
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=57, z=0.2),
                     size=0.5,
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=22, z=0.2),
                     size=0.5,
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
-                scenario_manager.world.debug.draw_point(
+                gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=67, z=0.2),
                     size=0.5,
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
 
-            scenario_manager.tick(single_cav_list)
+            gameworld.tick(single_cav_list)
 
             # zoom in/out spectator
             if t < 60:
@@ -155,7 +155,7 @@ def run_scenario(scenario_params):
                 if t < 185:
                     df_temp = df[(df['tick'] == t + 8) | (df['tick'] == t + 11) | (df['tick'] == t + 14)]
                     for k in range(18):
-                        scenario_manager.world.debug.draw_point(
+                        gameworld.world.debug.draw_point(
                             carla.Location(
                                 x=df_temp.iloc[k][0], y=df_temp.iloc[k][1],
                                 z=0.2),
@@ -165,7 +165,7 @@ def run_scenario(scenario_params):
                 if t > 14:
                     df_temp2 = df[(df['tick'] == t - 8) | (df['tick'] == t - 11) | (df['tick'] == t - 14)]
                     for k in range(18):
-                        scenario_manager.world.debug.draw_point(
+                        gameworld.world.debug.draw_point(
                             carla.Location(
                                 x=df_temp2.iloc[k][0], y=df_temp2.iloc[k][1],
                                 z=0.2),
@@ -175,7 +175,7 @@ def run_scenario(scenario_params):
                 if t < 185:
                     df_temp3 = df[(df['tick'] > t) & (df['tick'] < t + 16)]
                     for k in range(90):
-                        scenario_manager.world.debug.draw_point(
+                        gameworld.world.debug.draw_point(
                             carla.Location(
                                 x=df_temp3.iloc[k][0], y=df_temp3.iloc[k][1],
                                 z=0.2),
@@ -252,9 +252,9 @@ def run_scenario(scenario_params):
     finally:
         # eval_manager.evaluate()
         if scenario_params.common_params.record:
-            scenario_manager.client.stop_recorder()
+            gameworld.client.stop_recorder()
 
-        scenario_manager.close()
+        gameworld.close()
 
         for v in single_cav_list:
             v.destroy()

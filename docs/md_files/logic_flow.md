@@ -40,10 +40,10 @@ scenario_params = load_yaml(config_yaml)
 cav_world = CavWorld(opt.apply_ml)
 
 # create scenario manager
-scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                           opt.apply_ml,
-                                           town='Town06',
-                                           cav_world=cav_world)
+scenario_manager = sim_api.GameWorld(scenario_params,
+                                     opt.apply_ml,
+                                     town='Town06',
+                                     cav_world=cav_world)
 ```
 
 Afterwards, the platoons and single CAVs will be generated.

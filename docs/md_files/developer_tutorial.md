@@ -29,7 +29,7 @@ def run_scenario(opt, config_yaml):
     cav_world = CavWorld(opt.apply_ml)
     # create scenario manager
     scenario_manager =
-    sim_api.ScenarioManager(scenario_params, opt.apply_ml, xodr_path=xodr_path, cav_world=cav_world)
+    sim_api.GameWorld(scenario_params, opt.apply_ml, xodr_path=xodr_path, cav_world=cav_world)
 
 
 # create a list of single CAV
@@ -136,7 +136,7 @@ Now we will introduce each of them:
                                          z=cav_config['destination'][2])
             # The `update_info` method will call the internal localization module and perception module
             # to update position and detected objects. 
-            # Those information is then again passed to the v2x_manager/controller/BehaviorAgent module.
+            # Those information is then again passed to the v2x_manager/controller/AgentBehavior module.
             vehicle_manager.update_info()
             vehicle_manager.set_destination(vehicle_manager.vehicle.get_location(),destination,clean=True)
     
@@ -237,7 +237,7 @@ class VehicleManager(object):
         # perception module
         self.perception_manager = PerceptionManager(
             vehicle, sensing_config['perception'], cav_world.ml_manager, data_dumping)
-        # BehaviorAgent
+        # AgentBehavior
         self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
         # Control module
         self.controller = ControlManager(config_yaml['controller'])

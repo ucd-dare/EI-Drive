@@ -24,26 +24,26 @@ player_ids = []
 def run_scenario(scenario_params):
     scenario_runner = None
     cav_world = None
-    scenario_manager = None
+    gameworld = None
 
     try:
         # create CAV world
         cav_world = CavWorld()
         # create scenario manager
-        scenario_manager = sim_api.ScenarioManager(scenario_params,
-                                                   town='town06',
-                                                   cav_world=cav_world)
+        gameworld = sim_api.GameWorld(scenario_params,
+                                             town='town06',
+                                             cav_world=cav_world)
         if scenario_params.common_params.record:
-            scenario_manager.client.start_recorder("demo_loop.log", True)
+            gameworld.client.start_recorder("demo_loop.log", True)
 
-        single_cav_list = scenario_manager.create_vehicle_agent(application=['single'], data_dump=False)
+        single_cav_list = gameworld.create_vehicle_agent(application=['single'], data_dump=False)
 
         # create evaluation manager
         eval_manager = \
-            EvaluationManager(scenario_manager.cav_world,
+            EvaluationManager(gameworld.cav_world,
                               script_name='demo',
                               current_time='')
-        spectator = scenario_manager.world.get_spectator()
+        spectator = gameworld.world.get_spectator()
 
         # run steps
         t = 0
@@ -59,7 +59,7 @@ def run_scenario(scenario_params):
             if kl.keys['p']:
                 continue
 
-            scenario_manager.tick(single_cav_list)
+            gameworld.tick(single_cav_list)
 
             spec_controller.bird_view_following(single_cav_list[0].vehicle.get_transform())
 
@@ -72,9 +72,9 @@ def run_scenario(scenario_params):
         if cav_world is not None:
             cav_world.destroy()
         print("Destroyed cav_world")
-        if scenario_manager is not None:
-            scenario_manager.close()
-        print("Destroyed scenario_manager")
+        if gameworld is not None:
+            gameworld.close()
+        print("Destroyed gameworld")
         if scenario_runner is not None:
             scenario_runner.destroy()
         print("Destroyed scenario_runner")

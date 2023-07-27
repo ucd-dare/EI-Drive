@@ -344,7 +344,7 @@ class SemanticLidarSensor:
         self.timestamp = event.timestamp
 
 
-class PerceptionManager:
+class Perception:
     """
     Default perception module. Currenly only used to detect vehicles.
 
