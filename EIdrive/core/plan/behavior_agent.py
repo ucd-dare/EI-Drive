@@ -303,7 +303,7 @@ class AgentBehavior(object):
             self._global_planner = grp
 
         # Obtain route plan
-        route = self._global_planner.trace_route(
+        route = self._global_planner.route_generate(
             start_waypoint.transform.location,
             end_waypoint.transform.location)
 
