@@ -80,11 +80,12 @@ class EIDriveEnv(gym.Env):
         self.parameters = scenario_params['scenario']
 
         self.cav_world = CavWorld()
-        self.scenario_manager = sim_api.GameWorld(scenario_params, scenario_params.common_params.edge,
-                                                  town='Town06', cav_world=self.cav_world)
-        self.world = self.scenario_manager.world
+        self.gameworld = sim_api.GameWorld(scenario_params, scenario_params.scenario.edge,
+                                           town='Town06', cav_world=self.cav_world)
+        self.world = self.gameworld.world
         self.map = self.world.get_map()
         self.ego_vehicle = None
+        self.single_cav_list = None
         self.sr_process = None
         self.num_actors = 0
         self.prev_waypoint = None
@@ -127,7 +128,8 @@ class EIDriveEnv(gym.Env):
 
 
         if not self.use_scenario_runner:
-            single_cav_list = self.scenario_manager.create_vehicle_manager(application=['single'])
+            single_cav_list = self.gameworld.create_vehicle_agent(application=['single'])
+            self.single_cav_list = single_cav_list
             self.ego_vehicle = single_cav_list[0].vehicle
             self.spawn_points = self.parameters['single_cav_list'][0]['spawn_position']
             dest_idx = np.random.randint(len(self.spawn_points))
@@ -187,7 +189,7 @@ class EIDriveEnv(gym.Env):
         self.ego_vehicle.apply_control(control)
         self.curr_control = control
         self.scenario_runner.tick()
-        self.scenario_manager.tick()
+        self.gameworld.tick(self.single_cav_list)   # TODO: After revise the function of tick(), bug remains to be fixed.
         '''
         if self.use_scenario_runner:
             time.sleep(self.dt)
@@ -247,7 +249,7 @@ class EIDriveEnv(gym.Env):
             self.curr_control = carla.VehicleControl(throttle=0, steer=0, brake=0, hand_brake=False,
                                                      reverse=False, manual_gear_shift=False, gear=0)
             self.ego_vehicle.apply_control(self.curr_control)
-            self.scenario_manager.tick()
+            self.gameworld.tick()
         else:
             ti = time.perf_counter()
             self.scenario_runner.terminate_scenario()
@@ -329,9 +331,9 @@ class EIDriveEnv(gym.Env):
         lane_offset = self.ego_location.distance(center_location) / (lane_width/2)
         self.curr_lane_waypoint = lane_waypoint
         if self.render_waypoints:
-            self.scenario_manager.world.debug.draw_point(center_location, size=0.2, life_time=0.15)
-            self.scenario_manager.world.debug.draw_point(right_marking, size=0.2, life_time=0.15)
-            self.scenario_manager.world.debug.draw_point(left_marking, size=0.2, life_time=0.15)
+            self.gameworld.world.debug.draw_point(center_location, size=0.2, life_time=0.15)
+            self.gameworld.world.debug.draw_point(right_marking, size=0.2, life_time=0.15)
+            self.gameworld.world.debug.draw_point(left_marking, size=0.2, life_time=0.15)
         self.waypoint_buffer.clear()
         nxt = self.curr_lane_waypoint
         for idx in range(self.waypoint_horizon+1):
@@ -339,8 +341,8 @@ class EIDriveEnv(gym.Env):
             if nxt != None:
                 nxt = list(nxt.next(self.lane_resolution))[0]
                 if self.render_waypoints:
-                    self.scenario_manager.world.debug.draw_point(nxt.transform.location, size=0.2,
-                                                                 life_time=0.15)
+                    self.gameworld.world.debug.draw_point(nxt.transform.location, size=0.2,
+                                                          life_time=0.15)
 
         angles = []
         for i in range(self.waypoint_horizon):
@@ -429,7 +431,7 @@ class EIDriveEnv(gym.Env):
         plt.savefig('SAC_lane_keeping_rewards2.svg')
 
     def close(self):
-        self.scenario_manager.close()
+        self.gameworld.close()
         self.scenario_runner._cleanup()
         return
 

@@ -9,7 +9,7 @@ import carla
 import numpy as np
 
 from EIdrive.core.common.misc import cal_distance_angle, draw_trajetory_points
-from EIdrive.core.plan.spline import Spline2D
+from EIdrive.core.plan.cubic_spline import Spline2D
 
 
 class CollisionDetector:
@@ -141,7 +141,7 @@ class CollisionDetector:
 
         increment_distance = 0.1
 
-        # Create a 2D Spline with the gathered x and y coordinates
+        # Create a 2D CubicSpline with the gathered x and y coordinates
         created_spline = Spline2D(waypoint_x_coords, waypoint_y_coords)
         incremental_s_values = np.arange(created_spline.s[0], created_spline.s[-1], increment_distance)
 
@@ -150,10 +150,10 @@ class CollisionDetector:
         # Calculate interpolation points and the corresponding yaw values
         rx, ry, ryaw = [], [], []
         for s_val in incremental_s_values:
-            i_x, i_y = created_spline.calc_position(s_val)
+            i_x, i_y = created_spline.get_position(s_val)
             rx.append(i_x)
             ry.append(i_y)
-            ryaw.append(created_spline.calc_yaw(s_val))
+            ryaw.append(created_spline.get_yaw(s_val))
             debug_tmp.append(carla.Transform(carla.Location(i_x, i_y, 0)))
 
         return rx, ry, ryaw

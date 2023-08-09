@@ -15,7 +15,7 @@ import numpy as np
 
 from EIdrive.core.common.misc import distance_vehicle, draw_trajetory_points, \
     cal_distance_angle, compute_distance
-from EIdrive.core.plan.spline import Spline2D
+from EIdrive.core.plan.cubic_spline import Spline2D
 
 
 class RoadOption(Enum):
@@ -342,23 +342,23 @@ class LocalPlanner(object):
         # calculate interpolation points
         rx, ry, ryaw, rk = [], [], [], []
 
-        # Cubic Spline Interpolation calculation
+        # Cubic CubicSpline Interpolation calculation
         if len(x) < 2 or len(y) < 2:
             return rx, ry, rk, ryaw
 
         sp = Spline2D(x, y)
 
-        diff_x = current_location.x - sp.sx.y[0]
-        diff_y = current_location.y - sp.sy.y[0]
+        diff_x = current_location.x - sp.x_spline.y[0]
+        diff_y = current_location.y - sp.y_spline.y[0]
         diff_s = np.hypot(diff_x, diff_y)
 
         # we only need the interpolation points after current position
-        s = np.arange(diff_s, sp.s[-1], ds)
+        s = np.arange(diff_s, sp.arc_lengths[-1], ds)
 
         self._long_plan_debug = []
         # we only need the interpolation points until next waypoint
         for (i, i_s) in enumerate(s):
-            ix, iy = sp.calc_position(i_s)
+            ix, iy = sp.get_position(i_s)
             if abs(ix - x[index]) <= ds and abs(iy - y[index]) <= ds:
                 continue
             if i <= len(s) // 2:
@@ -366,8 +366,8 @@ class LocalPlanner(object):
                     carla.Transform(carla.Location(ix, iy, 0)))
             rx.append(ix)
             ry.append(iy)
-            rk.append(max(min(sp.calc_curvature(i_s), 0.2), -0.2))
-            ryaw.append(sp.calc_yaw(i_s))
+            rk.append(max(min(sp.get_curvature(i_s), 0.2), -0.2))
+            ryaw.append(sp.get_yaw(i_s))
 
         return rx, ry, rk, ryaw
 

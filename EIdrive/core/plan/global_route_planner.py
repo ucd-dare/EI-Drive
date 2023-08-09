@@ -33,9 +33,9 @@ class GlobalRoutePlanner(object):
         The last behavioral choice of the ego vehicle.
     """
 
-    def __init__(self, dao):
-
-        self.dao = dao
+    def __init__(self, world_map, sampling_resolution):
+        self._sampling_resolution = sampling_resolution
+        self._world_map = world_map
         self.topology = None
         self.graph = None
         self.id_map = None
@@ -43,12 +43,84 @@ class GlobalRoutePlanner(object):
         self.intersection_end_node = -1
         self.prior_decision = RoadOption.VOID
 
+    def get_topology(self):
+        """
+        Accessor for topology. This function first gets the topology from the server, which is a list of road
+        segments represented by pairs of waypoint objects. Then, it processes this list into a collection of
+        dictionaries, each dictionary representing a road segment with the following key-value pairs
+
+        :return topology_data:
+            'entry'    - The waypoint at the starting point of the road segment.
+            'entryxyz' - The (x,y,z) coordinates of the starting point of the road segment.
+            'exit'     - The waypoint at the end point of the road segment.
+            'exitxyz'  - The (x,y,z) coordinates of the end point of the road segment.
+            'path'     - A list of waypoints that are 1m apart, representing the path from the entry to the exit point.
+        """
+        topology_data = []
+
+        for segment in self._world_map.get_topology():
+            # Unpack segment waypoints
+            entry_waypoint, exit_waypoint = segment
+
+            # Retrieve and round off waypoint locations
+            entry_loc = np.round([entry_waypoint.transform.location.x,
+                                  entry_waypoint.transform.location.y,
+                                  entry_waypoint.transform.location.z], 0)
+            exit_loc = np.round([exit_waypoint.transform.location.x,
+                                 exit_waypoint.transform.location.y,
+                                 exit_waypoint.transform.location.z], 0)
+
+            # Initialize a dictionary for segment data
+            segment_info = {
+                'entry': entry_waypoint,
+                'exit': exit_waypoint,
+                'entryxyz': tuple(entry_loc),
+                'exitxyz': tuple(exit_loc),
+                'path': []
+            }
+
+            # If the distance between entry and exit points is larger than sampling resolution
+            if entry_waypoint.transform.location.distance(exit_waypoint.transform.location) > self._sampling_resolution:
+                waypoint = entry_waypoint.next(self._sampling_resolution)[0]
+
+                # Collect waypoints until we reach the exit point
+                while waypoint.transform.location.distance(
+                        exit_waypoint.transform.location) > self._sampling_resolution:
+                    segment_info['path'].append(waypoint)
+                    waypoint = waypoint.next(self._sampling_resolution)[0]
+            else:
+                segment_info['path'].append(entry_waypoint.next(self._sampling_resolution)[0])
+
+            # Append this segment's information to the topology data
+            topology_data.append(segment_info)
+
+        return topology_data
+
+    def get_waypoint(self, location):
+        """
+        The function returns waypoint at the specific location.
+
+        Args:
+            -location (carla.location): Location of vehicle.
+        Returns:
+            -waypoint (carla.waypoint): Newly generated waypoint close
+            to location.
+        """
+        waypoint = self._world_map.get_waypoint(location)
+        return waypoint
+
+    def get_resolution(self):
+        """
+        Return the sampling resolution.
+        """
+        return self._sampling_resolution
+
     def setup(self):
         """
         Performs initial server data lookup for detailed topology
         and builds graph representation of the world map.
         """
-        self.topology = self.dao.get_topology()
+        self.topology = self.get_topology()
         self.graph, self.id_map, self.road_id_to_edge = self.construct_graph()
         self.identify_unconnected_segments()
         self.add_lane_change_links()
@@ -120,7 +192,7 @@ class GlobalRoutePlanner(object):
         adds them to the internal graph representation.
         """
         loose_end_count = 0
-        resolution = self.dao.get_resolution()
+        resolution = self.get_resolution()
 
         # Iterate over the topology to find loose ends
         for segment in self.topology:
@@ -168,7 +240,7 @@ class GlobalRoutePlanner(object):
         Returns:
             edge (tuple): A pair of node IDs representing an edge in the graph.
         """
-        waypoint = self.dao.get_waypoint(location)
+        waypoint = self.get_waypoint(location)
         edge = None
         try:
             edge = \
@@ -467,9 +539,9 @@ class GlobalRoutePlanner(object):
 
         route_waypoint = []
         path = self.global_route_search(start, end)
-        current_waypoint = self.dao.get_waypoint(start)
-        destination_waypoint = self.dao.get_waypoint(end)
-        resolution = self.dao.get_resolution()
+        current_waypoint = self.get_waypoint(start)
+        destination_waypoint = self.get_waypoint(end)
+        resolution = self.get_resolution()
 
         for i in range(len(path) - 1):
             maneuver = self.determine_turn(i, path)

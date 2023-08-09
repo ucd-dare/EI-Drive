@@ -1,4 +1,5 @@
 test_scenario: DQN_demo
+edge: false
 
 single_cav_list:
   - id: 0

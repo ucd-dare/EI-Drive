@@ -19,8 +19,6 @@ from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_planner_behavior import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
-from EIdrive.core.plan.global_route_planner_dao import GlobalRoutePlannerDAO
-from EIdrive.core.plan.planer_debug_helper import PlanDebugHelper
 
 
 class DQNAgent(object):
@@ -79,9 +77,6 @@ class DQNAgent(object):
 
     objects : dict
         The dictionary that contains all kinds of objects nearby.
-
-    debug_helper : PlanDebugHelper
-        The helper class that help with the debug functions.
     """
 
     def __init__(self, vehicle, carla_map, config_yaml):
@@ -141,9 +136,6 @@ class DQNAgent(object):
         self.obstacle_vehicles = []
         self.objects = {}
 
-        # debug helper
-        self.debug_helper = PlanDebugHelper(self.vehicle.id)
-
     def update_information(self, ego_pos, ego_speed, objects):
         """
         Update the perception and localization information
@@ -171,9 +163,6 @@ class DQNAgent(object):
         # current version only consider about vehicles
         obstacle_vehicles = objects['vehicles']
         self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
-
-        # update the debug helper
-        self.debug_helper.update(ego_speed, self.ttc)
 
         if self.ignore_traffic_light:
             self.light_state = "Green"
@@ -336,9 +325,9 @@ class DQNAgent(object):
         # Setting up global router
         if self._global_planner is None:
             wld = self.vehicle.get_world()
-            dao = GlobalRoutePlannerDAO(
-                wld.get_map(), sampling_resolution=self._sampling_resolution)
-            grp = GlobalRoutePlanner(dao)
+            # dao = GlobalRoutePlannerDAO(
+            #     wld.get_map(), sampling_resolution=self._sampling_resolution)
+            grp = GlobalRoutePlanner(wld.get_map(), sampling_resolution=self._sampling_resolution)
             grp.setup()
             self._global_planner = grp
 
