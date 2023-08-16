@@ -410,8 +410,8 @@ class BehaviorAgent(object):
 ```
 
 * `update_information`
-    The `VehicleManager` will call `agent.update_information` to update the position and speed as well as the detected objects. Afterward, the agent will update the local planner with the new speed/location information. For the detected objects, it may contain the vehicles that are about to join the platooning and those vehicles should be managed by the platooning manager. Thus we should remove those vehicles from the `objects` like shown below. Besides, we will also update the traffic light state here. 
-    
+    The `VehicleManager` will call `agent.update_information` to update the position and speed as well as the detected objects. Afterward, the agent will update the local planner with the new speed/location information. For the detected objects, it may contain the vehicles that are about to join the platooning and those vehicles should be managed by the platooning manager. Thus we should remove those vehicles from the `objects` like shown below. Besides, we will also update the traffic light state here.
+
     ```python
     def update_information(self, ego_pos, ego_speed, objects):
         # update localization information
@@ -423,10 +423,10 @@ class BehaviorAgent(object):
         self.get_local_planner().update_information(ego_pos, ego_speed)
         # The white list contains all position of target platoon member for joining. 
         # Those vehicles should be managed by platooning manager. Thus we should remove them.
-        # Right now the white_list_match function will associate the vehicles 
+        # Right now the white_list_filt function will associate the vehicles 
         # based on their lane_id and location.
         obstacle_vehicles = objects['vehicles']
-        self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
+        self.obstacle_vehicles = self.white_list_filter(obstacle_vehicles)
       
         # update the debug helper
         self.debug_helper.update(ego_speed, self.ttc)

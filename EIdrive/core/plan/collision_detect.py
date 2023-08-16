@@ -143,7 +143,7 @@ class CollisionDetector:
 
         # Create a 2D CubicSpline with the gathered x and y coordinates
         created_spline = Spline2D(waypoint_x_coords, waypoint_y_coords)
-        incremental_s_values = np.arange(created_spline.s[0], created_spline.s[-1], increment_distance)
+        incremental_s_values = np.arange(created_spline.arc_lengths[0], created_spline.arc_lengths[-1], increment_distance)
 
         debug_tmp = []
 
@@ -166,13 +166,13 @@ class CollisionDetector:
             potential_obstacle,
             velocity,
             carla_roadmap,
-            adjacent_lane_check=False):
+            adjacent_check=False):
         """
         Checks for potential collision hazards on the proposed route using
         circular collision checking mechanism.
 
         Parameters
-            - adjacent_lane_check (boolean): Indicates whether adjacent lane checking should be done.
+            - adjacent_check (boolean): Indicates whether adjacent lane checking should be done.
               Note: The complete path should always be provided when performing an adjacent lane check.
             - velocity (float): The speed of the ego vehicle in meters per second.
             - route_yaw (float): A list of yaw angles.
@@ -189,7 +189,7 @@ class CollisionDetector:
         # Determine how far ahead to check, based on speed.
         # If the speed is very low, use a minimum threshold for the check distance
         check_distance = min(max(int(self.time_ahead * velocity / 0.1), 90),
-                             len(route_x)) if not adjacent_lane_check else len(route_x)
+                             len(route_x)) if not adjacent_check else len(route_x)
 
         potential_obstacle_location = potential_obstacle.get_location()
         potential_obstacle_yaw = carla_roadmap.get_waypoint(

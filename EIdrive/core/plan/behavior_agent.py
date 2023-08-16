@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-"""Behavior planning module
+"""
+Behavior planning module by rule-base method.
 """
 
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
-import math
-import random
 import sys
-
 import numpy as np
 import carla
 import importlib
-from collections import deque
 
+from collections import deque
 from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_planner_behavior import LocalPlanner
@@ -24,7 +16,8 @@ from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 
 class AgentBehavior(object):
     """
-    A modulized version of carla AgentBehavior.
+    A modulized version of carla AgentBehavior to deal with vehicle behavior, especially the trajectory planning with
+    rule-based method.
 
     Parameters
     ----------
@@ -34,18 +27,18 @@ class AgentBehavior(object):
     carla_map : carla.map
         The carla HD map for simulation world.
 
-    config_yaml : dict
+    behavior_config : dict
         The configuration dictionary of the localization module.
 
     Attributes
     ----------
-    _ego_pos : carla.position
+    vehicle_pos : carla.position
         Posiion of the ego vehicle.
 
-    _ego_speed : float
+    vehicle_speed : float
         Speed of the ego vehicle.
 
-    _map : carla.map
+    map : carla.map
         The HD map of the current simulation world.
 
     max_speed : float
@@ -63,13 +56,13 @@ class AgentBehavior(object):
     overtake_allowed : boolean
         Boolean indicator of whether to allow overtake.
 
-    _local_planner : LocalPlanner
+    local_planner : LocalPlanner
         A carla local planner class for behavior planning.
 
     lane_change_allowed : boolean
         Boolean indicator of whether the lane change is allowed.
 
-    white_list : list
+    safe_vehicles : list
         The white list contains all position of target
         platoon member for joining.
 
@@ -80,101 +73,97 @@ class AgentBehavior(object):
         The dictionary that contains all kinds of objects nearby.
     """
 
-    def __init__(self, vehicle, carla_map, config_yaml, control_yaml):
+    def __init__(self, vehicle, carla_map, behavior_config, control_config):
 
         self.vehicle = vehicle
-        # ego pos(transform) and speed(km/h) retrieved from localization module
-        self._ego_pos = None
-        self._ego_speed = 0.0
-        self._map = carla_map
 
-        # speed related, check yaml file to see the meaning
-        self.max_speed = config_yaml['max_speed']
-        self.tailgate_speed = config_yaml['tailgate_speed']
-        self.speed_lim_dist = config_yaml['speed_lim_dist']
-        self.speed_decrease = config_yaml['speed_decrease']
+        # Position and speed from localization module
+        self.vehicle_pos = None
+        self.vehicle_speed = 0.0
+        self.map = carla_map
 
-        # safety related
-        self.safety_time = config_yaml['safety_time']
-        self.emergency_param = config_yaml['emergency_param']
+        # Speed related configurations
+        self.max_speed = behavior_config['max_speed']
+        self.tailgate_speed = behavior_config['tailgate_speed']
+        self.max_speed_margin = behavior_config['max_speed_margin']
+        self.speed_decrease = behavior_config['speed_decrease']
+
+        # Safety related configurations
+        self.safety_time = behavior_config['safety_time']
+        self.emergency_param = behavior_config['emergency_param']
         self.break_distance = 0
         self.ttc = 1000
-        # collision checker
-        self._collision_detector = CollisionDetector(
-            time_ahead=config_yaml['collision_time_ahead'])
-        self.ignore_traffic_light = config_yaml['ignore_traffic_light']
-        self.overtake_allowed = config_yaml['overtake_allowed']
-        self.overtake_allowed_origin = config_yaml['overtake_allowed']
-        self.overtake_counter = 0
-        # used to indicate whether a vehicle is on the planned path
-        self.hazard_flag = False
 
-        # route planner related
-        self._global_planner = None
+        # Initialize collision detector
+        self._collision_detector = CollisionDetector(
+            time_ahead=behavior_config['collision_time_ahead'])
+        self.ignore_traffic_light = behavior_config['ignore_traffic_light']
+        self.overtake_allowed = behavior_config['overtake_allowed']
+        self.overtake_allowed_origin = behavior_config['overtake_allowed']
+        self.overtake_counter = 0
+
+        # Route planning related
+        self.global_planner = None
         self.start_waypoint = None
         self.end_waypoint = None
-        self._sampling_resolution = config_yaml['sample_resolution']
+        self.sampling_resolution = behavior_config['sample_resolution']
 
-        # intersection agent related
+        # Intersection handling
         self.light_state = "Red"
         self.light_id_to_ignore = -1
         self.stop_sign_wait_count = 0
 
-        # trajectory planner
-        self._local_planner = LocalPlanner(
-            self, carla_map, config_yaml['local_planner'])
+        # Initialize trajectory planning
+        self.local_planner = LocalPlanner(self, carla_map, behavior_config['local_planner'])
 
-        # controller
-        controller_type = control_yaml['type']
-        controller = getattr(
-            importlib.import_module(
-                "EIdrive.core.actuation.%s" %
-                controller_type), 'Controller')
-        self.controller = controller(control_yaml['args'])
+        # Initialize controller
+        controller_type = control_config['type']
+        controller = getattr(importlib.import_module("EIdrive.core.actuation.%s" % controller_type), 'Controller')
+        self.controller = controller(control_config['args'])
 
-        # special behavior related
+        # Behavior indicator related
         self.car_following_flag = False
         # lane change allowed flag
         self.lane_change_allowed = True
         # destination temp push flag
         self.destination_push_flag = 0
 
-        # white list of vehicle managers that the cav does not consider as
-        # obstacles
+        # white list of vehicle managers that the cav does not consider as obstacles
         self.white_list = []
         self.obstacle_vehicles = []
         self.objects = {}
 
-    def update_information(self, ego_pos, ego_speed, objects):
+    def update_information(self, current_position, current_speed, detected_objects):
         """
-        Update the perception and localization information
-        to the behavior agent.
+        Update agent state from the perception and localization module.
 
-        Parameters
+        Parameters:
         ----------
-        ego_pos : carla.Transform
-            Ego position from localization module.
+        current_position : carla.Transform
+            Current location of the vehicle from the localization module.
 
-        ego_speed : float
-            km/h, ego speed.
+        current_speed : float
+            The vehicle's speed in km/h.
 
-        objects : dict
-            Objects detection results from perception module.
+        detected_objects : dict
+            Detected entities from the perception module, encompassing vehicles and other objects.
         """
-        # update localization information
-        self._ego_speed = ego_speed
-        self._ego_pos = ego_pos
-        self.break_distance = self._ego_speed / 3.6 * self.emergency_param
-        # update the localization info to trajectory planner
-        self.get_local_planner().update_information(ego_pos, ego_speed)
+        # update vehicle's movement information
+        self.vehicle_speed = current_speed
+        self.vehicle_pos = current_position
+        self.break_distance = self.vehicle_speed / 3.6 * self.emergency_param
 
-        # update the controller
-        self.controller.update_info(ego_pos, ego_speed)
+        # update the localization info to local planner
+        self.get_local_planner().update_information(current_position, current_speed)
 
-        self.objects = objects
-        # current version only consider about vehicles
-        obstacle_vehicles = objects['vehicles']
-        # self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
+        # update the localization info to the controller
+        self.controller.update_info(current_position, current_speed)
+
+        self.objects = detected_objects
+
+        # For current version, consider vehicles only.
+        obstacle_vehicles = detected_objects['vehicles']
+        self.obstacle_vehicles = self.white_list_filter(obstacle_vehicles)
 
         if self.ignore_traffic_light:
             self.light_state = "Green"
@@ -182,673 +171,685 @@ class AgentBehavior(object):
             # This method also includes stop signs and intersections.
             self.light_state = str(self.vehicle.get_traffic_light_state())
 
-    def set_destination(
-            self,
-            start_location,
-            end_location,
-            clean=False,
-            end_reset=True,
-            clean_history=False):
+    def white_list_filter(self, detected_obstacles):
         """
-        This method creates a list of waypoints from agent's
-        position to destination location based on the route returned
-        by the global router.
+        Filters out obstacles that are present in the whitelist.
+        The whitelist consists of the positions of target platoon members for joining.
 
         Parameters
         ----------
-        end_reset : boolean
-            Flag to reset the waypoint queue.
+        detected_obstacles : list
+            A list of detected carla.Vehicle or ObstacleVehicle instances.
 
-        start_location : carla.location
-            Initial position.
-
-        end_location : carla.location
-            Final position.
-
-        clean : boolean
-            Flag to clean the waypoint queue.
-
-        clean_history : boolean
-            Flag to clean the waypoint history.
+        Returns
+        -------
+        filtered_obstacles : list
+            List of obstacles after filtering out whitelisted ones.
         """
-        if clean:
-            self.get_local_planner().get_waypoints_queue().clear()
-            self.get_local_planner().get_trajectory().clear()
-            self.get_local_planner().get_waypoint_buffer().clear()
-        if clean_history:
-            self.get_local_planner().get_history_buffer().clear()
 
-        self.start_waypoint = self._map.get_waypoint(start_location)
+        filtered_obstacles = []
 
-        # make sure the start waypoint is behind the vehicle
-        if self._ego_pos:
-            cur_loc = self._ego_pos.location
-            cur_yaw = self._ego_pos.rotation.yaw
-            _, angle = cal_distance_angle(
-                self.start_waypoint.transform.location, cur_loc, cur_yaw)
+        for obstacle in detected_obstacles:
+            is_whitelisted = False
 
-            while angle > 90:
+            obstacle_location = obstacle.get_location()
+            obstacle_waypoint = self.map.get_waypoint(obstacle_location)
+            obstacle_lane_id = obstacle_waypoint.lane_id
+
+            for vehicle_member in self.white_list:
+                member_position = vehicle_member.v2x_manager.get_ego_pos()
+                member_waypoint = self.map.get_waypoint(member_position.location)
+                member_lane_id = member_waypoint.lane_id
+
+                # Compare lane IDs and positions
+                if (obstacle_lane_id == member_lane_id) and \
+                   (abs(member_position.location.x - obstacle_location.x) <= 3.0) and \
+                   (abs(member_position.location.y - obstacle_location.y) <= 3.0):
+                    is_whitelisted = True
+                    break
+
+            if not is_whitelisted:
+                filtered_obstacles.append(obstacle)
+
+        return filtered_obstacles
+
+    def set_local_planner(
+            self,
+            origin,
+            destination,
+            clear_waypoints=False,
+            reset_end=True,
+            clear_history=False):
+        """
+        Establish a route of waypoints from the vehicle's current position to the specified destination.
+        It utilizes the global router to derive this route.
+
+        Parameters
+        ----------
+        origin : carla.location
+            Starting location for the route.
+
+        destination : carla.location
+            Ending location for the route.
+
+        clear_waypoints : boolean
+            If True, clears the existing waypoint queue.
+
+        reset_end : boolean
+            If True, resets the ending waypoint of the route.
+
+        clear_history : boolean
+            If True, clears the waypoint history.
+        """
+
+        # Clear the existing waypoints and trajectories if needed
+        if clear_waypoints:
+            self.local_planner.get_waypoints_queue().clear()
+            self.local_planner.get_trajectory().clear()
+            self.local_planner.get_waypoint_buffer().clear()
+        if clear_history:
+            self.local_planner.get_history_buffer().clear()
+
+        # Retrieve the starting waypoint
+        self.start_waypoint = self.map.get_waypoint(origin)
+
+        # Ensure the start waypoint is situated behind the vehicle
+        if self.vehicle_pos:
+            current_location = self.vehicle_pos.location
+            current_yaw = self.vehicle_pos.rotation.yaw
+            _, yaw_angle = cal_distance_angle(self.start_waypoint.transform.location, current_location, current_yaw)
+
+            while yaw_angle > 90:
                 self.start_waypoint = self.start_waypoint.next(1)[0]
-                _, angle = cal_distance_angle(
-                    self.start_waypoint.transform.location, cur_loc, cur_yaw)
+                _, yaw_angle = cal_distance_angle(self.start_waypoint.transform.location, current_location, current_yaw)
 
-        end_waypoint = self._map.get_waypoint(end_location)
-        if end_reset:
+        end_waypoint = self.map.get_waypoint(destination)
+        if reset_end:
             self.end_waypoint = end_waypoint
 
-        route_trace = self._trace_route(self.start_waypoint, end_waypoint)
+        # Compute the global route from start to end
+        global_route = self.generate_global_route(self.start_waypoint, end_waypoint)
 
-        self._local_planner.set_global_plan(route_trace, clean)
+        # Set this global route for the local planner
+        self.local_planner.set_global_plan(global_route, clear_waypoints)
 
     def get_local_planner(self):
         """
         return the local planner
         """
-        return self._local_planner
+        return self.local_planner
 
-    def reroute(self, spawn_points):
+    def generate_global_route(self, start_waypoint, end_waypoint):
         """
-        TODO: This function seems to be useless.
-        This method implements re-routing for vehicles
-        approaching its destination.  It finds a new target and
-         computes another path to reach it.
-
-        Parameters
-        ----------
-        spawn_points : list
-            List of possible destinations for the agent.
-        """
-
-        print("Target almost reached, setting new destination...")
-        random.shuffle(spawn_points)
-        new_start = \
-            self._local_planner.waypoints_queue[-1][0].transform.location
-        destination = spawn_points[0].location if \
-            spawn_points[0].location != new_start else spawn_points[1].location
-        print("New destination: " + str(destination))
-
-        self.set_destination(new_start, destination)
-
-    def _trace_route(self, start_waypoint, end_waypoint):
-        """
-        This method sets up a global router and returns the
-        optimal route from start_waypoint to end_waypoint.
+        Generate an optimal route between the provided start and end waypoints using a global planner.
 
         Parameters
         ----------
         start_waypoint : carla.waypoint
-            Initial position.
+            The starting waypoint for the route.
 
         end_waypoint : carla.waypoint
-            Final position.
+            The destination waypoint for the route.
         """
-        # Setting up global router
-        if self._global_planner is None:
-            wld = self.vehicle.get_world()
-            grp = GlobalRoutePlanner(wld.get_map(), sampling_resolution=self._sampling_resolution)
-            grp.setup()
-            self._global_planner = grp
 
-        # Obtain route plan
-        route = self._global_planner.route_generate(
+        # Initialize global router if it's not set
+        if self.global_planner is None:
+            world = self.vehicle.get_world()
+            route_planner = GlobalRoutePlanner(world.get_map(), sampling_resolution=self.sampling_resolution)
+            route_planner.setup()
+            self.global_planner = route_planner
+
+        # Fetch route using global planner
+        global_route = self.global_planner.route_generate(
             start_waypoint.transform.location,
             end_waypoint.transform.location)
 
-        return route
+        return global_route
 
-    def traffic_light_manager(self, waypoint):
+    def check_collision(self, path_x, path_y, path_yaw, current_waypoint, check_adjacent_lane=False):
         """
-        TODO: This function seems to be useless.
-        This method is in charge of behaviors for red lights and stops.
-        WARNING: What follows is a proxy to avoid having a car brake after
-        running a yellow light. This happens because the car is still under
-        the influence of the semaphore, even after passing it.
-        So, the semaphore id is temporarely saved to ignore it and go around
-        this issue, until the car is near a new one.
+        Monitors the potential collisions along the planned path with obstacles.
 
         Parameters
         ----------
-        waypoint : carla.waypoint
+        path_x : float
+            X coordinates of the planned path.
+
+        path_y : float
+            Y coordinates of the planned path.
+
+        path_yaw : float
+            Yaw angle of the planned path.
+
+        current_waypoint : carla.waypoint
             Current waypoint of the agent.
 
+        check_adjacent_lane : boolean, optional
+            Flag to determine if adjacent lanes should be checked for collisions.
+
+        Returns
+        -------
+        is_collision_detected: bool
+            True if there's a potential collision, False otherwise.
+
+        colliding_vehicle: carla.Vehicle
+            The vehicle causing the potential collision, or None if there's no collision.
+
+        min_distance: float
+            Minimum distance to the colliding vehicle.
+        """
+        is_collision_detected = False
+        min_distance = float('inf')
+        colliding_vehicle = None
+
+        for vehicle in self.obstacle_vehicles:
+            collision_free = self._collision_detector.circle_collision_check(
+                path_x, path_y, path_yaw, vehicle, self.vehicle_speed / 3.6, self.map,
+                adjacent_check=check_adjacent_lane)
+
+            if not collision_free:
+                is_collision_detected = True
+                # Adjusting for typical vehicle length
+                distance_to_vehicle = max(vehicle.get_location().distance(current_waypoint.transform.location) - 3, 0)
+
+                if distance_to_vehicle < min_distance:
+                    min_distance = distance_to_vehicle
+                    colliding_vehicle = vehicle
+
+        return is_collision_detected, colliding_vehicle, min_distance
+
+    def overtake_management(self, obstacle_vehicle):
+        """
+        Determines if the vehicle can overtake on the left or right, and sets the destination accordingly.
+
+        Parameters
+        ----------
+        obstacle_vehicle : carla.vehicle
+            The vehicle obstructing the path.
+
+        Returns
+        -------
+        hazardous_situation: bool
+            True if the vehicle is in a hazardous situation, otherwise False.
+        """
+        # Determine the location and waypoints related to the obstacle vehicle
+        obstacle_location = obstacle_vehicle.get_location()
+        obstacle_waypoint = self.map.get_waypoint(obstacle_location)
+
+        # Determine lane change possibilities
+        can_turn_left = obstacle_waypoint.left_lane_marking.lane_change
+        can_turn_right = obstacle_waypoint.right_lane_marking.lane_change
+
+        left_adjacent_waypoint = obstacle_waypoint.get_left_lane()
+        right_adjacent_waypoint = obstacle_waypoint.get_right_lane()
+
+        # Check for possible left overtaking
+        if (can_turn_left in [carla.LaneChange.Left, carla.LaneChange.Both]) and \
+           left_adjacent_waypoint and \
+           obstacle_waypoint.lane_id * left_adjacent_waypoint.lane_id > 0 and \
+           left_adjacent_waypoint.lane_type == carla.LaneType.Driving:
+
+            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
+                ego_loc=self.vehicle_pos.location,
+                target_wpt=left_adjacent_waypoint,
+                overtake=True)
+
+            hazardous_situation, _, _ = self.check_collision(
+                path_x, path_y, path_yaw,
+                self.map.get_waypoint(self.vehicle_pos.location),
+                check_adjacent_lane=True)
+
+            if not hazardous_situation:
+                print("Performing left overtaking")
+                self.overtake_counter = 100
+                next_waypoints = left_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
+
+                if not next_waypoints:
+                    return True
+
+                target_waypoint = next_waypoints[0]
+                left_adjacent_waypoint = left_adjacent_waypoint.next(5)[0]
+
+                self.set_local_planner(
+                    left_adjacent_waypoint.transform.location,
+                    target_waypoint.transform.location,
+                    clear_waypoints=True,
+                    reset_end=False)
+                return hazardous_situation
+
+        # Check for possible right overtaking
+        if (can_turn_right in [carla.LaneChange.Right, carla.LaneChange.Both]) and \
+           right_adjacent_waypoint and \
+           obstacle_waypoint.lane_id * right_adjacent_waypoint.lane_id > 0 and \
+           right_adjacent_waypoint.lane_type == carla.LaneType.Driving:
+
+            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
+                ego_loc=self.vehicle_pos.location,
+                target_wpt=right_adjacent_waypoint,
+                overtake=True)
+
+            hazardous_situation, _, _ = self.check_collision(
+                path_x, path_y, path_yaw,
+                self.map.get_waypoint(self.vehicle_pos.location),
+                check_adjacent_lane=True)
+
+            if not hazardous_situation:
+                print("Performing right overtaking")
+                self.overtake_counter = 100
+                next_waypoints = right_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
+
+                if not next_waypoints:
+                    return True
+
+                target_waypoint = next_waypoints[0]
+                right_adjacent_waypoint = right_adjacent_waypoint.next(5)[0]
+
+                self.set_local_planner(
+                    right_adjacent_waypoint.transform.location,
+                    target_waypoint.transform.location,
+                    clear_waypoints=True,
+                    reset_end=False)
+                return hazardous_situation
+
+        return True
+
+    def check_lane_change(self):
+        """
+        Evaluate if a lane change presents any potential hazards.
+
+        Returns
+        -------
+        hazardous_situation: bool
+            True if the lane change is risky, otherwise False.
+        """
+        # Determine the current lane of the vehicle
+        current_waypoint = self.map.get_waypoint(self.vehicle_pos.location)
+        current_lane_id = current_waypoint.lane_id
+        adjacent_lane_waypoint = None
+
+        # Identify the nearest waypoint in the neighboring lane
+        for waypoint_data in self.get_local_planner().get_waypoint_buffer():
+            if waypoint_data[0].lane_id != current_lane_id:
+                adjacent_lane_waypoint = waypoint_data[0]
+                break
+
+        # If no adjacent lane waypoint found, consider lane change as risky
+        if not adjacent_lane_waypoint:
+            return True
+
+        # Check for potential collisions during a lane change
+        path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
+            ego_loc=self.vehicle_pos.location,
+            target_wpt=adjacent_lane_waypoint,
+            overtake=False)
+
+        hazardous_situation, _, _ = self.check_collision(
+            path_x, path_y, path_yaw,
+            self.map.get_waypoint(self.vehicle_pos.location),
+            check_adjacent_lane=True)
+
+        return hazardous_situation
+
+    def manage_car_following(self, lead_vehicle, lead_distance, desired_speed=None):
+        """
+        Handles the car-following behaviors when there is a vehicle in front.
+
+        Parameters
+        ----------
+        lead_vehicle : carla.vehicle
+            The vehicle in front which our vehicle follows.
+
+        lead_distance : float
+            Distance to the leading vehicle.
+
+        desired_speed : float, optional
+            Desired speed for following. Defaults to max speed minus margin.
+
+        Returns
+        -------
+        adjusted_speed : float
+            The recommended speed to maintain safe following distance.
+        """
+        # Default to a reduced maximum speed if none is provided
+        if not desired_speed:
+            desired_speed = self.max_speed - self.max_speed_margin
+
+        lead_vehicle_speed = get_speed(lead_vehicle)
+
+        # Calculate speed difference and time to collision
+        speed_difference = max(1, (self.vehicle_speed - lead_vehicle_speed) / 3.6)
+        time_to_collision = lead_distance / speed_difference if speed_difference != 0 else lead_distance / np.nextafter(0., 1.)
+
+        self.ttc = time_to_collision
+
+        # If within a critical time frame, decelerate.
+        if self.safety_time > time_to_collision > 0.0:
+            adjusted_speed = min(positive(lead_vehicle_speed - self.speed_decrease), desired_speed)
+        # Otherwise, attempt to match the leading vehicle's speed.
+        else:
+            adjusted_speed = 0 if lead_vehicle_speed == 0 else min(lead_vehicle_speed + 1, desired_speed)
+
+        return adjusted_speed
+
+    def is_near_intersection(self, objects, waypoint_buffer):
+        """
+        Determines if upcoming waypoints are near an intersection by comparing
+        their distances to traffic lights.
+
+        Parameters
+        ----------
+        objects : dict
+            Dictionary containing information about various environmental objects.
+
+        waypoint_buffer : deque
+            Queue of upcoming waypoints.
+
+        Returns
+        -------
+        is_near_intersection : boolean
+            Indicates if any upcoming waypoint is near an intersection.
+        """
+        traffic_lights = objects['traffic_lights']
+
+        for traffic_light in traffic_lights:
+            for waypoint, _ in waypoint_buffer:
+                distance_to_light = traffic_light.get_location().distance(waypoint.transform.location)
+                if distance_to_light < 20:
+                    return True
+
+        return False
+
+    def is_near_destination(self):
+        """
+        Determines if the ego vehicle's current position is close to destination.
+
+        Returns
+        -------
+        is_near : boolean
+            True if the ego vehicle's current position is close to its destination; otherwise, False.
+        """
+        proximity_x = abs(self.vehicle_pos.location.x - self.end_waypoint.transform.location.x) <= 10
+        proximity_y = abs(self.vehicle_pos.location.y - self.end_waypoint.transform.location.y) <= 10
+
+        is_near = proximity_x and proximity_y
+        return is_near
+
+    def is_lane_change_allowed(self, previous_permission, collision_detection_enabled, curvature_list):
+        """
+        Determines whether a lane change is allowed.
+        A multitude of conditions impact this decision, including road curvature,
+        the state of the collision detector, and current overtake and push statuses.
+        For an exhaustive list of conditions, please consult the function's logic.
+
+        Parameters
+        ----------
+        previous_permission : boolean
+            Permission for lane change from the previous check.
+
+        collision_detection_enabled : boolean
+            Indicates if the collision detection mechanism is active.
+
+        curvature_list : list
+            List containing curvature values for the planned path points.
+
+        Returns
+        -------
+        is_lane_change_allowed : boolean
+            True if the lane change is feasible, otherwise False.
         """
 
-        light_id = self.vehicle.get_traffic_light(
-        ).id if self.vehicle.get_traffic_light() is not None else -1
+        # Forbid lane change if the path has significant curvature
+        if len(curvature_list) > 2 and np.mean(np.abs(np.array(curvature_list))) > 0.04:
+            previous_permission = False
 
-        # this is the case where the vehicle just pass a stop sign, and won't
-        # stop at any stop sign in the next 4 seconds.
+        # Allow for a potential lane change only when all requirements are met:
+        # - Collision detection is active.
+        # - There's an actual lane change in the planned route, which presents as lane id and lane lateral changes.
+        # - overtake hasn't happened : lane change should not be allowed if previously we have been doing an overtake.
+        # - The destination has not been pushed.
+        conditions_met = collision_detection_enabled and \
+                         self.get_local_planner().lane_id_change and \
+                         self.get_local_planner().lane_lateral_change and \
+                         self.overtake_counter <= 0 and \
+                         not self.destination_push_flag
+
+        if conditions_met:
+            previous_permission = previous_permission and self.check_lane_change()
+            if not previous_permission:
+                print("Lane change is not allowed")
+
+        return previous_permission
+
+    def push_destination(self, current_waypoint, is_intersection):
+        """
+        Determine a temporary destination (waypoint) for a push operation. This is useful in situations
+        where a potential collision might occur, so the vehicle's destination should be "pushed" forward.
+
+        Parameters
+        ----------
+        current_waypoint : carla.waypoint
+            The current waypoint of the ego vehicle.
+
+        is_intersection : boolean
+            Indicates if the vehicle is currently at an intersection.
+
+        Returns
+        -------
+        pushed_destination : carla.waypoint
+            The calculated waypoint for the push operation.
+        """
+
+        waypoint_buffer = self.get_local_planner().get_waypoint_buffer()
+        mid_buffer_index = len(waypoint_buffer) // 2
+
+        # If at an intersection, select a future waypoint that ensures continued travel on the same lane.
+        if is_intersection:
+            pushed_destination = waypoint_buffer[mid_buffer_index][0].next(
+                max(self.vehicle_speed / 3.6, 10.0))[0]
+        else:
+            pushed_destination = current_waypoint.next(
+                max(self.vehicle_speed / 3.6 * 3, 10.0))[0]
+
+        print(
+            'Vehicle ID: %d: Pushed the destination forward to prevent potential collision. New destination: %f, %f, %f' %
+            (self.vehicle.id,
+             pushed_destination.transform.location.x,
+             pushed_destination.transform.location.y,
+             pushed_destination.transform.location.z))
+
+        return pushed_destination
+
+    def handle_traffic_signals(self, current_waypoint):
+        """
+        Manages the agent's behavior at traffic lights and stop signs.
+        NOTE: A temporary measure is used to prevent the vehicle from braking
+        after passing a yellow light. This occurs when the vehicle remains affected
+        by the traffic signal even after crossing it. To address this, the signal's
+        ID is temporarily saved to bypass this behavior until the vehicle approaches
+        a new signal.
+
+        Parameters
+        ----------
+        current_waypoint : carla.waypoint
+            The vehicle's present waypoint.
+
+        Returns
+        -------
+        int
+            1 if an emergency stop is required, 0 otherwise.
+        """
+
+        light_id = self.vehicle.get_traffic_light().id if self.vehicle.get_traffic_light() else -1
+
+        # This condition represents a scenario where the vehicle recently passed a stop sign
+        # and won't halt at any subsequent stop sign for the next 4 seconds.
         if 60 <= self.stop_sign_wait_count < 240:
             self.stop_sign_wait_count += 1
         elif self.stop_sign_wait_count >= 240:
             self.stop_sign_wait_count = 0
 
         if self.light_state == "Red":
-            # when light state is red and light id is -1, it means the vehicle
-            # is near a stop sign.
+            # If the light state is red and signal_id is -1, it means the vehicle is near a stop sign.
             if light_id == -1:
-                # we force the vehicle wait for 2 sceconds in front of the
-                # stop sign
+                # Make the vehicle wait for 2 seconds at the stop sign.
                 if self.stop_sign_wait_count < 60:
                     self.stop_sign_wait_count += 1
-                    # indicate emergent stop needed
+                    # Indicate an emergency stop is needed.
                     return 1
-                # After pass a stop sign, the vehicle shouldn't stop at
-                # the stop sign in the opposite direction
+                # Ensure the vehicle doesn't stop at the opposing stop sign after crossing one.
                 else:
-                    # indicate no need to stop
                     return 0
 
-            if not waypoint.is_junction and (
-                    self.light_id_to_ignore != light_id or light_id == -1):
+            # Case when the vehicle is at a red light, not at a junction, and the signal isn't the one to be ignored.
+            if not current_waypoint.is_junction and (self.light_id_to_ignore != light_id or light_id == -1):
                 return 1
-            elif waypoint.is_junction and light_id != -1:
+            elif current_waypoint.is_junction and light_id != -1:
                 self.light_id_to_ignore = light_id
+
         if self.light_id_to_ignore != light_id:
             self.light_id_to_ignore = -1
+
         return 0
 
-    def collision_manager(self, rx, ry, ryaw, waypoint, adjacent_check=False):
+    def trajectory_planning(self, desired_speed=None, collision_detection=True, lane_change_allowed=True):
         """
-        This module is in charge of warning in case of a collision.
+        Implement the trajectory planning for vehicle with rule-based method. This method deals with overtaking,
+        following, traffic light, and normal behavior.
 
         Parameters
         ----------
-        rx : float
-            x coordinates of plan path.
+        desired_speed : float, optional
+            Target speed the vehicle aims to achieve.
 
-        ry : float
-            y coordinates of plan path.
+        collision_detection : bool
+            Determines if collision checks should be made.
 
-        ryaw : float
-            yaw angle.
-
-        waypoint : carla.waypoint
-            current waypoint of the agent.
-
-        adjacent_check : boolean
-            Whether it is a check for adjacent lane.
-        """
-
-        def dist(v):
-            return v.get_location().distance(waypoint.transform.location)
-
-        vehicle_state = False
-        min_distance = 100000
-        target_vehicle = None
-
-        for vehicle in self.obstacle_vehicles:
-            collision_free = self._collision_detector.circle_collision_check(
-                rx, ry, ryaw, vehicle, self._ego_speed / 3.6, self._map,
-                adjacent_check=adjacent_check)
-            if not collision_free:
-                vehicle_state = True
-
-                # the vehicle length is typical 3 meters,
-                # so we need to consider that when calculating the distance
-                distance = positive(dist(vehicle) - 3)
-
-                if distance < min_distance:
-                    min_distance = distance
-                    target_vehicle = vehicle
-
-        return vehicle_state, target_vehicle, min_distance
-
-    def overtake_management(self, obstacle_vehicle):
-        """
-        Overtake behavior.
-
-        Parameters
-        ----------
-        obstacle_vehicle : carla.vehicle
-            The obstacle vehicle.
-
-        Return
-        ------
-        vehicle_state : boolean
-            Flag indicating whether the vehicle is in dangerous state.
-        """
-        # obstacle vehicle's location
-        obstacle_vehicle_loc = obstacle_vehicle.get_location()
-        obstacle_vehicle_wpt = self._map.get_waypoint(obstacle_vehicle_loc)
-
-        # whether a lane change is allowed
-        left_turn = obstacle_vehicle_wpt.left_lane_marking.lane_change
-        right_turn = obstacle_vehicle_wpt.right_lane_marking.lane_change
-
-        # left and right waypoint of the obstacle vehicle
-        left_wpt = obstacle_vehicle_wpt.get_left_lane()
-        right_wpt = obstacle_vehicle_wpt.get_right_lane()
-
-        # if the vehicle is able to operate left overtake
-        if (left_turn == carla.LaneChange.Left or left_turn ==
-            carla.LaneChange.Both) and \
-                left_wpt and \
-                obstacle_vehicle_wpt.lane_id * left_wpt.lane_id > 0 and \
-                left_wpt.lane_type == carla.LaneType.Driving:
-            # this not the real plan path, but just a quick path to check
-            # collision
-            rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
-                ego_loc=self._ego_pos.location,
-                target_wpt=left_wpt,
-                overtake=True)
-            vehicle_state, _, _ = self.collision_manager(
-                rx, ry, ryaw, self._map.get_waypoint(
-                    self._ego_pos.location), True)
-            if not vehicle_state:
-                print("left overtake is operated")
-                self.overtake_counter = 100
-                next_wpt_list = left_wpt.next(self._ego_speed / 3.6 * 6)
-                if len(next_wpt_list) == 0:
-                    return True
-
-                next_wpt = next_wpt_list[0]
-                left_wpt = left_wpt.next(5)[0]
-                self.set_destination(
-                    left_wpt.transform.location,
-                    next_wpt.transform.location,
-                    clean=True,
-                    end_reset=False)
-                return vehicle_state
-
-        if (right_turn == carla.LaneChange.Right or right_turn ==
-            carla.LaneChange.Both) and \
-                right_wpt and \
-                obstacle_vehicle_wpt.lane_id * right_wpt.lane_id > 0 \
-                and right_wpt.lane_type == carla.LaneType.Driving:
-            rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
-                ego_loc=self._ego_pos.location,
-                target_wpt=right_wpt,
-                overtake=True)
-
-            vehicle_state, _, _ = self.collision_manager(
-                rx, ry, ryaw, self._map.get_waypoint(
-                    self._ego_pos.location), True)
-            if not vehicle_state:
-                print("right overtake is operated")
-                self.overtake_counter = 100
-                next_wpt_list = right_wpt.next(self._ego_speed / 3.6 * 6)
-                if len(next_wpt_list) == 0:
-                    return True
-
-                next_wpt = next_wpt_list[0]
-                right_wpt = right_wpt.next(5)[0]
-                self.set_destination(
-                    right_wpt.transform.location,
-                    next_wpt.transform.location,
-                    clean=True,
-                    end_reset=False)
-                return vehicle_state
-
-        return True
-
-    def lane_change_management(self):
-        """
-        Identify whether a potential hazard exits if operating lane change.
+        lane_change_allowed : bool
+            Permission to change lanes, typically passed from platoon behavior.
 
         Returns
         -------
-        vehicle_state : boolean
-            Whether the lane change is dangerous.
+        speed_buffer : narray
+            The narray with planned speed repeated.
+
+        location_buffer : deque
+            The deque with all the locations in trajectory buffer.
         """
-        ego_wpt = self._map.get_waypoint(self._ego_pos.location)
-        ego_lane_id = ego_wpt.lane_id
-        target_wpt = None
 
-        # check the closest waypoint on the adjacent lane
-        for wpt in self.get_local_planner().get_waypoint_buffer():
-            if wpt[0].lane_id != ego_lane_id:
-                target_wpt = wpt[0]
-                break
-        if not target_wpt:
-            return True
-
-        rx, ry, ryaw = self._collision_detector.check_adjacent_lane_collision(
-            ego_loc=self._ego_pos.location,
-            target_wpt=target_wpt,
-            overtake=False)
-        vehicle_state, _, _ = self.collision_manager(
-            rx, ry, ryaw, self._map.get_waypoint(
-                self._ego_pos.location), adjacent_check=True)
-        return not vehicle_state
-
-    def car_following_manager(self, vehicle, distance, target_speed=None):
-        """
-        Module in charge of car-following behaviors when there's
-        someone in front of us.
-
-        Parameters
-        ----------
-        vehicle : carla.vehicle)
-            Leading vehicle to follow.
-
-        distance : float
-            distance from leading vehicle.
-
-        target_speed : float
-            The target car following speed.
-
-        Returns
-        -------
-        target_speed : float
-            The target speed for the next step.
-
-        target_loc : carla.Location
-            The target location.
-        """
-        if not target_speed:
-            target_speed = self.max_speed - self.speed_lim_dist
-
-        vehicle_speed = get_speed(vehicle)
-
-        delta_v = max(1, (self._ego_speed - vehicle_speed) / 3.6)
-        ttc = distance / delta_v if delta_v != 0 else distance / \
-                                                      np.nextafter(0., 1.)
-        self.ttc = ttc
-        # Under safety time distance, slow down.
-        if self.safety_time > ttc > 0.0:
-            target_speed = min(positive(vehicle_speed - self.speed_decrease),
-                               target_speed)
-
-        # Actual safety distance area, try to follow the speed of the vehicle
-        # in front.
-        else:
-            target_speed = 0 if vehicle_speed == 0 else \
-                min(vehicle_speed + 1,
-                    target_speed)
-        return target_speed
-
-    def is_intersection(self, objects, waypoint_buffer):
-        """
-        Check the next waypoints is near the intersection. This is done by
-        check the distance between the waypoints and the traffic light.
-
-        Parameters
-        ----------
-        objects : dict
-            The dictionary contains all objects info.
-
-        waypoint_buffer : deque
-            The waypoint buffer.
-
-        Returns
-        -------
-        is_junc : boolean
-            Whether there is any future waypoint in the junction shortly.
-        """
-        for tl in objects['traffic_lights']:
-            for wpt, _ in waypoint_buffer:
-                distance = \
-                    tl.get_location().distance(wpt.transform.location)
-                if distance < 20:
-                    return True
-        return False
-
-    def is_close_to_destination(self):
-        """
-        Check if the current ego vehicle's position is close to destination
-
-        Returns
-        -------
-        flag : boolean
-            It is True if the current ego vehicle's position is close to destination
-
-        """
-        flag = abs(self._ego_pos.location.x - self.end_waypoint.transform.location.x) <= 10 and \
-               abs(self._ego_pos.location.y - self.end_waypoint.transform.location.y) <= 10
-        return flag
-
-    def check_lane_change_permission(self, lane_change_allowed, collision_detector_enabled, rk):
-        """
-        Check if lane change is allowed.
-        Several conditions will influence the result such as the road curvature, collision detector, overtake and push status.
-        Please refer to the code for complete conditions.
-
-        Parameters
-        ----------
-        lane_change_allowed : boolean
-            Previous lane change permission.
-
-        collision_detector_enabled : boolean
-            True if collision detector is enabled.
-
-        rk : list
-            List of planned path points' curvatures.
-
-        Returns
-        -------
-        lane_change_enabled : boolean
-            True if lane change is allowed
-
-
-        """
-        # the lane change is forbidden if driving within a large curve
-        if len(rk) > 2 and np.mean(np.abs(np.array(rk))) > 0.04:
-            lane_change_allowed = False
-        # change the lane change permission only when all of the following conditions are satisfied:
-        # * collision detector is enabled : otherwise we won't perform collision check for lane change.
-        # * lane id changes and lane lateral changes : makes sure it is indeed a lane change happen in our planned route.
-        # * overtake hasn't happened : if previously we have been doing an overtake, then lane change should not be allowed.
-        # * destination is not pushed : if we have been doing destination pushed, then lane change should not be allowed.
-        lane_change_enabled_flag = collision_detector_enabled and \
-                                   self.get_local_planner().lane_id_change and \
-                                   self.get_local_planner().lane_lateral_change and \
-                                   self.overtake_counter <= 0 and \
-                                   not self.destination_push_flag
-        if lane_change_enabled_flag:
-            lane_change_allowed = lane_change_allowed and self.lane_change_management()
-            if not lane_change_allowed:
-                print("lane change not allowed")
-
-        return lane_change_allowed
-
-    def get_push_destination(self, ego_vehicle_wp, is_intersection):
-        """
-        Get the destination for push operation.
-
-        Parameters
-        ----------
-        ego_vehicle_wp : carla.waypoint
-            Ego vehicle's waypoint.
-
-        is_intersection : boolean
-            True if in the intersection.
-
-        Returns
-        -------
-        reset_target : carla.waypoint
-            Temporal push destination.
-
-        """
+        # Fetch vehicle's current position
+        ego_location = self.vehicle_pos.location
+        ego_waypoint = self.map.get_waypoint(ego_location)
         waypoint_buffer = self.get_local_planner().get_waypoint_buffer()
-        reset_index = len(waypoint_buffer) // 2
 
-        # when it comes to the intersection, we need to use the future
-        # waypoint to make sure the next waypoint is at the same lane
-        if is_intersection:
-            reset_target = waypoint_buffer[reset_index][0].next(
-                max(self._ego_speed / 3.6, 10.0))[0]
-        else:
-            reset_target = \
-                ego_vehicle_wp.next(max(self._ego_speed / 3.6 * 3,
-                                        10.0))[0]
-
-        print(
-            'Vehicle id: %d :destination pushed forward because of '
-            'potential collision, reset destination :%f. %f, %f' %
-            (self.vehicle.id, reset_target.transform.location.x,
-             reset_target.transform.location.y,
-             reset_target.transform.location.z))
-        return reset_target
-
-    def trajectory_planning(
-            self,
-            target_speed=None,
-            collision_detector_enabled=True,
-            lane_change_allowed=True):
-        """
-        Execute one step of navigation
-
-        Parameters
-        __________
-        collision_detector_enabled : boolean
-            Whether to enable collision detection.
-
-        target_speed : float
-            A manual order to achieve certain speed.
-
-        lane_change_allowed : boolean
-            Whether lane change is allowed. This is passed from
-            platoon behavior agent.
-
-        Returns
-        -------
-        control : carla.VehicleControl
-            Vehicle control of the next step.
-        """
-        # retrieve ego location
-        ego_vehicle_loc = self._ego_pos.location
-        ego_vehicle_wp = self._map.get_waypoint(ego_vehicle_loc)
-        waipoint_buffer = self.get_local_planner().get_waypoint_buffer()
-        # ttc reset to 1000 at the beginning
+        # Set time-to-collision to a high value
         self.ttc = 1000
-        # when overtake_counter > 0, another overtake/lane change is forbidden
+
+        # When overtake_counter > 0, another overtake/lane change is forbidden
         if self.overtake_counter > 0:
             self.overtake_counter -= 1
 
-        # we reset destination push flag for every n rounds
+        # Reset destination push flag periodically
         if self.destination_push_flag > 0:
             self.destination_push_flag -= 1
 
-        # use traffic light to detect intersection
-        is_intersection = self.is_intersection(self.objects, waipoint_buffer)
+        # Detect if the car is near an intersection
+        near_intersection = self.is_near_intersection(self.objects, waypoint_buffer)
 
-        # 0. Simulation ends condition
-        if self.is_close_to_destination():
+        # 0. Check if the vehicle is close to its destination
+        if self.is_near_destination():
             print('Simulation is Over')
             sys.exit(0)
 
-        # TODO: revise the return
-        ### 1. Traffic light management
-        # if self.traffic_light_manager(ego_vehicle_wp) != 0:
-        #     print('traffic_light_manager')
-        #     return 0, None
+        # 1. Manage behavior at traffic lights
+        if self.handle_traffic_signals(ego_waypoint) != 0:
+            print('handle_traffic_signals')
+            return 0, None
 
-        # 2. when the temporary route is finished, we return to the global route
-        if len(self.get_local_planner().get_waypoints_queue()) == 0 \
-                and len(self.get_local_planner().get_waypoint_buffer()) <= 2:
+        # 2. Reset to global route if temporary route is finished
+        if len(self.get_local_planner().get_waypoints_queue()) == 0 and len(waypoint_buffer) <= 2:
             print('Destination Reset!')
-            # in case the vehicle is disabled overtaking function
-            # at the beginning
-            self.overtake_allowed = True and self.overtake_allowed_origin
+            self.overtake_allowed = self.overtake_allowed_origin
             self.lane_change_allowed = True
             self.destination_push_flag = 0
-            self.set_destination(
-                ego_vehicle_loc,
-                self.end_waypoint.transform.location,
-                clean=True,
-                clean_history=True)
+            self.set_local_planner(ego_location, self.end_waypoint.transform.location, clear_waypoints=True,
+                                   clear_history=True)
 
-        # intersection behavior. if the car is near a intersection, no overtake is allowed
-        if is_intersection:
+        # No overtaking is allowed around intersections
+        if near_intersection:
             self.overtake_allowed = False
         else:
-            self.overtake_allowed = True and self.overtake_allowed_origin
+            self.overtake_allowed = self.overtake_allowed_origin
 
-        # Path generation based on the global route
-        rx, ry, rk, ryaw = self._local_planner.generate_path()
+        # Generate a local path based on global route
+        path_x, path_y, path_k, path_yaw = self.local_planner.generate_path()
 
-        # check whether lane change is allowed
-        self.lane_change_allowed = self.check_lane_change_permission(lane_change_allowed, collision_detector_enabled,
-                                                                     rk)
+        # Check if lane change is allowed
+        self.lane_change_allowed = self.is_lane_change_allowed(lane_change_allowed, collision_detection, path_k)
 
-        # 3. Collision check
-        is_hazard = False
-        if collision_detector_enabled:
-            is_hazard, obstacle_vehicle, distance = self.collision_manager(
-                rx, ry, ryaw, ego_vehicle_wp)
-        car_following_flag = False
+        # 3. Collision checking
+        is_hazardous = False
+        if collision_detection:
+            is_hazardous, blocking_vehicle, gap = self.check_collision(path_x, path_y, path_yaw, ego_waypoint)
+        following_other_vehicle = False
 
-        if not is_hazard:
-            self.hazard_flag = False
-
-        # 4. push case. Push the car to a temporary destination when original lane change action can't be executed
-        # The case that the vehicle is doing lane change as planned
-        # but found vehicle blocking on the other lane
-        if not self.lane_change_allowed and \
-                self.get_local_planner().potential_curved_road \
-                and not self.destination_push_flag and \
-                self.overtake_counter <= 0:
+        # 4. Push the destination to a temporary one when lane change can not be made.
+        # This happens when other vehicle block in the other lane when doing lane change.
+        if not self.lane_change_allowed and self.get_local_planner().potential_curved_road and not self.destination_push_flag and self.overtake_counter <= 0:
             self.overtake_allowed = False
-            # get push destination based on intersection flag and current waypoint (rule-based)
-            reset_target = self.get_push_destination(ego_vehicle_wp, is_intersection)
-            # set the flag, so the push operation is not allowed for the next few frames.
+            new_target = self.push_destination(ego_waypoint, near_intersection)
             self.destination_push_flag = 90
-            self.set_destination(
-                ego_vehicle_loc,
-                reset_target.transform.location,
-                clean=True,
-                end_reset=False)
-            rx, ry, rk, ryaw = self._local_planner.generate_path()
+            self.set_local_planner(ego_location, new_target.transform.location, clear_waypoints=True, reset_end=False)
+            path_x, path_y, path_k, path_yaw = self.local_planner.generate_path()
 
-        # 5. the case that vehicle is blocking in front and overtake not
-        # allowed or it is doing overtaking the second condition is to
-        # prevent successive overtaking
-        elif is_hazard and (not self.overtake_allowed or
-                            self.overtake_counter > 0
-                            or self.get_local_planner().potential_curved_road):
-            car_following_flag = True
-        # 6. overtake handeling
-        elif is_hazard and self.overtake_allowed and \
-                self.overtake_counter <= 0:
-            obstacle_speed = get_speed(obstacle_vehicle)
-            obstacle_lane_id = self._map.get_waypoint(obstacle_vehicle.get_location()).lane_id
-            ego_lane_id = self._map.get_waypoint(
-                self._ego_pos.location).lane_id
-            # overtake the obstacle vehicle only when speed is bigger and the
-            # lane id is the same
-            if ego_lane_id == obstacle_lane_id:
-                # this flag is used for transition from cut-in joining to back
-                # joining
-                self.hazard_flag = is_hazard
-                # we only consider overtaking when speed is faster than the
-                # front obstacle
+        # 5. Handle front blocking vehicles and overtaking restrictions
+        elif is_hazardous and (
+                not self.overtake_allowed or self.overtake_counter > 0 or self.get_local_planner().potential_curved_road):
+            following_other_vehicle = True
 
-                if self._ego_speed >= obstacle_speed - 5:
-                    car_following_flag = self.overtake_management(obstacle_vehicle)
+        # 6. Manage overtaking behavior
+        elif is_hazardous and self.overtake_allowed and self.overtake_counter <= 0:
+            blocking_speed = get_speed(blocking_vehicle)
+            blocking_lane_id = self.map.get_waypoint(blocking_vehicle.get_location()).lane_id
+            ego_lane_id = ego_waypoint.lane_id
+
+            # Overtake only when having higher speed and at same lane
+            if ego_lane_id == blocking_lane_id:
+                if self.vehicle_speed >= blocking_speed - 5:
+                    following_other_vehicle = self.overtake_management(blocking_vehicle)
                 else:
-                    car_following_flag = True
+                    following_other_vehicle = True
 
-        # 7. Car following behavior
-        if car_following_flag:
-            #     if distance < max(self.break_distance, 3):
-            #         # TODO: revise the return
-            #         ### return 0, None
+        # 7. Implement car-following behavior
+        if following_other_vehicle:
+            if gap < max(self.break_distance, 3):
+                print("Stop car following")
+                return 0, None
 
-            target_speed = self.car_following_manager(obstacle_vehicle, distance, target_speed)
-            target_speed, target_loc = self._local_planner.run_step(
-                rx, ry, rk, target_speed=target_speed)
-            trajectory_buffer_speed = self._local_planner.get_trajectory()
-            trajectory_buffer = deque()
-            for traj in trajectory_buffer_speed:
-                trajectory_buffer.append(traj[0])
-            target_speed = np.repeat(target_speed, len(trajectory_buffer))
-            return target_speed, trajectory_buffer
+            desired_speed = self.manage_car_following(blocking_vehicle, gap, desired_speed)
+            planned_speed, planned_location = self.local_planner.run_step(path_x, path_y, path_k,
+                                                                          target_speed=desired_speed)
+            trajectory_buffer = self.local_planner.get_trajectory()
 
-        # 8. Normal behavior
-        target_speed, target_loc = self._local_planner.run_step(
-            rx, ry, rk, target_speed=self.max_speed - self.speed_lim_dist
-            if not target_speed else target_speed)
-        # revise for trajectory buffer
-        trajectory_buffer_speed = self._local_planner.get_trajectory()
-        trajectory_buffer = deque()
-        for traj in trajectory_buffer_speed:
-            trajectory_buffer.append(traj[0])
-        target_speed = np.repeat(target_speed, len(trajectory_buffer))
-        return target_speed, trajectory_buffer
+            # Split trajectory into speed buffer and location buffer
+            location_buffer = deque()
+            for traj in trajectory_buffer:
+                location_buffer.append(traj[0])
+            speed_buffer = np.repeat(planned_speed, len(location_buffer))
+            return speed_buffer, location_buffer
+
+        # 8. Standard navigation behavior
+        planned_speed, planned_location = self.local_planner.run_step(path_x, path_y, path_k,
+                                                                      target_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
+        trajectory_buffer = self.local_planner.get_trajectory()
+        location_buffer = deque()
+        for traj in trajectory_buffer:
+            location_buffer.append(traj[0])
+        speed_buffer = np.repeat(planned_speed, len(location_buffer))
+        return speed_buffer, location_buffer
 
     def vehicle_control(self, target_speed, trajectory_buffer):
         """
+        Pass the trajectory to controller and implement the vehicle control.
 
         Parameters
         ----------

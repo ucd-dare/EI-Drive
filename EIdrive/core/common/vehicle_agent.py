@@ -147,12 +147,9 @@ class VehicleAgent(object):
 
         end_reset : bool
             Indicator of whether reset the end location.
-
-        Returns
-        -------
         """
 
-        self.agent.set_destination(
+        self.agent.set_local_planner(
             start_location, end_location, clean, end_reset)
 
     def update_info(self):

@@ -90,7 +90,7 @@ class DQNAgent(object):
         # speed related, check yaml file to see the meaning
         self.max_speed = config_yaml['max_speed']
         self.tailgate_speed = config_yaml['tailgate_speed']
-        self.speed_lim_dist = config_yaml['speed_lim_dist']
+        self.max_speed_margin = config_yaml['max_speed_margin']
         self.speed_decrease = config_yaml['speed_decrease']
 
         # safety related
@@ -162,7 +162,7 @@ class DQNAgent(object):
         self.objects = objects
         # current version only consider about vehicles
         obstacle_vehicles = objects['vehicles']
-        self.obstacle_vehicles = self.white_list_match(obstacle_vehicles)
+        self.obstacle_vehicles = self.white_list_filter(obstacle_vehicles)
 
         if self.ignore_traffic_light:
             self.light_state = "Green"
@@ -176,7 +176,7 @@ class DQNAgent(object):
         """
         self.white_list.append(vm)
 
-    def white_list_match(self, obstacles):
+    def white_list_filter(self, obstacles):
         """
         Match the detected obstacles with the white list.
         Remove the obstacles that are in white list.
@@ -579,7 +579,7 @@ class DQNAgent(object):
             The target location.
         """
         if not target_speed:
-            target_speed = self.max_speed - self.speed_lim_dist
+            target_speed = self.max_speed - self.max_speed_margin
 
         vehicle_speed = get_speed(vehicle)
 
@@ -772,8 +772,8 @@ class DQNAgent(object):
 
         # TODO: revise the return
         ### 1. Traffic light management
-        # if self.traffic_light_manager(ego_vehicle_wp) != 0:
-        #     print('traffic_light_manager')
+        # if self.handle_traffic_signals(ego_vehicle_wp) != 0:
+        #     print('handle_traffic_signals')
         #     return 0, None
 
         # 2. when the temporary route is finished, we return to the global route
@@ -879,7 +879,7 @@ class DQNAgent(object):
 
         # 8. Normal behavior
         target_speed, target_loc = self._local_planner.run_step(
-            rx, ry, rk, target_speed=self.max_speed - self.speed_lim_dist
+            rx, ry, rk, target_speed=self.max_speed - self.max_speed_margin
             if not target_speed else target_speed)
         # revise for trajectory buffer
         trajectory_buffer_speed = self._local_planner.get_trajectory()

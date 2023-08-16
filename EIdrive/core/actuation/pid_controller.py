@@ -200,7 +200,7 @@ deque
 
         """
         # control class for carla vehicle
-        if len(waypoints) == 0:
+        if waypoints is None or len(waypoints) == 0:
             print("waypoints is empty")
         else:
             waypoint = waypoints[0].location
@@ -210,7 +210,7 @@ deque
         control = carla.VehicleControl()
 
         # emergency stop
-        if target_speed == 0 or len(waypoints) == 0:
+        if target_speed == 0 or waypoints is None or len(waypoints) == 0:
             control.steer = 0.0
             control.throttle = 0.0
             control.brake = 1.0
@@ -243,5 +243,5 @@ deque
         control.hand_brake = False
         control.manual_gear_shift = False
         self.past_steering = steering
-        logging.info(control.steer)
+        # logging.info(control.steer)
         return control
