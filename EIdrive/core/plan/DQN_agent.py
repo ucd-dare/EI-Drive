@@ -279,7 +279,7 @@ class DQNAgent(object):
 
         route_trace = self._trace_route(self.start_waypoint, end_waypoint)
 
-        self._local_planner.set_global_plan(route_trace, clean)
+        self._local_planner.update_global_route(route_trace, clean)
 
     def get_local_planner(self):
         """
@@ -302,7 +302,7 @@ class DQNAgent(object):
         print("Target almost reached, setting new destination...")
         random.shuffle(spawn_points)
         new_start = \
-            self._local_planner.waypoints_queue[-1][0].transform.location
+            self._local_planner.cur_global_route[-1][0].transform.location
         destination = spawn_points[0].location if \
             spawn_points[0].location != new_start else spawn_points[1].location
         print("New destination: " + str(destination))
@@ -798,7 +798,7 @@ class DQNAgent(object):
             self.overtake_allowed = True and self.overtake_allowed_origin
 
         # Path generation based on the global route
-        rx, ry, rk, ryaw = self._local_planner.generate_path()
+        rx, ry, rk, ryaw = self._local_planner.generate_local_path()
 
 
         # check whether lane change is allowed
@@ -831,7 +831,7 @@ class DQNAgent(object):
                 reset_target.transform.location,
                 clean=True,
                 end_reset=False)
-            rx, ry, rk, ryaw = self._local_planner.generate_path()
+            rx, ry, rk, ryaw = self._local_planner.generate_local_path()
 
         # 5. the case that vehicle is blocking in front and overtake not
         # allowed or it is doing overtaking the second condition is to
@@ -868,8 +868,8 @@ class DQNAgent(object):
         #         ### return 0, None
 
             target_speed = self.car_following_manager(obstacle_vehicle, distance, target_speed)
-            target_speed, target_loc = self._local_planner.run_step(
-                rx, ry, rk, target_speed=target_speed)
+            target_speed, target_loc = self._local_planner.run_trajectory_planning(
+                rx, ry, rk, desired_speed=target_speed)
             trajectory_buffer_speed = self._local_planner.get_trajectory()
             trajectory_buffer = deque()
             for traj in trajectory_buffer_speed:
@@ -878,8 +878,8 @@ class DQNAgent(object):
             return target_speed, trajectory_buffer
 
         # 8. Normal behavior
-        target_speed, target_loc = self._local_planner.run_step(
-            rx, ry, rk, target_speed=self.max_speed - self.max_speed_margin
+        target_speed, target_loc = self._local_planner.run_trajectory_planning(
+            rx, ry, rk, desired_speed=self.max_speed - self.max_speed_margin
             if not target_speed else target_speed)
         # revise for trajectory buffer
         trajectory_buffer_speed = self._local_planner.get_trajectory()

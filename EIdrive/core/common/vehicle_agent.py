@@ -198,7 +198,7 @@ class VehicleAgent(object):
     #             target_speed.append(tem_speed)
     #
     #     else:
-    #         target_speed, target_pos = self.agent.trajectory_planning(
+    #         target_speed, target_pos = self.agent.rule_based_trajectory_planning(
     #             target_speed)  # target_pos is trajectory buffer, target_pos[i][0].location is Location class
     #
     #     control = self.agent.vehicle_control(target_speed, target_pos)

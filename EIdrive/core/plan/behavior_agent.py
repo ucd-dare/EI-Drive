@@ -154,7 +154,7 @@ class AgentBehavior(object):
         self.break_distance = self.vehicle_speed / 3.6 * self.emergency_param
 
         # update the localization info to local planner
-        self.get_local_planner().update_information(current_position, current_speed)
+        self.get_local_planner().update_vehicle_info(current_position, current_speed)
 
         # update the localization info to the controller
         self.controller.update_info(current_position, current_speed)
@@ -246,7 +246,7 @@ class AgentBehavior(object):
         if clear_waypoints:
             self.local_planner.get_waypoints_queue().clear()
             self.local_planner.get_trajectory().clear()
-            self.local_planner.get_waypoint_buffer().clear()
+            self.local_planner.get_global_route().clear()
         if clear_history:
             self.local_planner.get_history_buffer().clear()
 
@@ -271,7 +271,7 @@ class AgentBehavior(object):
         global_route = self.generate_global_route(self.start_waypoint, end_waypoint)
 
         # Set this global route for the local planner
-        self.local_planner.set_global_plan(global_route, clear_waypoints)
+        self.local_planner.update_global_route(global_route, clear_waypoints)
 
     def get_local_planner(self):
         """
@@ -468,7 +468,7 @@ class AgentBehavior(object):
         adjacent_lane_waypoint = None
 
         # Identify the nearest waypoint in the neighboring lane
-        for waypoint_data in self.get_local_planner().get_waypoint_buffer():
+        for waypoint_data in self.get_local_planner().get_global_route():
             if waypoint_data[0].lane_id != current_lane_id:
                 adjacent_lane_waypoint = waypoint_data[0]
                 break
@@ -639,7 +639,7 @@ class AgentBehavior(object):
             The calculated waypoint for the push operation.
         """
 
-        waypoint_buffer = self.get_local_planner().get_waypoint_buffer()
+        waypoint_buffer = self.get_local_planner().get_global_route()
         mid_buffer_index = len(waypoint_buffer) // 2
 
         # If at an intersection, select a future waypoint that ensures continued travel on the same lane.
@@ -711,7 +711,7 @@ class AgentBehavior(object):
 
         return 0
 
-    def trajectory_planning(self, desired_speed=None, collision_detection=True, lane_change_allowed=True):
+    def rule_based_trajectory_planning(self, desired_speed=None, collision_detection=True, lane_change_allowed=True):
         """
         Implement the trajectory planning for vehicle with rule-based method. This method deals with overtaking,
         following, traffic light, and normal behavior.
@@ -739,7 +739,7 @@ class AgentBehavior(object):
         # Fetch vehicle's current position
         ego_location = self.vehicle_pos.location
         ego_waypoint = self.map.get_waypoint(ego_location)
-        waypoint_buffer = self.get_local_planner().get_waypoint_buffer()
+        waypoint_buffer = self.get_local_planner().get_global_route()
 
         # Set time-to-collision to a high value
         self.ttc = 1000
@@ -781,7 +781,7 @@ class AgentBehavior(object):
             self.overtake_allowed = self.overtake_allowed_origin
 
         # Generate a local path based on global route
-        path_x, path_y, path_k, path_yaw = self.local_planner.generate_path()
+        path_x, path_y, path_k, path_yaw = self.local_planner.generate_local_path()
 
         # Check if lane change is allowed
         self.lane_change_allowed = self.is_lane_change_allowed(lane_change_allowed, collision_detection, path_k)
@@ -799,7 +799,7 @@ class AgentBehavior(object):
             new_target = self.push_destination(ego_waypoint, near_intersection)
             self.destination_push_flag = 90
             self.set_local_planner(ego_location, new_target.transform.location, clear_waypoints=True, reset_end=False)
-            path_x, path_y, path_k, path_yaw = self.local_planner.generate_path()
+            path_x, path_y, path_k, path_yaw = self.local_planner.generate_local_path()
 
         # 5. Handle front blocking vehicles and overtaking restrictions
         elif is_hazardous and (
@@ -826,8 +826,8 @@ class AgentBehavior(object):
                 return 0, None
 
             desired_speed = self.manage_car_following(blocking_vehicle, gap, desired_speed)
-            planned_speed, planned_location = self.local_planner.run_step(path_x, path_y, path_k,
-                                                                          target_speed=desired_speed)
+            planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
+                                                                                         desired_speed=desired_speed)
             trajectory_buffer = self.local_planner.get_trajectory()
 
             # Split trajectory into speed buffer and location buffer
@@ -838,8 +838,8 @@ class AgentBehavior(object):
             return speed_buffer, location_buffer
 
         # 8. Standard navigation behavior
-        planned_speed, planned_location = self.local_planner.run_step(path_x, path_y, path_k,
-                                                                      target_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
+        planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
+                                                                                     desired_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
         trajectory_buffer = self.local_planner.get_trajectory()
         location_buffer = deque()
         for traj in trajectory_buffer:

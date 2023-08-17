@@ -160,7 +160,7 @@ def calculateVehicleControl(cav):
 
     else:
         # target_pos is trajectory buffer
-        target_speed, target_pos = cav.agent.trajectory_planning(target_speed)
+        target_speed, target_pos = cav.agent.rule_based_trajectory_planning(target_speed)
 
     control = cav.agent.vehicle_control(target_speed, target_pos)
 

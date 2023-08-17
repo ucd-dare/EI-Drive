@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-""" This module contains a local planner to perform
-low-level waypoint following based on PID controllers. """
+"""
+This module contains a local planner to provide low-level waypoint for controllers.
+"""
 
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License:  TDG-Attribution-NonCommercial-NoDistrib
-
-from collections import deque
-from enum import Enum
 import statistics
 import math
-
 import carla
 import numpy as np
 
+from collections import deque
+from enum import Enum
 from EIdrive.core.common.misc import distance_vehicle, draw_trajetory_points, \
     cal_distance_angle, compute_distance
 from EIdrive.core.plan.cubic_spline import Spline2D
@@ -20,8 +16,7 @@ from EIdrive.core.plan.cubic_spline import Spline2D
 
 class RoadOption(Enum):
     """
-    RoadOption represents the possible topological configurations
-    when moving from a segment of lane to other.
+    RoadOption show the topological configurations when shifting from one part of road to another.
     """
     VOID = -1
     LEFT = 1
@@ -43,596 +38,495 @@ class LocalPlanner(object):
     Parameters
     ----------
     agent : carla.agent
-        The carla.agent that applying vehicle contorl.
+        The carla agent in charge of vehicle control.
 
-    carla_map : carla.map
-        The HD map of the current simulation world.
+    world_map : carla.map
+        The map of the current world.
 
     config : dict
-        The configuration dictionary of the trajectory planning module.
+        Configuration settings for the trajectory planning.
 
     Attributes
     ----------
-    _vehicle : carla.vehicle
-        The caral vehicle objcet.
+    vehicle : carla.vehicle
+        The carla vehicle.
 
-    _ego_pos : carla.position
+    vehicle_pos : carla.position
         The current position of the ego vehicle.
 
-    _ego_speed : float
+    vehicle_speed : float
         The current speed of the ego vehicle.
 
-    waypoints_queue : deque
-        The waypoint deque of the current plan.
+    cur_global_route : deque
+        The waypoint deque of the current global route.
 
-    _waypoint_buffer : deque
-        A buffer deque to store waypoints of the next steps.
+    global_route_buffer : deque
+        A buffer deque to store the current global route.
 
-    _long_plan_debug : list
-        A list that stores the waypoints of global plan for debug purposes.
+    path_debug : list
+        A list that stores a part of global plan for debug.
 
-    _trajectory_buffer : deque
+    trajectory_buffer : deque
         A deque buffer that stores the current trajectory.
 
-    _history_buffer : deque
-        A deque buffer that stores the trajectory history of the ego vehicle.
+    history_buffer : deque
+        A deque buffer that stores the trajectory history.
 
     potential_curved_road : boolean
-        A indicator used to identify whether the road is potentially curved by using lane_id and lane's lateral change
+        Indicates if the road is likely curved based on lane's ID and its lateral changes.
 
-    lane_id_change : boolean
-        In some corner cases, the id is not changed but we regard it
-         as lane change due to large lateral diff.
-
+    lane_id_change : boolean Tracks corner cases where lane ID remains unchanged despite notable lateral differences,
+    thus being seen as a lane change.
     """
 
-    # Minimum distance to target waypoint as a percentage
-    # (e.g. within 80% of total distance)
+    def __init__(self, agent, world_map, config):
+        self.vehicle = agent.vehicle
+        self.map = world_map
 
-    def __init__(self, agent, carla_map, config_yaml):
-        self._vehicle = agent.vehicle
-        self._map = carla_map
+        self.vehicle_pos = None
+        self.vehicle_speed = None
+        self.min_distance = config['min_dist']
+        self.buffer_size = config['buffer_size']
 
-        self._ego_pos = None
-        self._ego_speed = None
+        # Global route
+        self.cur_global_route = deque(maxlen=20000)
+        # Global route buffer restores the global route
+        self.global_route_buffer = deque(maxlen=self.buffer_size)
+        # Trajectory buffer
+        self.path_debug = []
+        self.trajectory_buffer = deque(maxlen=30)
+        self.history_buffer = deque(maxlen=3)
+        self.trajectory_update_freq = config['trajectory_update_freq']
+        self.global_route_update_freq = config['global_route_update_freq']
+        self.trajectory_sample_horizon = config['trajectory_sample_horizon']
 
-        # waypoint pop out thresholding
-        self._min_distance = config_yaml['min_dist']
-        self._buffer_size = config_yaml['buffer_size']
+        # Trajectory update frequency
+        self.dt = config['trajectory_dt']
 
-        # global route
-        self.waypoints_queue = deque(maxlen=20000)
-        # waypoint route
-        self._waypoint_buffer = deque(maxlen=self._buffer_size)
-        # trajectory buffer
-        self._long_plan_debug = []
-        self._trajectory_buffer = deque(maxlen=30)
-        self._history_buffer = deque(maxlen=3)
-        self.trajectory_update_freq = config_yaml['trajectory_update_freq']
-        self.waypoint_update_freq = config_yaml['waypoint_update_freq']
-
-        # trajectory sampling rate
-        self.dt = config_yaml['trajectory_dt']
-
-        # used to identify whether road is potentially curved
+        # Checks related to road curvature and lane changes
         self.potential_curved_road = False
-        # In some corner cases, the id is not changed but we regard it as lane
-        # change due to large lateral diff
         self.lane_id_change = False
         self.lane_lateral_change = False
 
-        # debug option
-        self.debug = config_yaml['debug']
-        self.debug_trajectory = config_yaml['debug_trajectory']
+        # Debug settings
+        self.debug = config['debug']
+        self.debug_trajectory = config['debug_trajectory']
 
-    def set_global_plan(self, current_plan, clean=False):
+    def update_global_route(self, current_route, reset=False):
         """
-        Sets new global plan.
+            Updates the global plan with the provided waypoints.
 
-        Parameters
-        ----------
-        current_plan : list
-            List of waypoints in the actual plan.
+            Parameters
+            ----------
+            current_route : list
+                Current global route generated by global planner.
 
-        clean : boolean
-            Indicator of whether to clear the global plan.
+            reset : boolean
+                If set to True, the global plan buffer is cleared.
 
-        """
-        for elem in current_plan:
-            self.waypoints_queue.append(elem)
+            """
+        for waypoint in current_route:
+            self.cur_global_route.append(waypoint)
 
-        if clean:
-            self._waypoint_buffer.clear()
-            for _ in range(self._buffer_size):
-                if self.waypoints_queue:
-                    self._waypoint_buffer.append(
-                        self.waypoints_queue.popleft())
+        if reset:
+            self.global_route_buffer.clear()
+            for _ in range(self.buffer_size):
+                if self.cur_global_route:
+                    self.global_route_buffer.append(self.cur_global_route.popleft())
                 else:
                     break
 
-    def update_information(self, ego_pos, ego_speed):
+    def update_vehicle_info(self, vehicle_pos, vehicle_speed):
         """
         Update the ego position and speed for trajectory planner.
 
         Parameters
         ----------
-        ego_pos : carla.Transform
-            Ego position from localization module.
+        vehicle_pos : carla.Transform
+            Vehicle position.
 
-        ego_speed : float
-            Ego speed(km/h) from localization module.
+        vehicle_speed : float
+            Vehicle speed.
 
         """
-        self._ego_pos = ego_pos
-        self._ego_speed = ego_speed
+        self.vehicle_pos = vehicle_pos
+        self.vehicle_speed = vehicle_speed
 
     def get_trajectory(self):
         """
-        Get the trajetory
+        Get the trajectory buffer.
 
         Returns :
         ----------
-        self._trajectory_buffer : deque
+        self.trajectory_buffer : deque
             Trajectory buffer.
 
         """
-        return self._trajectory_buffer
+        return self.trajectory_buffer
 
-    def get_waypoint_buffer(self):
+    def get_global_route(self):
         """
-        Get the _waypoint_buffer.
+        Get the global_route_buffer.
 
         Returns
         -------
-        self._waypoint_buffer : deque
-            A buffer deque to store waypoints of the next steps.
+        self.global_route_buffer : deque
+            A buffer deque stores global route.
 
         """
-        return self._waypoint_buffer
+        return self.global_route_buffer
 
     def get_waypoints_queue(self):
         """
-        Get the waypoints_queue.
+        Get the cur_global_route.
         Returns
         -------
-        self.waypoints_queue : deque
+        self.cur_global_route : deque
             The waypoint deque of the current plan.
 
         """
-        return self.waypoints_queue
+        return self.cur_global_route
 
     def get_history_buffer(self):
         """
-        Get the _history_buffer
+        Get the history buffer
 
         Returns
         -------
-        self._history_buffer : deque
-            A deque buffer that stores the trajectory history of the ego vehicle.
+        self.history_buffer : deque
+            A deque buffer that stores the trajectory history.
 
         """
-        return self._history_buffer
+        return self.history_buffer
 
-    def generate_path(self):
+    def generate_local_path(self):
         """
-        Generate the smooth trajectory using cubic spline.
+        Compute a smooth local path using cubic spline interpolation.
 
-        Returns :
-        ----------
-        rx : list
-            List of planned path points' x coordinates.
+        Returns
+        -------
+        path_x : list
+            x coordinates of the interpolated path.
 
-        ry : list
-            List of planned path points' y coordinates.
+        path_y : list
+            y coordinates of the interpolated path.
 
-        ryaw : list
-            List of planned path points' yaw angles.
+        path_yaw : list
+            Yaw angles of the interpolated path.
 
-        rk : list
-            List of planned path points' curvatures.
-
+        path_curvature : list
+            Curvature values of the interpolated path.
         """
 
-        # used to save all key spline node
-        x = []
-        y = []
+        # Gather key spline nodes.
+        spline_x, spline_y = [], []
 
-        # pop out the waypoints that may damage driving performance
-        self.buffer_filter()
+        # Filter out waypoints that may affect driving.
+        self.filter_global_route()
 
-        # [m] distance of each interpolated points
-        ds = 0.1
+        # Distance between interpolated points.
+        interpolation_distance = 0.1
 
-        # retrieve current location, yaw angle
-        current_location = self._ego_pos.location
-        current_yaw = self._ego_pos.rotation.yaw
+        # Fetch current position and orientation of the vehicle.
+        current_loc = self.vehicle_pos.location
+        current_yaw = self.vehicle_pos.rotation.yaw
 
-        # retrieve the corresponding waypoint of the current location
-        current_wpt = self._map.get_waypoint(current_location).next(1)[0]
+        # Get the waypoint corresponding to the current location.
+        current_wpt = self.map.get_waypoint(current_loc).next(1)[0]
         current_wpt_loc = current_wpt.transform.location
 
-        # retrieve the future and past waypoint to check whether a lane change
-        # is gonna operated
-        future_wpt = self._waypoint_buffer[-1][0] if len(self._waypoint_buffer) > 0 else current_wpt
-        previous_wpt = self._history_buffer[0][0] if len( self._history_buffer) > 0 else current_wpt
+        # Determine if a lane change is upcoming.
+        future_wpt = self.global_route_buffer[-1][0] if self.global_route_buffer else current_wpt
+        past_wpt = self.history_buffer[0][0] if self.history_buffer else current_wpt
 
-        # check lateral offset from previous waypoint to current waypoint
-        vec_norm, angle = cal_distance_angle(previous_wpt.transform.location,
-                                             future_wpt.transform.location,
-                                             future_wpt.transform.rotation.yaw)
-        # distance in the lateral direction
-        lateral_diff = abs(
-            vec_norm *
-            math.sin(
-                math.radians(
-                    angle - 1 if angle > 90 else angle + 1)))
+        # Evaluate lateral offset between past and future waypoints.
+        distance, offset_angle = cal_distance_angle(past_wpt.transform.location, future_wpt.transform.location, future_wpt.transform.rotation.yaw)
+        lateral_offset = abs(distance * math.sin(math.radians(offset_angle - 1 if offset_angle > 90 else offset_angle + 1)))
 
-        boundingbox = self._vehicle.bounding_box
-        veh_width = 2 * abs(boundingbox.location.y - boundingbox.extent.y)
-        lane_width = current_wpt.lane_width
+        veh_dims = self.vehicle.bounding_box
+        veh_half_width = abs(veh_dims.location.y - veh_dims.extent.y)
+        road_width = current_wpt.lane_width
 
-        self.lane_lateral_change = veh_width < lateral_diff
-        # check if the vehicle is in lane change based on lane id and lateral
-        # offset
-        self.lane_id_change = (
-                future_wpt.lane_id != current_wpt.lane_id or
-                previous_wpt.lane_id != future_wpt.lane_id)
+        self.lane_lateral_change = veh_half_width < lateral_offset
+        self.lane_id_change = future_wpt.lane_id != current_wpt.lane_id or past_wpt.lane_id != future_wpt.lane_id
         self.potential_curved_road = self.lane_id_change or self.lane_lateral_change
 
-        _, angle = cal_distance_angle(
-            self._waypoint_buffer[0][0].transform.location,
-            current_location,
-            current_yaw)
+        # Incorporate historical waypoints into trajectory.
+        waypoint_idx = 0
+        for i, (wpt, _) in enumerate(self.history_buffer):
+            loc = wpt.transform.location
+            _, yaw_angle = cal_distance_angle(loc, current_loc, current_yaw)
 
-        # we consider history waypoint to generate trajectory
-        index = 0
-        for i in range(len(self._history_buffer)):
-            prev_wpt = self._history_buffer[i][0].transform.location
-            _, angle = cal_distance_angle(
-                prev_wpt, current_location, current_yaw)
-            # make sure the history waypoint is already passed by
-            if angle > 90 and not self.potential_curved_road:
-                x.append(prev_wpt.x)
-                y.append(prev_wpt.y)
-                index += 1
+            if yaw_angle > 90 and not self.potential_curved_road:
+                spline_x.append(loc.x)
+                spline_y.append(loc.y)
+                waypoint_idx += 1
             if self.potential_curved_road:
-                x.append(prev_wpt.x)
-                y.append(prev_wpt.y)
-                index += 1
+                spline_x.append(loc.x)
+                spline_y.append(loc.y)
+                waypoint_idx += 1
 
-        # to make sure the vehicle is stable during lane change, we don't
-        # include any current position
+        # Determine current position for the trajectory.
         if self.potential_curved_road:
-            _, angle = cal_distance_angle(
-                self._waypoint_buffer[0][0].transform.location,
-                current_location,
-                current_yaw)
-            # if the vehicle starts lane change at the very start
-            if len(x) == 0 or len(y) == 0:
-                x.append(current_location.x)
-                y.append(current_location.y)
+            spline_x.append(current_loc.x)
+            spline_y.append(current_loc.y)
         else:
-            _, angle = cal_distance_angle(
-                current_wpt_loc, current_location, current_yaw)
-            # we prefer to use waypoint as the current position for path
-            # generation if the waypoint is in front of us.
-            # This is because waypoint always sits in the center
-            if angle < 90:
-                x.append(current_wpt_loc.x)
-                y.append(current_wpt_loc.y)
+            _, yaw_angle = cal_distance_angle(current_wpt_loc, current_loc, current_yaw)
+            if yaw_angle < 90:
+                spline_x.append(current_wpt_loc.x)
+                spline_y.append(current_wpt_loc.y)
             else:
-                x.append(current_location.x)
-                y.append(current_location.y)
+                spline_x.append(current_loc.x)
+                spline_y.append(current_loc.y)
 
-        # used to filter the waypoints that are too close
-        index = max(0, index - 1) if self.potential_curved_road else index
-        prev_x = x[index]
-        prev_y = y[index]
-        for i in range(len(self._waypoint_buffer)):
-            cur_x = self._waypoint_buffer[i][0].transform.location.x
-            cur_y = self._waypoint_buffer[i][0].transform.location.y
-            if abs(prev_x - cur_x) < 0.5 and abs(prev_y - cur_y) < 0.5:
+        # Filter closely located waypoints.
+        waypoint_idx = max(0, waypoint_idx - 1) if self.potential_curved_road else waypoint_idx
+        last_x, last_y = spline_x[waypoint_idx], spline_y[waypoint_idx]
+        for wpt, _ in self.global_route_buffer:
+            loc = wpt.transform.location
+            if abs(last_x - loc.x) < 0.5 and abs(last_y - loc.y) < 0.5:
                 continue
-            prev_x = cur_x
-            prev_y = cur_y
+            last_x, last_y = loc.x, loc.y
+            spline_x.append(last_x)
+            spline_y.append(last_y)
 
-            x.append(cur_x)
-            y.append(cur_y)
+        # Execute cubic spline interpolation.
+        path_x, path_y, path_yaw, path_curvature = [], [], [], []
 
-        # calculate interpolation points
-        rx, ry, ryaw, rk = [], [], [], []
+        if len(spline_x) < 2 or len(spline_y) < 2:
+            return path_x, path_y, path_curvature, path_yaw
 
-        # Cubic CubicSpline Interpolation calculation
-        if len(x) < 2 or len(y) < 2:
-            return rx, ry, rk, ryaw
+        spline_path = Spline2D(spline_x, spline_y)
+        diff_s = np.hypot(current_loc.x - spline_path.x_spline.y[0], current_loc.y - spline_path.y_spline.y[0])
 
-        sp = Spline2D(x, y)
-
-        diff_x = current_location.x - sp.x_spline.y[0]
-        diff_y = current_location.y - sp.y_spline.y[0]
-        diff_s = np.hypot(diff_x, diff_y)
-
-        # we only need the interpolation points after current position
-        s = np.arange(diff_s, sp.arc_lengths[-1], ds)
-
-        self._long_plan_debug = []
-        # we only need the interpolation points until next waypoint
-        for (i, i_s) in enumerate(s):
-            ix, iy = sp.get_position(i_s)
-            if abs(ix - x[index]) <= ds and abs(iy - y[index]) <= ds:
+        s_values = np.arange(diff_s, spline_path.arc_lengths[-1], interpolation_distance)
+        self.path_debug = []
+        for i, s in enumerate(s_values):
+            interpolated_x, interpolated_y = spline_path.get_position(s)
+            if abs(interpolated_x - spline_x[waypoint_idx]) <= interpolation_distance and abs(interpolated_y - spline_y[waypoint_idx]) <= interpolation_distance:
                 continue
-            if i <= len(s) // 2:
-                self._long_plan_debug.append(
-                    carla.Transform(carla.Location(ix, iy, 0)))
-            rx.append(ix)
-            ry.append(iy)
-            rk.append(max(min(sp.get_curvature(i_s), 0.2), -0.2))
-            ryaw.append(sp.get_yaw(i_s))
+            if i <= len(s_values) // 2:
+                self.path_debug.append(carla.Transform(carla.Location(interpolated_x, interpolated_y, 0)))
+            path_x.append(interpolated_x)
+            path_y.append(interpolated_y)
+            path_curvature.append(max(min(spline_path.get_curvature(s), 0.2), -0.2))
+            path_yaw.append(spline_path.get_yaw(s))
 
-        return rx, ry, rk, ryaw
+        return path_x, path_y, path_curvature, path_yaw
 
-    def generate_trajectory(self, rx, ry, rk):
+    def generate_trajectory(self, path_x, path_y, path_curvature):
         """
-        Sampling the generated trajectory and assign speed to each point.
+        Sample the given local path and assign speed for each waypoint to generate trajectory.
 
         Parameters
         ----------
-        rx : list
-            List of planned path points' x coordinates. (from generate_path)
+        path_x : list
+            List of x coordinates of the trajectory provided by generate_local_path.
 
-        ry : list
-            List of planned path points' y coordinates.
+        path_y : list
+            List of y coordinates of the trajectory.
 
-        rk : list
-            List of planned path points' curvatures.
-
-        debug : boolean
-            whether to draw the whole plan path
+        path_curvature : list
+            List of curvature values of the trajectory.
 
         """
-        # unit distance for interpolation points
+        # Define the distance increment between interpolation points
         ds = 0.1
-        # unit sampling resolution. Sample a point every dt.
+        # Define the time increment for sampling
         dt = self.dt
 
-        target_speed = self._target_speed
-        current_speed = self._ego_speed
+        desired_speed = self.desired_speed
+        present_speed = self.vehicle_speed
 
-        # sample the trajectory by 0.1 second
-        sample_num = 4.0 // dt  # future horizon
+        # Set a future horizon for sampling
+        future_horizon = self.trajectory_sample_horizon // dt
 
-        break_flag = False
-        current_speed = current_speed / 3.6
-        sample_resolution = 0
+        reached_end = False
+        present_speed /= 3.6  # Convert km/h to m/s
+        sampling_dist = 0
 
-        # use mean curvature to constrain the speed
+        # Calculate speed constraint based on average curvature
+        avg_curvature = 0.0001 if len(path_curvature) < 2 else abs(statistics.mean(path_curvature))
+        speed_constraint = min(desired_speed, np.sqrt(5.0 / (avg_curvature + 10e-6)) * 3.6)
 
-        mean_k = 0.0001 if len(rk) < 2 else abs(statistics.mean(rk))
-        # v^2 <= a_lat_max / curvature, we assume 3.6 is the maximum lateral
-        # acceleration
-        target_speed = min(target_speed, np.sqrt(5.0 / (mean_k + 10e-6)) * 3.6)
+        max_acceleration = 3.5  # Maximum possible acceleration
+        # Compute acceleration ensuring it lies within the constraints
+        acc = max(min(max_acceleration, (speed_constraint / 3.6 - present_speed) / dt), -6.5)
 
-        max_acc = 3.5
-        # todo: hard-coded, need to be tuned
-        acceleration = max(
-            min(max_acc, (target_speed / 3.6 - current_speed) / dt), -6.5)
+        for step in range(1, int(future_horizon) + 1):
+            sampling_dist += present_speed * dt + 0.5 * acc * dt ** 2
+            present_speed += acc * dt
 
-        for i in range(1, int(sample_num) + 1):
-            sample_resolution += current_speed * dt + \
-                                 0.5 * acceleration * dt ** 2
-            current_speed += acceleration * dt
-
-            # print(sample_resolution)
-            if int(sample_resolution // ds - 1) >= len(rx):
-                sample_x = rx[-1]
-                sample_y = ry[-1]
-                break_flag = True
-
+            # Check if we've reached the end of the path
+            if int(sampling_dist // ds - 1) >= len(path_x):
+                final_x = path_x[-1]
+                final_y = path_y[-1]
+                reached_end = True
             else:
-                sample_x = rx[max(0, int(sample_resolution // ds - 1))]
-                sample_y = ry[max(0, int(sample_resolution // ds - 1))]
+                final_x = path_x[max(0, int(sampling_dist // ds - 1))]
+                final_y = path_y[max(0, int(sampling_dist // ds - 1))]
 
-            self._trajectory_buffer.append(
+            # Append the sampled point and speed to the trajectory buffer
+            self.trajectory_buffer.append(
                 (carla.Transform(
                     carla.Location(
-                        sample_x,
-                        sample_y,
-                        self._waypoint_buffer[0][0].transform.location.z +
-                        0.5)),
-                 target_speed))
-            if break_flag:
+                        final_x,
+                        final_y,
+                        self.global_route_buffer[0][0].transform.location.z + 0.5)),
+                 desired_speed))
+            if reached_end:
                 break
 
-    def buffer_filter(self):
+    def filter_global_route(self):
         """
-        Remove the waypoints in the global route plan which has dramatic
-        change of yaw angle. Such waypoint can cause bad vehicle dynnamics.
+        Refines the global route by removing waypoints that could result in sudden yaw angle changes.
         """
-        prev_wpt = None
+        last_waypoint = None
 
-        tmp = self._waypoint_buffer.copy()
+        temp_buffer = self.global_route_buffer.copy()
 
-        for i, (waypoint, _) in enumerate(tmp):
+        for idx, (current_waypoint, _) in enumerate(temp_buffer):
 
-            # we only need to examine the waypoint nearby
-            if i >= 3:
+            # Limit the examination to nearby waypoints
+            if idx >= 3:
                 break
-            # we need to find the right index for origin buffer, since
-            # it may remove several elements already
-            j = i - (len(tmp) - len(self._waypoint_buffer))
 
-            # check if the current waypoint is behind the vehicle.
-            # if so, remove such waypoint.
-            _, angle = cal_distance_angle(
-                waypoint.transform.location,
-                self._ego_pos.location, self._ego_pos.rotation.yaw)
+            # Adjust the index to align with the original buffer after potential deletions
+            adjusted_idx = idx - (len(temp_buffer) - len(self.global_route_buffer))
 
-            if angle > 90:
-                print('delete waypoint!')
-                del self._waypoint_buffer[j]
+            # Determine if the waypoint is behind the vehicle. If so, remove it.
+            _, yaw_angle = cal_distance_angle(
+                current_waypoint.transform.location,
+                self.vehicle_pos.location, self.vehicle_pos.rotation.yaw)
+
+            if yaw_angle > 90:
+                # print('Removing waypoint behind the vehicle!')
+                del self.global_route_buffer[adjusted_idx]
                 continue
 
-            if prev_wpt is None:
-                prev_wpt = waypoint
+            if last_waypoint is None:
+                last_waypoint = current_waypoint
                 continue
 
-            # avoid the situation that the next goal state is on the
-            # neighbor lane and it is too close to the current location,
-            # which will cause large steering angel for lane change.
-            if prev_wpt.lane_id != waypoint.lane_id and \
-                    len(self._waypoint_buffer) >= 2:
-                dist = compute_distance(waypoint.transform.location,
-                                        prev_wpt.transform.location)
+            # Remove those next waypoint on the other lane and is too close, which leads to abrupt steering actions.
+            if last_waypoint.lane_id != current_waypoint.lane_id and len(self.global_route_buffer) >= 2:
+                distance_between = compute_distance(current_waypoint.transform.location,
+                                                    last_waypoint.transform.location)
 
-                if dist <= 4.5:
-                    del self._waypoint_buffer[j]
+                if distance_between <= 4.5:
+                    del self.global_route_buffer[adjusted_idx]
 
-            prev_wpt = waypoint
+            last_waypoint = current_waypoint
 
-    def pop_buffer(self, vehicle_transform):
+    def remove_visited_waypoints(self, vehicle_transform):
         """
-        Remove waypoints the ego vehicle has achieved.
+        Remove those trajectory waypoints that the ego vehicle has visited.
         
         Parameters
         ----------
-        vehicle_transform : carla.position
-            The position of vehicle.
+        vehicle_transform : carla.transform
+            The transform of vehicle.
         """
-        max_index = -1
+        last_visited_idx = -1
 
-        for i, (waypoint, _) in enumerate(self._waypoint_buffer):
-            if distance_vehicle(
-                    waypoint, vehicle_transform) < self._min_distance:
-                max_index = i
-        if max_index >= 0:
-            for i in range(max_index + 1):
-                if self._history_buffer:
-                    prev_wpt = self._history_buffer[-1]
-                    incoming_wpt = self._waypoint_buffer.popleft()
+        # Identify last visited waypoint in global route buffer
+        for idx, (waypoint, _) in enumerate(self.global_route_buffer):
+            if distance_vehicle(waypoint, vehicle_transform) < self.min_distance:
+                last_visited_idx = idx
+
+        # Remove the identified waypoints and append them to history buffer
+        if last_visited_idx >= 0:
+            for _ in range(last_visited_idx + 1):
+                if self.history_buffer:
+                    last_history = self.history_buffer[-1]
+                    next_waypoint = self.global_route_buffer.popleft()
 
                     if abs(
-                            prev_wpt[0].transform.location.x -
-                            incoming_wpt[0].transform.location.x) > 4.5 or abs(
-                        prev_wpt[0].transform.location.y -
-                        incoming_wpt[0].transform.location.y) > 4.5:
-                        self._history_buffer.append(incoming_wpt)
-                else:
-                    self._history_buffer.append(
-                        self._waypoint_buffer.popleft())
+                            last_history[0].transform.location.x -
+                            next_waypoint[0].transform.location.x) > 4.5 or abs(
+                        last_history[0].transform.location.y -
+                        next_waypoint[0].transform.location.y) > 4.5:
+                        self.history_buffer.append(next_waypoint)
+                    else:
+                        self.history_buffer.append(
+                            self.global_route_buffer.popleft())
 
-        if self._trajectory_buffer:
-            max_index = -1
-            for i, (waypoint, _,) in enumerate(self._trajectory_buffer):
-                if distance_vehicle(
-                        waypoint, vehicle_transform) < \
-                        max(self._min_distance - 1, 1):
-                    max_index = i
-            if max_index >= 0:
-                for i in range(max_index + 1):
-                    self._trajectory_buffer.popleft()
+        # Identify and remove visited waypoints in trajectory buffer
+        if self.trajectory_buffer:
+            last_visited_trajectory_idx = -1
+            for idx, (waypoint, _) in enumerate(self.trajectory_buffer):
+                if distance_vehicle(waypoint, vehicle_transform) < \
+                        max(self.min_distance - 1, 1):
+                    last_visited_trajectory_idx = idx
 
-    def run_step(
+            if last_visited_trajectory_idx >= 0:
+                for _ in range(last_visited_trajectory_idx + 1):
+                    self.trajectory_buffer.popleft()
+
+    def run_trajectory_planning(
             self,
-            rx,
-            ry,
-            rk,
-            target_speed=None,
-            trajectory=None,
-            following=False):
+            path_x,
+            path_y,
+            curvatures,
+            desired_speed=None):
         """
-        Execute one step of local planning which involves
-        running the longitudinal and lateral PID controllers to
-        follow the smooth waypoints trajectory.
+        Conducts one iteration of trajectory planning.
 
         Parameters
         ----------
-        rx : list
-            List of planned path points' x coordinates.
+        path_x : list
+            X coordinates of the planned path points.
 
-        ry : list
-            List of planned path points' y coordinates.
+        path_y : list
+            Y coordinates of the planned path points.
 
-        ryaw : list
-            List of planned path points' yaw angles.
+        curvatures : list
+            Curvatures of the planned path points.
 
-        rk : list
-            List of planned path points' curvatures.
-
-        following : boolean
-            Indicator of whether the vehicle is under following status.
-
-        trajectory : list
-            Pre-generated car-following trajectory only for platoon members.
-
-        target_speed : float
-            The ego vehicle's desired speed.
+        desired_speed : float, optional
+            The preferred speed for the ego vehicle.
 
         Returns
         -------
-        speed : float
-            Next trajectory point's target speed。
+        trajectory_speed : float
+            Speed for the upcoming trajectory point.
 
-        waypoint : carla.waypoint
-            Next trajectory point's waypoint.
+        next_point_location : carla.location
+            Location for the upcoming trajectory point.
 
         """
+        self.desired_speed = desired_speed
 
-        self._target_speed = target_speed
-
-        # Buffering the waypoints. Always keep the waypoint buffer alive
-        if len(self._waypoint_buffer) < self.waypoint_update_freq:
-            for i in range(self._buffer_size - len(self._waypoint_buffer)):
-                if self.waypoints_queue:
-                    self._waypoint_buffer.append(
-                        self.waypoints_queue.popleft())
+        # Keep the waypoint buffer populated
+        if len(self.global_route_buffer) < self.global_route_update_freq:
+            for _ in range(self.buffer_size - len(self.global_route_buffer)):
+                if self.cur_global_route:
+                    self.global_route_buffer.append(self.cur_global_route.popleft())
                 else:
                     break
 
-        # we will generate the trajectory only if it is not a following vehicle
-        # in the platooning
-        if not trajectory and len(
-                self._trajectory_buffer) < self.trajectory_update_freq and \
-                not following:
-            self._trajectory_buffer.clear()
-            # if no spline points provided, return 0 and none target wpt
-            if len(rx) == 0:
+        # Generate trajectory if required
+        if len(self.trajectory_buffer) < self.trajectory_update_freq:
+            self.trajectory_buffer.clear()
+            if len(path_x) == 0:  # return if no spline points available
                 return 0, None
-            self.generate_trajectory(rx, ry, rk)
-        elif trajectory:
-            self._trajectory_buffer = trajectory.copy()
+            self.generate_trajectory(path_x, path_y, curvatures)
 
-        # Target waypoint
-        self.target_waypoint, self._target_speed = \
-            self._trajectory_buffer[min(1, len(self._trajectory_buffer) - 1)]
+        # get waypoint and speed
+        self.target_waypoint, self.desired_speed = self.trajectory_buffer[min(1, len(self.trajectory_buffer) - 1)]
 
-        # Purge the queue of obsolete waypoints
-        vehicle_transform = self._ego_pos
-        self.pop_buffer(vehicle_transform)
+        # Remove visited waypoints
+        vehicle_position = self.vehicle_pos
+        self.remove_visited_waypoints(vehicle_position)
 
+        # Debug visualization
         if self.debug_trajectory:
-            draw_trajetory_points(self._vehicle.get_world(),
-                                  self._long_plan_debug,
-                                  color=carla.Color(0, 255, 0),
-                                  size=0.05,
-                                  lt=0.1)
-            # draw_trajetory_points(self._vehicle.get_world(),
-            # self._trajectory_buffer, size=0.1, arrow_size=0.2, z=0.1, lt=0.1)
-
+            draw_trajetory_points(self.vehicle.get_world(), self.path_debug, color=carla.Color(0, 255, 0), size=0.05, lt=0.1)
         if self.debug:
-            draw_trajetory_points(self._vehicle.get_world(),
-                                  self._waypoint_buffer,
-                                  z=0.1,
-                                  size=0.1,
-                                  color=carla.Color(0, 0, 255),
-                                  lt=0.2)
-            draw_trajetory_points(self._vehicle.get_world(),
-                                  self._history_buffer,
-                                  z=0.1,
-                                  size=0.1,
-                                  color=carla.Color(255, 0, 255),
-                                  lt=0.2)
+            draw_trajetory_points(self.vehicle.get_world(), self.global_route_buffer, z=0.1, size=0.1, color=carla.Color(0, 0, 255), lt=0.2)
+            draw_trajetory_points(self.vehicle.get_world(), self.history_buffer, z=0.1, size=0.1, color=carla.Color(255, 0, 255), lt=0.2)
 
-        return self._target_speed, \
-               self.target_waypoint.transform.location if hasattr(  # here should be self.target_waypoint.location
-                   self.target_waypoint,
-                   'is_junction') else self.target_waypoint.location
+        trajectory_speed = self.desired_speed
+        next_point_location = self.target_waypoint.transform.location if hasattr(self.target_waypoint, 'is_junction') else self.target_waypoint.location
+
+        return trajectory_speed, next_point_location
