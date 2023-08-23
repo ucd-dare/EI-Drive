@@ -61,7 +61,7 @@ defaults:
   - vehicle_perception: perception_demo_false
   - vehicle_localization: localization_demo_false
   - game_map: map_deactivated
-  - behavior: behavior_demo
+  - behavior: behavior_demo_manual
   - controller: pid_controller
   - traffic_manager: lane_change_false
   - scenario: demo

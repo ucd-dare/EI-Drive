@@ -10,7 +10,7 @@ from EIdrive.core.sensing.localization.localization_manager \
     import Localizer
 from EIdrive.core.sensing.perception.perception \
     import Perception
-from EIdrive.core.plan.behavior_agent \
+from EIdrive.core.plan.agent_behavior \
     import AgentBehavior
 from EIdrive.core.map.game_map import GameMap
 from EIdrive.core.common.data_dumper import DataDumper
@@ -167,7 +167,7 @@ class VehicleAgent(object):
         objects = self.perception_manager.detect(ego_pos)
 
         # update the ego pose for map manager
-        self.gamemap.update_information(ego_pos)
+        self.gamemap.set_center(ego_pos)
 
         self.agent.update_information(ego_pos, ego_spd, objects)
 

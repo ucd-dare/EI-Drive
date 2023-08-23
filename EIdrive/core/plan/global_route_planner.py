@@ -6,7 +6,7 @@ import math
 import numpy as np
 import networkx as nx
 import carla
-from EIdrive.core.plan.local_planner_behavior import RoadOption
+from EIdrive.core.plan.local_trajectory_planner import RoadOption
 from EIdrive.core.common.misc import vector
 
 

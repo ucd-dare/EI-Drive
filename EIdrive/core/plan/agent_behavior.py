@@ -10,7 +10,7 @@ import importlib
 from collections import deque
 from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
 from EIdrive.core.plan.collision_detect import CollisionDetector
-from EIdrive.core.plan.local_planner_behavior import LocalPlanner
+from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 
 
@@ -33,7 +33,7 @@ class AgentBehavior(object):
     Attributes
     ----------
     vehicle_pos : carla.position
-        Posiion of the ego vehicle.
+        Position of the ego vehicle.
 
     vehicle_speed : float
         Speed of the ego vehicle.
@@ -47,7 +47,7 @@ class AgentBehavior(object):
     break_distance : float
         The current distance needed for ego vehicle to reach a steady stop.
 
-    _collision_detector : collisiondetetor
+    _collision_detector : CollisionDetetor
         A collision check class to estimate the collision with front obstacle.
 
     ignore_traffic_light : boolean

@@ -17,7 +17,7 @@ from collections import deque
 
 from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
 from EIdrive.core.plan.collision_detect import CollisionDetector
-from EIdrive.core.plan.local_planner_behavior import LocalPlanner
+from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
 
 

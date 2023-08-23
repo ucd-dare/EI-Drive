@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
-"""HDMap manager
+"""
+Build and render minimap
 """
 
 import math
@@ -15,80 +14,89 @@ from shapely.geometry import Polygon
 from EIdrive.core.sensing.perception.sensor_transformation import \
     world_to_sensor
 from EIdrive.core.map.map_utils import \
-    lateral_shift, list_loc2array, list_wpt2array, convert_tl_status
+    lateral_shift, convert_locations_to_array, waypoints_to_array, traffic_light_state_to_string
 from EIdrive.core.map.map_drawing import \
-    cv2_subpixel, draw_agent, draw_road, draw_lane
+    cv2_subpixel, render_agent, render_road, render_lane
 
 
 class GameMap(object):
     """
-    This class is used to manage HD Map. We emulate the style of Lyft dataset.
-    todo: Currently mainly used for map rasterization.
-    todo: everything is groundtruth loaded from server directly.
+    Manages a High Definition (HD) Map. The class process and visualize information about lanes, crosswalks,
+    traffic lights, and other critical mapping elements.
 
     Parameters
     ----------
     vehicle : Carla.vehicle
-        The ego vehicle.
+        The ego vehicle in the simulation.
 
-    carla_map : Carla.Map
-        The carla simulator map.
+    world_map : Carla.Map
+        The map being used in the Carla simulator.
 
     config : dict
-        All the map manager parameters.
+        Configuration parameters dictating various properties of the map.
 
     Attributes
     ----------
     world : carla.world
-        Carla simulation world.
+        Instance of the Carla world containing the simulation elements.
 
-    center : carla.Transform
-        The rasterization map's center pose.
+    agent_id : int
+        Identifier for the ego vehicle.
+
+    center : carla.Transform or None
+        Represents the center pose of the rasterized map. None if not set.
+
+    activate : bool
+        Determines if certain features are activated.
+
+    visualize : bool
+        Flag for visualizations.
+
+    pixels_per_meter : float
+        Pixel density relative to actual measurements.
 
     meter_per_pixel : float
-        m/pixel
+        Physical size each pixel represents (inverse of `pixels_per_meter`).
 
-    raster_size : float
-        The rasterization map size in pixels.
+    raster_size : np.array
+        Dimensions of the rasterized map in pixels.
 
     raster_radius : float
-        The valid radius(m) in the center of the rasterization map.
+        Radius of the usable part of the rasterized map in meters.
 
     topology : list
-        Map topology in list.
+        List of starting waypoints in the HD Map, sorted by altitude.
 
     lane_info : dict
-        A dictionary that contains all lane information.
+        Contains detailed information about the lanes.
 
     crosswalk_info : dict
-        A dictionary that contains all crosswalk information.
-        todo: will be implemented in the next version.
+        Contains detailed information about the crosswalks.
 
     traffic_light_info : dict
-        A dictionary that contains all traffic light information.
+        Contains detailed information about the traffic lights.
 
     bound_info : dict
-        A dictionary that saves boundary information of lanes and crosswalks.
-        It is used to efficiently filter out invalid lanes/crosswarlks.
+        Boundary information for lanes and crosswalks for efficient data access.
 
     lane_sample_resolution : int
-        The sampling resolution for drawing lanes.
-
-    static_bev : np.array
-        The static bev map containing lanes and drivable road information.
+        Resolution used for sampling when drawing the lanes.
 
     dynamic_bev : np.array
-        The dynamic bev map containing vehicle's information.
+        Bird's Eye View (BEV) map that incorporates dynamic objects like vehicles.
+
+    static_bev : np.array
+        BEV map focusing on static elements like roads and lanes.
 
     vis_bev : np.array
-        The comprehensive bev map for visualization.
-
+        Comprehensive BEV map used for visualizations.
     """
 
-    def __init__(self, vehicle, carla_map, config):
+    def __init__(self, vehicle, world_map, config):
+        # Initializing attributes
         self.world = vehicle.get_world()
         self.agent_id = vehicle.id
-        self.carla_map = carla_map
+        self.world_map = world_map
         self.center = None
 
         self.activate = config['activate']
@@ -99,31 +107,26 @@ class GameMap(object):
                                      config['raster_size'][1]])
         self.lane_sample_resolution = config['lane_sample_resolution']
 
-        self.raster_radius = \
-            float(np.linalg.norm(self.raster_size *
-                                 np.array(
-                                     [self.meter_per_pixel,
-                                      self.meter_per_pixel]))) / 2
+        self.raster_radius = float(np.linalg.norm(self.raster_size * np.array(
+                                                      [self.meter_per_pixel,
+                                                       self.meter_per_pixel]))) / 2
 
-        # list of all start waypoints in HD Map
-        topology = [x[0] for x in carla_map.get_topology()]
-        # sort by altitude
+        # Extracting and sorting all starting waypoints from the HD Map
+        topology = [x[0] for x in world_map.get_topology()]
         self.topology = sorted(topology, key=lambda w: w.transform.location.z)
 
-        # basic elements in HDMap: lane, crosswalk and traffic light
+        # Initializing dictionaries for map elements
         self.lane_info = {}
         self.crosswalk_info = {}
         self.traffic_light_info = {}
-        # this is mainly used for efficient filtering
         self.bound_info = {'lanes': {},
                            'crosswalks': {}}
 
-        # generate information for traffic light
-        self.generate_tl_info(self.world)
-        # generate lane, crosswalk and boundary information
+        # Generate information for different map elements
+        self.generate_traffic_light_data(self.world)
         self.generate_lane_cross_info()
 
-        # bev maps
+        # Initializing BEV maps
         self.dynamic_bev = 255 * np.zeros(
             shape=(self.raster_size[1], self.raster_size[0], 3),
             dtype=np.uint8)
@@ -134,9 +137,9 @@ class GameMap(object):
             shape=(self.raster_size[1], self.raster_size[0], 3),
             dtype=np.uint8)
 
-    def update_information(self, ego_pose):
+    def set_center(self, ego_pose):
         """
-        Update the ego pose as the map center.
+        Set the ego pose as the map center.
 
         Parameters
         ----------
@@ -144,403 +147,436 @@ class GameMap(object):
         """
         self.center = ego_pose
 
-    # def run_step(self):
-    #     """
-    #     Rasterization + Visualize the bev map if needed.
-    #     """
-    #     if not self.activate:
-    #         return
-    #     self.rasterize_static()
-    #     self.rasterize_dynamic()
-    #     if self.visualize:
-    #         cv2.imshow('the bev map of agent %s' % self.agent_id,
-    #                    self.vis_bev)
-    #         cv2.waitKey(1)
+    def rasterize_bev_map(self):
+        """
+        Rasterize and Visualize the bev map.
+        """
+        if not self.activate:
+            return
+        self.render_static_agents()
+        self.render_dynamic_agents()
+        if self.visualize:
+            cv2.imshow('the bev map of agent %s' % self.agent_id, self.vis_bev)
+            cv2.waitKey(1)
 
     @staticmethod
-    def get_bounds(left_lane, right_lane):
+    def compute_lane_bounds(left_boundary, right_boundary):
         """
-        Get boundary information of a lane.
+        Computes the bounding box for a given lane defined by its left and right boundaries.
 
         Parameters
         ----------
-        left_lane : np.array
-            shape: (n, 3)
-        right_lane : np.array
-            shape: (n,3)
+        left_boundary : np.array
+            Array representing the left boundary of the lane. Shape: (n, 3)
+
+        right_boundary : np.array
+            Array representing the right boundary of the lane. Shape: (n, 3)
+
         Returns
         -------
-        bound : np.array
+        bounding_box : np.array
+            Array containing the minimum and maximum coordinates that enclose the lane.
         """
-        x_min = min(np.min(left_lane[:, 0]),
-                    np.min(right_lane[:, 0]))
-        y_min = min(np.min(left_lane[:, 1]),
-                    np.min(right_lane[:, 1]))
-        x_max = max(np.max(left_lane[:, 0]),
-                    np.max(right_lane[:, 0]))
-        y_max = max(np.max(left_lane[:, 1]),
-                    np.max(right_lane[:, 1]))
-        bounds = np.asarray([[[x_min, y_min], [x_max, y_max]]])
 
-        return bounds
+        # Calculate the bounds for the given lane
+        x_min = min(np.min(left_boundary[:, 0]), np.min(right_boundary[:, 0]))
+        y_min = min(np.min(left_boundary[:, 1]), np.min(right_boundary[:, 1]))
+        x_max = max(np.max(left_boundary[:, 0]), np.max(right_boundary[:, 0]))
+        y_max = max(np.max(left_boundary[:, 1]), np.max(right_boundary[:, 1]))
 
-    def agents_in_range(self,
-                        radius,
-                        agents_dict):
+        bounding_box = np.asarray([[[x_min, y_min], [x_max, y_max]]])
+
+        return bounding_box
+
+    def filter_agents_within_radius(self, radius, all_agents):
         """
-        Filter out all agents out of the radius.
+        Filters and returns agents within a specified radius from the center.
 
         Parameters
         ----------
-        radius : float
-            Radius in meters
+        range_radius : float
+            The range in meters within which to filter agents.
 
-        agents_dict : dict
-            Dictionary containing all dynamic agents.
+        all_agents : dict
+            Dictionary containing details of all agents.
 
         Returns
         -------
-        The dictionary that only contains the agent in range.
+        agents_within_range : dict
+            A dictionary containing agents that are within the specified radius from the center.
         """
-        final_agents = {}
 
-        # convert center to list format
-        center = [self.center.location.x, self.center.location.y]
+        agents_within_range = {}
 
-        for agent_id, agent in agents_dict.items():
-            location = agent['location']
-            distance = math.sqrt((location[0] - center[0]) ** 2 + \
-                                 (location[1] - center[1]) ** 2)
-            if distance < radius:
-                final_agents.update({agent_id: agent})
+        # Retrieve the center's coordinates
+        center_coords = [self.center.location.x, self.center.location.y]
 
-        return final_agents
+        for agent_key, agent_details in all_agents.items():
+            agent_location = agent_details['location']
+            euclidean_distance = math.sqrt((agent_location[0] - center_coords[0]) ** 2 +
+                                           (agent_location[1] - center_coords[1]) ** 2)
+
+            if euclidean_distance < radius:
+                agents_within_range[agent_key] = agent_details
+
+        return agents_within_range
 
     def indices_in_bounds(self,
-                          bounds: np.ndarray,
-                          half_extent: float) -> np.ndarray:
+                          bounding_boxes: np.ndarray,
+                          box_half_extent: float) -> np.ndarray:
         """
-        Get indices of elements for which the bounding box described by bounds
-        intersects the one defined around center (square with side 2*half_side)
+        Obtain indices of elements where given bounding boxes intersect with a square bounding box
+        centered around the `self.center` and having a side length of 2 * box_half_extent.
 
         Parameters
         ----------
-        bounds :np.ndarray
-            array of shape Nx2x2 [[x_min,y_min],[x_max, y_max]]
+        bounding_boxes : np.ndarray
+            Array of shape Nx2x2 representing bounding boxes as [[x_min, y_min], [x_max, y_max]].
 
-        half_extent : float
-            half the side of the bounding box centered around center
+        box_half_extent : float
+            Half the side length of the square bounding box centered around `self.center`.
 
         Returns
         -------
-        np.ndarray: indices of elements inside radius from center
+        np.ndarray
+            Indices of elements within the specified bounding box around `self.center`.
         """
-        x_center, y_center = self.center.location.x, self.center.location.y
 
-        x_min_in = x_center > bounds[:, 0, 0] - half_extent
-        y_min_in = y_center > bounds[:, 0, 1] - half_extent
-        x_max_in = x_center < bounds[:, 1, 0] + half_extent
-        y_max_in = y_center < bounds[:, 1, 1] + half_extent
-        return np.nonzero(x_min_in & y_min_in & x_max_in & y_max_in)[0]
+        center_x, center_y = self.center.location.x, self.center.location.y
 
-    def associate_lane_tl(self, mid_lane):
+        x_min_within = center_x > bounding_boxes[:, 0, 0] - box_half_extent
+        y_min_within = center_y > bounding_boxes[:, 0, 1] - box_half_extent
+        x_max_within = center_x < bounding_boxes[:, 1, 0] + box_half_extent
+        y_max_within = center_y < bounding_boxes[:, 1, 1] + box_half_extent
+
+        return np.nonzero(x_min_within & y_min_within & x_max_within & y_max_within)[0]
+
+    def get_associated_traffic_light(self, lane_midline):
         """
-        Given the waypoints for a certain lane, find the traffic light that
-        influence it.
+        Identifies the traffic light that influences a given lane based on waypoints.
 
         Parameters
         ----------
-        mid_lane : np.ndarray
-            The middle line of the lane.
+        lane_midline : np.ndarray
+            Represents the centerline waypoints of the lane.
+
         Returns
         -------
-        associate_tl_id : str
-            The associated traffic light id.
+        associated_traffic_light_id : str
+            The ID of the traffic light that is associated with the lane.
         """
-        associate_tl_id = ''
 
-        for tl_id, tl_content in self.traffic_light_info.items():
-            trigger_poly = tl_content['corners']
-            # use Path to do fast computation
-            trigger_path = Path(trigger_poly.boundary)
-            # check if any point in the middle line inside the trigger area
-            check_array = trigger_path.contains_points(mid_lane[:, :2])
+        associated_traffic_light_id = ''
 
-            if check_array.any():
-                associate_tl_id = tl_id
-        return associate_tl_id
+        # Iterate over all traffic lights to check influence on the lane
+        for tl_id, tl_details in self.traffic_light_info.items():
+            trigger_area = tl_details['corners']
+
+            # Create a path object for efficient geometric computations
+            trigger_path = Path(trigger_area.boundary)
+
+            # Verify if any waypoint of the lane's centerline lies within the trigger area
+            check_result = trigger_path.contains_points(lane_midline[:, :2])
+
+            if check_result.any():
+                associated_traffic_light_id = tl_id
+                break
+
+        return associated_traffic_light_id
 
     def generate_lane_cross_info(self):
         """
-        From the topology generate all lane and crosswalk
-        information in a dictionary under world's coordinate frame.
+        Extracts lane and crosswalk information from the topology and transfer them
+        into respective dictionaries using world coordinates.
         """
-        # list of str
-        lanes_id = []
-        crosswalks_ids = []
 
-        # boundary of each lane for later filtering
-        lanes_bounds = np.empty((0, 2, 2), dtype=np.float)
-        crosswalks_bounds = np.empty((0, 2, 2), dtype=np.float)
+        # Lists to store lane and crosswalk IDs
+        lane_ids = []
+        crosswalk_ids = []
 
-        # loop all waypoints to get lane information
-        for (i, waypoint) in enumerate(self.topology):
-            # unique id for each lane
-            lane_id = uuid.uuid4().hex[:6].upper()
-            lanes_id.append(lane_id)
+        # Arrays to store the boundaries of lanes and crosswalks
+        lane_boundaries = np.empty((0, 2, 2), dtype=np.float)
+        crosswalk_boundaries = np.empty((0, 2, 2), dtype=np.float)
 
-            waypoints = [waypoint]
-            nxt = waypoint.next(self.lane_sample_resolution)[0]
-            # looping until next lane
-            while nxt.road_id == waypoint.road_id \
-                    and nxt.lane_id == waypoint.lane_id:
-                waypoints.append(nxt)
+        # Iterate through all waypoints to extract lane information
+        for waypoint in self.topology:
 
-                # Add check to prevent crashing
-                if len(nxt.next(self.lane_sample_resolution)) > 0:
-                    nxt = nxt.next(self.lane_sample_resolution)[0]
+            # Generate a unique ID for each lane
+            current_lane_id = uuid.uuid4().hex[:6].upper()
+            lane_ids.append(current_lane_id)
+
+            collected_waypoints = [waypoint]
+            next_waypoint = waypoint.next(self.lane_sample_resolution)[0]
+
+            # Traverse waypoints in the same lane
+            while next_waypoint.road_id == waypoint.road_id and \
+                    next_waypoint.lane_id == waypoint.lane_id:
+                collected_waypoints.append(next_waypoint)
+
+                # Check to ensure the next waypoint exists
+                if len(next_waypoint.next(self.lane_sample_resolution)) > 0:
+                    next_waypoint = next_waypoint.next(self.lane_sample_resolution)[0]
                 else:
                     break
 
-            # waypoint is the centerline, we need to calculate left lane mark
-            left_marking = [lateral_shift(w.transform, -w.lane_width * 0.5) for
-                            w in waypoints]
-            right_marking = [lateral_shift(w.transform, w.lane_width * 0.5) for
-                             w in waypoints]
-            # convert the list of carla.Location to np.array
-            left_marking = list_loc2array(left_marking)
-            right_marking = list_loc2array(right_marking)
-            mid_lane = list_wpt2array(waypoints)
+            # Calculate left and right lane markings based on the waypoint's centerline
+            left_lane_boundary = [lateral_shift(w.transform, -w.lane_width * 0.5) for w in collected_waypoints]
+            right_lane_boundary = [lateral_shift(w.transform, w.lane_width * 0.5) for w in collected_waypoints]
 
-            # get boundary information
-            bound = self.get_bounds(left_marking, right_marking)
-            lanes_bounds = np.append(lanes_bounds, bound, axis=0)
+            # Convert the list of Carla locations to numpy arrays
+            left_lane_boundary = convert_locations_to_array(left_lane_boundary)
+            right_lane_boundary = convert_locations_to_array(right_lane_boundary)
+            center_line = waypoints_to_array(collected_waypoints)
 
-            # associate with traffic light
-            tl_id = self.associate_lane_tl(mid_lane)
+            # Determine boundary and append to lane boundaries
+            current_boundary = self.compute_lane_bounds(left_lane_boundary, right_lane_boundary)
+            lane_boundaries = np.append(lane_boundaries, current_boundary, axis=0)
 
-            self.lane_info.update({lane_id: {'xyz_left': left_marking,
-                                             'xyz_right': right_marking,
-                                             'xyz_mid': mid_lane,
-                                             'tl_id': tl_id}})
-            # boundary information
-            self.bound_info['lanes']['ids'] = lanes_id
-            self.bound_info['lanes']['bounds'] = lanes_bounds
-            self.bound_info['crosswalks']['ids'] = crosswalks_ids
-            self.bound_info['crosswalks']['bounds'] = crosswalks_bounds
+            # Link lanes to their respective traffic lights
+            traffic_light_id = self.get_associated_traffic_light(center_line)
 
-    def generate_tl_info(self, world):
+            self.lane_info.update({
+                current_lane_id: {
+                    'xyz_left': left_lane_boundary,
+                    'xyz_right': right_lane_boundary,
+                    'xyz_mid': center_line,
+                    'tl_id': traffic_light_id
+                }
+            })
+
+            # Update boundary information
+            self.bound_info['lanes']['ids'] = lane_ids
+            self.bound_info['lanes']['bounds'] = lane_boundaries
+            self.bound_info['crosswalks']['ids'] = crosswalk_ids
+            self.bound_info['crosswalks']['bounds'] = crosswalk_boundaries
+
+    def generate_traffic_light_data(self, world):
         """
-        Generate traffic light information under world's coordinate frame.
+        Generate information about traffic lights in the given world's coordinate system.
 
         Parameters
         ----------
-        world : carla.world
-            Carla simulator env.
+        environment : carla.world
+            Instance of the Carla simulator environment.
 
         Returns
         -------
-        A dictionary containing traffic lights information.
+        dict:
+            A dictionary containing detailed information about each traffic light.
         """
-        tl_list = world.get_actors().filter('traffic.traffic_light*')
 
-        for tl_actor in tl_list:
-            tl_id = uuid.uuid4().hex[:4].upper()
+        # Fetch all traffic light actors from the environment
+        traffic_light_actors = world.get_actors().filter('traffic.traffic_light*')
+        traffic_light_data = {}
 
-            base_transform = tl_actor.get_transform()
-            base_rot = base_transform.rotation.yaw
-            # this is where the vehicle stops
-            area_loc = base_transform.transform(
-                tl_actor.trigger_volume.location)
-            area_transform = carla.Transform(area_loc,
-                                             carla.Rotation(yaw=base_rot))
+        # Iterate over each traffic light actor to extract relevant information
+        for tl in traffic_light_actors:
+            unique_tl_id = uuid.uuid4().hex[:4].upper()
 
-            # bbx extent
-            ext = tl_actor.trigger_volume.extent
-            # the y is to narrow
-            ext.y += 0.5
-            ext_corners = np.array([
-                [-ext.x, -ext.y],
-                [ext.x, -ext.y],
-                [ext.x, ext.y],
-                [-ext.x, ext.y]])
-            for i in range(ext_corners.shape[0]):
-                corrected_loc = area_transform.transform(
-                    carla.Location(ext_corners[i][0], ext_corners[i][1]))
-                ext_corners[i, 0] = corrected_loc.x
-                ext_corners[i, 1] = corrected_loc.y
+            primary_transform = tl.get_transform()
+            primary_rotation_yaw = primary_transform.rotation.yaw
 
-            # use shapely lib to convert to polygon
-            corner_poly = Polygon(ext_corners)
-            self.traffic_light_info.update(
-                {tl_id: {'actor': tl_actor,
-                         'corners': corner_poly,
-                         'base_rot': base_rot,
-                         'base_transform': base_transform
-                         }})
+            # Compute the area location where vehicles are expected to stop
+            stop_area_location = primary_transform.transform(tl.trigger_volume.location)
+            stop_area_transform = carla.Transform(stop_area_location, carla.Rotation(yaw=primary_rotation_yaw))
 
-    def generate_lane_area(self, xyz_left, xyz_right):
+            # Define extents of the bounding box
+            bounding_box_extent = tl.trigger_volume.extent
+            bounding_box_extent.y += 0.5
+            bounding_box_corners = np.array([
+                [-bounding_box_extent.x, -bounding_box_extent.y],
+                [bounding_box_extent.x, -bounding_box_extent.y],
+                [bounding_box_extent.x, bounding_box_extent.y],
+                [-bounding_box_extent.x, bounding_box_extent.y]
+            ])
+
+            # Adjust corners based on transformed location
+            for idx in range(bounding_box_corners.shape[0]):
+                transformed_location = stop_area_transform.transform(
+                    carla.Location(bounding_box_corners[idx][0], bounding_box_corners[idx][1]))
+                bounding_box_corners[idx, 0] = transformed_location.x
+                bounding_box_corners[idx, 1] = transformed_location.y
+
+            # Convert corners to polygon using shapely library
+            polygon_representation = Polygon(bounding_box_corners)
+
+            # Update the dictionary with the extracted information
+            traffic_light_data[unique_tl_id] = {
+                'actor': tl,
+                'corners': polygon_representation,
+                'base_rot': primary_rotation_yaw,
+                'base_transform': primary_transform
+            }
+
+        self.traffic_light_info.update(traffic_light_data)
+
+    def compute_lane_polygon(self, left_markings, right_markings):
         """
-        Generate the lane area poly under rasterization map's center
-        coordinate frame.
+        Constructs a lane polygon based on the map's central rasterization frame.
 
         Parameters
         ----------
-        xyz_left : np.ndarray
-            Left lanemarking of a lane, shape: (n, 3).
-        xyz_right : np.ndarray
-            Right lanemarking of a lane, shape: (n, 3).
+        left_markings : np.ndarray
+            Coordinates for the left edge of the lane, with a shape of (n, 3).
+        right_markings : np.ndarray
+            Coordinates for the right edge of the lane, with a shape of (n, 3).
 
         Returns
         -------
-        lane_area : np.ndarray
-            Combine left and right lane together to form a polygon.
+        lane_polygon : np.ndarray
+            A polygon formed by merging the left and right edges of the lane.
         """
-        lane_area = np.zeros((2, xyz_left.shape[0], 2))
-        # convert coordinates to center's coordinate frame
-        xyz_left = xyz_left.T
-        xyz_left = np.r_[
-            xyz_left, [np.ones(xyz_left.shape[1])]]
-        xyz_right = xyz_right.T
-        xyz_right = np.r_[
-            xyz_right, [np.ones(xyz_right.shape[1])]]
+        lane_polygon = np.zeros((2, left_markings.shape[0], 2))
 
-        # ego's coordinate frame
-        xyz_left = world_to_sensor(xyz_left, self.center).T
-        xyz_right = world_to_sensor(xyz_right, self.center).T
+        # Homogenize coordinates for transformation
+        left_markings = left_markings.T
+        left_markings = np.r_[
+            left_markings, [np.ones(left_markings.shape[1])]]
+        right_markings = right_markings.T
+        right_markings = np.r_[
+            right_markings, [np.ones(right_markings.shape[1])]]
 
-        # to image coordinate frame
-        lane_area[0] = xyz_left[:, :2]
-        lane_area[1] = xyz_right[::-1, :2]
-        # switch x and y
-        lane_area = lane_area[..., ::-1]
+        # Convert world coordinates to the ego vehicle's frame
+        left_markings = world_to_sensor(left_markings, self.center).T
+        right_markings = world_to_sensor(right_markings, self.center).T
+
+        # Extract x, y from the transformed coordinates and invert y-axis for right markings
+        lane_polygon[0] = left_markings[:, :2]
+        lane_polygon[1] = right_markings[::-1, :2]
+
+        # Swap x and y coordinates
+        lane_polygon = lane_polygon[..., ::-1]
+
+        # Invert the y coordinate
+        lane_polygon[:, :, 1] = -lane_polygon[:, :, 1]
+
+        # Adjust coordinates based on pixel density and raster size
+        lane_polygon[:, :, 0] = lane_polygon[:, :, 0] * self.pixels_per_meter + self.raster_size[0] // 2
+        lane_polygon[:, :, 1] = lane_polygon[:, :, 1] * self.pixels_per_meter + self.raster_size[1] // 2
+
+        # Refine the polygon for higher accuracy
+        lane_polygon = cv2_subpixel(lane_polygon)
+
+        return lane_polygon
+
+    def generate_agent_area(self, bounding_box_corners):
+        """
+        Transforms the agent's bounding box corners from world coordinates
+        to rasterization frame coordinates.
+
+        Parameters
+        ----------
+        bounding_box_corners : list
+            List of four corners of the agent's bounding box in the world coordinate frame.
+
+        Returns
+        -------
+        Rasterized coordinates of the agent's bounding box corners.
+        """
+        # Convert the list of corners to a (4, 3) numpy array
+        bounding_box_corners = np.array(bounding_box_corners)
+
+        # Convert from world frame to the ego vehicle's frame
+        bounding_box_corners = bounding_box_corners.T
+        bounding_box_corners = np.r_[bounding_box_corners, [np.ones(bounding_box_corners.shape[1])]]
+        bounding_box_corners = world_to_sensor(bounding_box_corners, self.center).T
+        bounding_box_corners = bounding_box_corners[:, :2]
+
+        # Swap x and y coordinates
+        bounding_box_corners = bounding_box_corners[..., ::-1]
         # y revert
-        lane_area[:, :, 1] = -lane_area[:, :, 1]
+        bounding_box_corners[:, 1] = -bounding_box_corners[:, 1]
 
-        lane_area[:, :, 0] = lane_area[:, :, 0] * self.pixels_per_meter + \
-            self.raster_size[0] // 2
-        lane_area[:, :, 1] = lane_area[:, :, 1] * self.pixels_per_meter + \
-            self.raster_size[1] // 2
+        bounding_box_corners[:, 0] = bounding_box_corners[:, 0] * self.pixels_per_meter + self.raster_size[0] // 2
+        bounding_box_corners[:, 1] = bounding_box_corners[:, 1] * self.pixels_per_meter + self.raster_size[1] // 2
 
-        # to make more precise polygon
-        lane_area = cv2_subpixel(lane_area)
-
-        return lane_area
-
-    def generate_agent_area(self, corners):
-        """
-        Convert the agent's bbx corners from world coordinates to
-        rasterization coordinates.
-
-        Parameters
-        ----------
-        corners : list
-            The four corners of the agent's bbx under world coordinate.
-
-        Returns
-        -------
-        agent four corners in image.
-        """
-        # (4, 3) numpy array
-        corners = np.array(corners)
-        # for homogeneous transformation
-        corners = corners.T
-        corners = np.r_[
-            corners, [np.ones(corners.shape[1])]]
-        # convert to ego's coordinate frame
-        corners = world_to_sensor(corners, self.center).T
-        corners = corners[:, :2]
-
-        # switch x and y
-        corners = corners[..., ::-1]
-        # y revert
-        corners[:, 1] = -corners[:, 1]
-
-        corners[:, 0] = corners[:, 0] * self.pixels_per_meter + \
-            self.raster_size[0] // 2
-        corners[:, 1] = corners[:, 1] * self.pixels_per_meter + \
-            self.raster_size[1] // 2
-
-        # to make more precise polygon
-        corner_area = cv2_subpixel(corners[:, :2])
+        # Refine the bounding box corners for higher precision
+        corner_area = cv2_subpixel(bounding_box_corners[:, :2])
 
         return corner_area
 
-    def load_agents_world(self):
+    def fetch_dynamic_agents_data(self):
         """
-        Load all the dynamic agents info from server directly
-        into a  dictionary.
+        Retrieve information of all dynamic agents directly from the server and
+        organize it into a dictionary.
 
         Returns
         -------
-        The dictionary contains all agents info in the carla world.
+        A dictionary containing details of all dynamic agents present in the carla world.
         """
 
-        agent_list = self.world.get_actors().filter('vehicle.*')
-        dynamic_agent_info = {}
+        vehicle_actors = self.world.get_actors().filter('vehicle.*')
+        agents_data = {}
 
-        for agent in agent_list:
-            agent_id = agent.id
+        for agent in vehicle_actors:
+            agent_key = agent.id
 
-            agent_transform = agent.get_transform()
-            agent_loc = [agent_transform.location.x,
-                         agent_transform.location.y,
-                         agent_transform.location.z, ]
-
-            agent_yaw = agent_transform.rotation.yaw
-
-            # calculate 4 corners
-            bb = agent.bounding_box.extent
-            corners = [
-                carla.Location(x=-bb.x, y=-bb.y),
-                carla.Location(x=-bb.x, y=bb.y),
-                carla.Location(x=bb.x, y=bb.y),
-                carla.Location(x=bb.x, y=-bb.y)
+            agent_current_transform = agent.get_transform()
+            agent_position = [
+                agent_current_transform.location.x,
+                agent_current_transform.location.y,
+                agent_current_transform.location.z,
             ]
-            # corners are originally in ego coordinate frame, convert to
-            # world coordinate
-            agent_transform.transform(corners)
-            corners_reformat = [[x.x, x.y, x.z] for x in corners]
 
-            dynamic_agent_info[agent_id] = {'location': agent_loc,
-                                            'yaw': agent_yaw,
-                                            'corners': corners_reformat}
-        return dynamic_agent_info
+            agent_orientation = agent_current_transform.rotation.yaw
 
-    def rasterize_dynamic(self):
+            # Determine the four bounding box corners
+            bounding_extent = agent.bounding_box.extent
+            bounding_corners = [
+                carla.Location(x=-bounding_extent.x, y=-bounding_extent.y),
+                carla.Location(x=-bounding_extent.x, y=bounding_extent.y),
+                carla.Location(x=bounding_extent.x, y=bounding_extent.y),
+                carla.Location(x=bounding_extent.x, y=-bounding_extent.y)
+            ]
+            # Convert bounding corners from the agent's coordinate frame to the world frame
+            agent_current_transform.transform(bounding_corners)
+            formatted_corners = [[corner.x, corner.y, corner.z] for corner in bounding_corners]
+
+            agents_data[agent_key] = {
+                'location': agent_position,
+                'yaw': agent_orientation,
+                'corners': formatted_corners
+            }
+
+        return agents_data
+
+    def render_dynamic_agents(self):
         """
-        Rasterize the dynamic agents.
-
-        Returns
-        -------
-        Rasterization image.
+        Visualize the dynamic elements on a bird's-eye view (BEV) map.
         """
-        self.dynamic_bev = 255 * np.zeros(
+
+        # Initialize an empty image canvas for agent visualization
+        self.dynamic_bev = 255 * np.ones(
             shape=(self.raster_size[1], self.raster_size[0], 3),
             dtype=np.uint8)
-        # filter using half a radius from the center
-        raster_radius = \
-            float(np.linalg.norm(self.raster_size *
-                                 np.array([self.meter_per_pixel,
-                                           self.meter_per_pixel]))) / 2
-        # retrieve all agents
-        dynamic_agents = self.load_agents_world()
-        # filter out agents out of range
-        final_agents = self.agents_in_range(raster_radius,
-                                            dynamic_agents)
 
-        corner_list = []
-        for agent_id, agent in final_agents.items():
-            agent_corner = self.generate_agent_area(agent['corners'])
-            corner_list.append(agent_corner)
+        # Calculate the raster's effective radius based on its size
+        effective_radius = \
+            0.5 * np.linalg.norm(self.raster_size *
+                                 np.array([self.meter_per_pixel, self.meter_per_pixel]))
 
-        self.dynamic_bev = draw_agent(corner_list, self.dynamic_bev)
-        self.vis_bev = draw_agent(corner_list, self.vis_bev)
+        # Fetch data of all dynamic agents in the world
+        all_agents_data = self.fetch_dynamic_agents_data()
 
-    def rasterize_static(self):
+        # Retain only those agents within the effective radius
+        relevant_agents = self.filter_agents_within_radius(effective_radius,
+                                                           all_agents_data)
+
+        formatted_corners = []
+        for agent_key, agent_details in relevant_agents.items():
+            rasterized_corners = self.generate_agent_area(agent_details['corners'])
+            formatted_corners.append(rasterized_corners)
+
+        # Draw agents on the canvas
+        self.dynamic_bev = render_agent(formatted_corners, self.dynamic_bev)
+        self.vis_bev = render_agent(formatted_corners, self.vis_bev)
+
+    def render_static_agents(self):
         """
-        Generate the static bev map.
+        Visualize the static elements on a bird's-eye view (BEV) map.
         """
+
+        # Create empty canvases for static BEV and visualization
         self.static_bev = 255 * np.ones(
             shape=(self.raster_size[1], self.raster_size[0], 3),
             dtype=np.uint8)
@@ -548,44 +584,45 @@ class GameMap(object):
             shape=(self.raster_size[1], self.raster_size[0], 3),
             dtype=np.uint8)
 
-        # filter using half a radius from the center
-        raster_radius = \
+        # Compute the effective radius for filtering elements
+        effective_radius = \
             float(np.linalg.norm(self.raster_size *
                                  np.array([self.meter_per_pixel,
                                            self.meter_per_pixel]))) / 2
-        lane_indices = self.indices_in_bounds(self.bound_info['lanes'][
-                                                  'bounds'],
-                                              raster_radius)
-        lanes_area_list = []
-        lane_type_list = []
 
-        for idx, lane_idx in enumerate(lane_indices):
-            lane_idx = self.bound_info['lanes']['ids'][lane_idx]
-            lane_info = self.lane_info[lane_idx]
-            xyz_left, xyz_right = lane_info['xyz_left'], lane_info['xyz_right']
+        # Fetch lanes that are within the determined bounds
+        relevant_lane_indices = self.indices_in_bounds(self.bound_info['lanes']['bounds'],
+                                                       effective_radius)
 
-            # generate lane area
-            lane_area = self.generate_lane_area(xyz_left, xyz_right)
-            lanes_area_list.append(lane_area)
+        lane_areas = []
+        lane_status_list = []
 
-            # check the associated traffic light
-            associated_tl_id = lane_info['tl_id']
-            if associated_tl_id:
-                tl_actor = self.traffic_light_info[associated_tl_id]['actor']
-                status = convert_tl_status(tl_actor.get_state())
-                lane_type_list.append(status)
+        for idx, lane_id in enumerate(relevant_lane_indices):
+            specific_lane_id = self.bound_info['lanes']['ids'][lane_id]
+            lane_details = self.lane_info[specific_lane_id]
+            left_points, right_points = lane_details['xyz_left'], lane_details['xyz_right']
+
+            # Calculate the polygon for the lane
+            lane_polygon = self.compute_lane_polygon(left_points, right_points)
+            lane_areas.append(lane_polygon)
+
+            # Get the status of the associated traffic light
+            traffic_light_id = lane_details['tl_id']
+            if traffic_light_id:
+                tl_actor = self.traffic_light_info[traffic_light_id]['actor']
+                tl_status = traffic_light_state_to_string(tl_actor.get_state())
+                lane_status_list.append(tl_status)
             else:
-                lane_type_list.append('normal')
+                lane_status_list.append('normal')
 
-        self.static_bev = draw_road(lanes_area_list,
-                                    self.static_bev)
-        self.static_bev = draw_lane(lanes_area_list, lane_type_list,
-                                    self.static_bev)
+        # Draw roads and lanes on the static BEV and visualization
+        self.static_bev = render_road(lane_areas, self.static_bev)
+        self.static_bev = render_lane(lane_areas, lane_status_list, self.static_bev)
 
-        self.vis_bev = draw_road(lanes_area_list,
-                                 self.vis_bev)
-        self.vis_bev = draw_lane(lanes_area_list, lane_type_list,
-                                 self.vis_bev)
+        self.vis_bev = render_road(lane_areas, self.vis_bev)
+        self.vis_bev = render_lane(lane_areas, lane_status_list, self.vis_bev)
+
+        # Adjust color for display
         self.vis_bev = cv2.cvtColor(self.vis_bev, cv2.COLOR_RGB2BGR)
 
     def destroy(self):

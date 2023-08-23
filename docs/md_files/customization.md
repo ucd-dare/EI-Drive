@@ -116,7 +116,7 @@ To customize your own behavior planning algorithms, create a `behavior_agent.py`
 
 ```python
 import carla.libcarla
-from EIdrive.core.plan.behavior_agent import AgentBehavior
+from EIdrive.core.plan.agent_behavior import AgentBehavior
 
 
 class CustomizedBehaviorAgent(AgentBehavior):

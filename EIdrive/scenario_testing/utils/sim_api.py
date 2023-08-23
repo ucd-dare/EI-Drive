@@ -126,8 +126,8 @@ def multi_class_vehicle_blueprint_filter(label, blueprint_library, bp_meta):
 def map_visualize(cav):
     if not cav.gamemap.activate:
         return
-    cav.gamemap.rasterize_static()
-    cav.gamemap.rasterize_dynamic()
+    cav.gamemap.render_static_agents()
+    cav.gamemap.render_dynamic_agents()
     if cav.gamemap.visualize:
         cv2.imshow('the bev map of agent %s' % cav.gamemap.agent_id,
                    cav.gamemap.vis_bev)
