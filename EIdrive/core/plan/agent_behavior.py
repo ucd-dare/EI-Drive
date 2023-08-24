@@ -864,5 +864,5 @@ class AgentBehavior(object):
         control: carla.VehicleControl
             Carla control command.
         """
-        control = self.controller.run_step(target_speed, trajectory_buffer)
+        control = self.controller.run_controller(target_speed, trajectory_buffer)
         return control

@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-""" This module is used to check collision possibility """
+"""
+This module is used to check collision.
+"""
 
 import math
 from math import sin, cos

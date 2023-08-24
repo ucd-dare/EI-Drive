@@ -19,7 +19,7 @@ class Controller:
 
     Attributes
     ----------
-    _lon_ebuffer : deque
+    lon_error_buffer : deque
         A deque buffer that stores longitudinal control errors.
     """
 
@@ -134,7 +134,7 @@ class Controller:
 
         return u_opt.x
 
-    def run_step(self, target_speed, waypoints):
+    def run_controller(self, target_speed, waypoints):
 
         ref_waypoints = deque()
         for i in range(0, self.prediction_horizon):
