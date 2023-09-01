@@ -69,8 +69,8 @@ To customize your own object detection algorithms, create a `perception_manager.
 
 ```python
 import cv2
-from EIdrive.core.sensing.perception.perception import Perception
-from EIdrive.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
+from EIdrive.core.sensing.perception.sensor_perception import Perception
+from EIdrive.core.sensing.perception.dynamic_obstacle import DynamicObstacle
 from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
 
 
@@ -98,7 +98,7 @@ class CustomziedPeceptionManager(Perception):
         # this is where you put your algorithm #
         ########################################
         objects = your_algorithm(rgb_images, lidar_data)
-        assert type(objects['vehicles']) == ObstacleVehicle
+        assert type(objects['vehicles']) == DynamicObstacle
         assert type(objects['traffic_lights']) == TrafficLight
 
     return objects

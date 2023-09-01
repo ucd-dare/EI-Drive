@@ -59,7 +59,7 @@ class BoundingBox(object):
         self.extent = carla.Vector3D(x=extent_x, y=extent_y, z=extent_z)
 
 
-class ObstacleVehicle(object):
+class DynamicObstacle(object):
     """
     Represents an obstacle vehicle, aligning attributes with the carla.Vehicle class.
 
@@ -147,7 +147,7 @@ class ObstacleVehicle(object):
 
     def set_vehicle(self, vehicle_obj, lidar_sensor):
         """
-        Assign attributes from carla.Vehicle to ObstacleVehicle.
+        Assign attributes from carla.Vehicle to DynamicObstacle.
 
         Parameters
         ----------

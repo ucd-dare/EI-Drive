@@ -186,7 +186,7 @@ class DQNAgent(object):
         Parameters
         ----------
         obstacles : list
-            A list of carla.Vehicle or ObstacleVehicle
+            A list of carla.Vehicle or DynamicObstacle
 
         Returns
         -------

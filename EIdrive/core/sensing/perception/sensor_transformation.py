@@ -45,7 +45,7 @@ def generate_bb_points(vehicle_obj):
     Parameters
     ----------
     vehicle_obj : EIdrive object
-        An instance of Opencda's ObstacleVehicle with relevant attributes.
+        An instance of Opencda's DynamicObstacle with relevant attributes.
 
     Returns
     -------
@@ -117,7 +117,7 @@ def bbx_to_world(bounding_box_coords, obstacle_vehicle):
     bounding_box_coords : np.ndarray
         Bounding box coordinates with 8 vertices in the shape of (8, 4).
     obstacle_vehicle : EIdrive object
-        ObstacleVehicle object.
+        DynamicObstacle object.
 
     Returns
     -------
@@ -208,7 +208,7 @@ def vehicle_to_sensor(cords, vehicle, sensor_transform):
          Coordinates in vehicle coordinates in the shape of (n, 4).
 
     vehicle : EIdrive object
-        Carla ObstacleVehicle.
+        Carla DynamicObstacle.
 
     sensor_transform : carla.Transform
         Sensor transform in the world.

@@ -17,10 +17,10 @@ import open3d as o3d
 import EIdrive.core.sensing.perception.sensor_transformation as st
 from EIdrive.core.common.misc import \
     cal_distance_angle, get_speed
-from EIdrive.core.sensing.perception.obstacle_vehicle import \
-    ObstacleVehicle
+from EIdrive.core.sensing.perception.dynamic_obstacle import \
+    DynamicObstacle
 from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
-from EIdrive.core.sensing.perception.o3d_lidar_libs import \
+from EIdrive.core.sensing.perception.open3d_visualize import \
     o3d_visualizer_init, convert_raw_to_o3d_pointcloud, visualize_point_cloud, \
     camera_lidar_fusion_yolo
 from PIL import Image
@@ -517,7 +517,7 @@ class Perception:
                     break
                 rgb_image = self.ml_manager.draw_2d_box(
                     yolo_detection, rgb_image, i)
-                rgb_image = cv2.resize(rgb_image, (0, 0), fx=0.4, fy=0.4)
+                rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
@@ -628,7 +628,7 @@ class Perception:
                 #     rescaled_detections, classes_to_labels, rgb_image, i)
                 rgb_image = self.ml_manager.draw_2d_box_SSD(
                     best_results_per_input, classes_to_labels, rgb_image, i)
-                rgb_image = cv2.resize(rgb_image, (0, 0), fx=0.4, fy=0.4)
+                rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
@@ -683,10 +683,10 @@ class Perception:
             vehicle_list = self.filter_vehicle_out_of_range(vehicle_list)
 
         if self.lidar:
-            vehicle_list = [ObstacleVehicle(None, None, v, self.lidar.sensor, self.cav_world.sumo2carla_ids) for v in
+            vehicle_list = [DynamicObstacle(None, None, v, self.lidar.sensor, self.cav_world.sumo2carla_ids) for v in
                             vehicle_list]
         else:
-            vehicle_list = [ObstacleVehicle(None, None, v, None, self.cav_world.sumo2carla_ids) for v in vehicle_list]
+            vehicle_list = [DynamicObstacle(None, None, v, None, self.cav_world.sumo2carla_ids) for v in vehicle_list]
 
         objects.update({'vehicles': vehicle_list})
         return objects
@@ -705,7 +705,7 @@ class Perception:
 
                 rgb_image = np.array(rgb_camera.image)
                 rgb_image = self.visualize_bbx_front_camera(objects, rgb_image, i)
-                rgb_image = cv2.resize(rgb_image, (0, 0), fx=0.9, fy=1.0)
+                rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
 
                 cv2.imshow('%s camera of actor %d' % (names[i], self.id), rgb_image)
                 self.camera_window_pos(names[i])

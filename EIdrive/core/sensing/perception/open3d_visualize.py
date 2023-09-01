@@ -11,8 +11,8 @@ from matplotlib import cm
 from scipy.stats import mode
 
 import EIdrive.core.sensing.perception.sensor_transformation as st
-from EIdrive.core.sensing.perception.obstacle_vehicle import \
-    is_vehicle_in_cococlass, ObstacleVehicle
+from EIdrive.core.sensing.perception.dynamic_obstacle import \
+    is_vehicle_in_cococlass, DynamicObstacle
 from EIdrive.core.sensing.perception.static_obstacle import StaticObstacle
 
 VIRIDIS = np.array(cm.get_cmap('plasma').colors)
@@ -226,7 +226,7 @@ def camera_lidar_fusion_SSD(objects,
         world_corners = world_corners.transpose()[:, :3]
 
         if is_vehicle_in_cococlass(object_label):
-            vehicle_obstacle = ObstacleVehicle(world_corners, bounding_box)
+            vehicle_obstacle = DynamicObstacle(world_corners, bounding_box)
             if 'vehicles' in objects:
                 objects['vehicles'].append(vehicle_obstacle)
             else:
@@ -339,7 +339,7 @@ def camera_lidar_fusion_yolo(objects,
         corner = corner.transpose()[:, :3]
 
         if is_vehicle_in_cococlass(label):
-            obstacle_vehicle = ObstacleVehicle(corner, aabb)
+            obstacle_vehicle = DynamicObstacle(corner, aabb)
             if 'vehicles' in objects:
                 objects['vehicles'].append(obstacle_vehicle)
             else:

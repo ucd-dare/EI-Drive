@@ -6,7 +6,7 @@ Basic class for RSU(Roadside Unit) management.
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
 from EIdrive.core.common.data_dumper import DataDumper
-from EIdrive.core.sensing.perception.perception import \
+from EIdrive.core.sensing.perception.sensor_perception import \
     Perception
 from EIdrive.core.sensing.localization.rsu_localization_manager import \
     LocalizationManager

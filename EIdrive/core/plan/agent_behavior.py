@@ -179,7 +179,7 @@ class AgentBehavior(object):
         Parameters
         ----------
         detected_obstacles : list
-            A list of detected carla.Vehicle or ObstacleVehicle instances.
+            A list of detected carla.Vehicle or DynamicObstacle instances.
 
         Returns
         -------

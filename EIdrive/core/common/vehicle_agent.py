@@ -8,7 +8,7 @@ from collections import deque
 
 from EIdrive.core.sensing.localization.localization_manager \
     import Localizer
-from EIdrive.core.sensing.perception.perception \
+from EIdrive.core.sensing.perception.sensor_perception \
     import Perception
 from EIdrive.core.plan.agent_behavior \
     import AgentBehavior

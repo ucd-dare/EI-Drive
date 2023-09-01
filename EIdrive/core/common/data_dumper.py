@@ -228,7 +228,7 @@ class DataDumper(object):
             ]})
 
             # dump intrinsic matrix
-            camera_intrinsic = st.get_camera_intrinsic(camera.sensor)
+            camera_intrinsic = st.get_camera_intrinsic_matrix(camera.sensor)
             camera_intrinsic = self.matrix2list(camera_intrinsic)
             camera_param.update({'intrinsic': camera_intrinsic})
 

@@ -1,7 +1,7 @@
 perception: &base_perception
   activate: false # when not activated, perception_demo_true.yaml
   apply_ml: false
-  model: 1 # 1 is yolo, 2 is ssd
+  model: yolo
   camera:
     visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
     num: 1 # how many cameras are mounted on the vehicle. Maximum 3(frontal, left and right cameras)

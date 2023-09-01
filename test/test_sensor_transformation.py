@@ -48,12 +48,12 @@ class TestSensorTransformation(unittest.TestCase):
         assert sensor_to_world(self.cords, self.lidar_transform).shape == (4, self.cords.shape[1])
 
     def test_get_camera_intrinsic(self):
-        assert get_camera_intrinsic(self.camera).shape == (3, 3)
-        assert get_camera_intrinsic(self.camera)[2, 2] == 1
+        assert get_camera_intrinsic_matrix(self.camera).shape == (3, 3)
+        assert get_camera_intrinsic_matrix(self.camera)[2, 2] == 1
 
     def test_create_bb_points(self):
-        assert create_bb_points(self.vehicle).shape == (8, 4)
-        assert create_bb_points(self.vehicle)[:, 3].all() == 1
+        assert generate_bb_points(self.vehicle).shape == (8, 4)
+        assert generate_bb_points(self.vehicle)[:, 3].all() == 1
 
     def test_bbx_to_world(self):
         assert bbx_to_world(self.cords.T, self.vehicle).shape == (4, self.cords.shape[1])
@@ -62,15 +62,15 @@ class TestSensorTransformation(unittest.TestCase):
         assert vehicle_to_sensor(self.cords.T, self.vehicle, self.camera_transform).shape == (4, self.cords.shape[1])
 
     def test_get_bounding_box(self):
-        assert get_bounding_box(self.vehicle, self.camera, self.camera_transform).shape == (8, 3)
+        assert get_2d_bounding_box(self.vehicle, self.camera, self.camera_transform).shape == (8, 3)
 
     def test_get_2d_bb(self):
-        assert get_2d_bb(self.vehicle, self.camera, self.camera_transform).shape == (2, 2)
+        assert get_2d_bbx(self.vehicle, self.camera, self.camera_transform).shape == (2, 2)
 
     def test_project_lidar_to_camera(self):
-        assert project_lidar_to_camera(self.lidar, self.camera, self.point_cloud, self.rgb_image)[1].shape == \
+        assert convert_lidar_to_camera(self.lidar, self.camera, self.point_cloud, self.rgb_image)[1].shape == \
                (self.point_cloud.shape[0], 3)
-        assert project_lidar_to_camera(self.lidar, self.camera, self.point_cloud, self.rgb_image)[0].shape == \
+        assert convert_lidar_to_camera(self.lidar, self.camera, self.point_cloud, self.rgb_image)[0].shape == \
                self.rgb_image.shape
 
 
