@@ -50,7 +50,7 @@ class VehicleAgent(object):
     localizer : EIdrive object
         The current localization manager.
 
-    perception_manager : EIdrive object
+    perception : EIdrive object
         The current V2X perception manager.
 
     agent : EIdrive object
@@ -102,7 +102,7 @@ class VehicleAgent(object):
         self.localizer = Localizer(
             vehicle, localization_config, carla_map)
         # perception module
-        self.perception_manager = Perception(
+        self.perception = Perception(
             vehicle, perception_config, cav_world,
             data_dumping)
         # map manager
@@ -117,7 +117,7 @@ class VehicleAgent(object):
             self.is_manually = behavior_config['is_manually']
 
         if data_dumping:
-            self.data_dumper = DataDumper(self.perception_manager,
+            self.data_dumper = DataDumper(self.perception,
                                           vehicle.id,
                                           save_time=current_time)
         else:
@@ -164,7 +164,7 @@ class VehicleAgent(object):
         ego_spd = self.localizer.get_ego_spd()
 
         # object detection
-        objects = self.perception_manager.detect(ego_pos)
+        objects = self.perception.object_detect(ego_pos)
 
         # update the ego pose for map manager
         self.gamemap.set_center(ego_pos)
@@ -205,7 +205,7 @@ class VehicleAgent(object):
     #
     #     # dump data
     #     if self.data_dumper:
-    #         self.data_dumper.save_data(self.perception_manager,
+    #         self.data_dumper.save_data(self.perception,
     #                                    self.localizer,
     #                                    self.agent)
     #
@@ -218,7 +218,7 @@ class VehicleAgent(object):
         Destroy the actor vehicle
         """
 
-        self.perception_manager.destroy()
+        self.perception.destroy()
         self.localizer.destroy()
         self.vehicle.destroy()
         self.gamemap.destroy()

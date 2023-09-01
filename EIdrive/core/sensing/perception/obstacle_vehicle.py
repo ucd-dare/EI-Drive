@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Obstacle vehicle class to save object detection.
+Class for object detection and save the obstacle.
 """
 
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 import sys
 
 import carla
@@ -14,15 +11,19 @@ import open3d as o3d
 import EIdrive.core.sensing.perception.sensor_transformation as st
 
 
-def is_vehicle_cococlass(label):
+def is_vehicle_in_cococlass(label):
     """
-    Check whether the label belongs to the vehicle class
-    according to coco dataset.
-    Args:
-        -label(int): The lable of the detecting object.
+    Determines if the given label corresponds to a vehicle class in the COCO dataset.
 
-    Returns:
-        -is_vehicle(bool): Whether this label belongs to the vehicle class
+    Parameters
+    ----------
+    label : int
+        The label of the detected object.
+
+    Returns
+    -------
+    bool
+        True if the label belongs to the vehicle class, otherwise False.
     """
     vehicle_class_array = np.array([1, 2, 3, 5, 7], dtype=np.int)
     return True if 0 in (label - vehicle_class_array) else False
@@ -30,16 +31,19 @@ def is_vehicle_cococlass(label):
 
 class BoundingBox(object):
     """
-    Bounding box class for obstacle vehicle.
+    Represents a bounding box for an obstacle vehicle.
 
-    Params:
-    -corners : nd.nparray
-        Eight corners of the bounding box. (shape:(8, 3))
-    Attributes:
-    -location : carla.location
+    Parameters
+    ----------
+    corners : np.ndarray
+        Eight corners of the bounding box. Shape: (8, 3).
+
+    Attributes
+    ----------
+    location : carla.Location
         The location of the object.
-    -extent : carla.vector3D
-        The extent of  the object.
+    extent : carla.Vector3D
+        The dimensions of the object in three-dimensional space.
     """
 
     def __init__(self, corners):
@@ -57,54 +61,41 @@ class BoundingBox(object):
 
 class ObstacleVehicle(object):
     """
-    A class for obstacle vehicle. The attributes are designed to match
-    with carla.Vehicle class.
+    Represents an obstacle vehicle, aligning attributes with the carla.Vehicle class.
 
     Parameters
     ----------
-    corners : nd.nparray
-        Eight corners of the bounding box. shape:(8, 3).
-
-    o3d_bbx : pen3d.AlignedBoundingBox
-        The bounding box object in Open3d. This is mainly used for
-        visualization
-
+    corners : np.ndarray
+        Eight corners of the bounding box. Shape: (8, 3).
+    o3d_bbx : open3d.AlignedBoundingBox
+        Bounding box representation in Open3D, mainly for visualization purposes.
     vehicle : carla.Vehicle
-        The carla.Vehicle object.
-
-    lidar : carla.sensor.lidar
-        The lidar sensor.
-
+        Associated carla.Vehicle instance.
+    lidar : carla.sensor.Lidar
+        The LiDAR sensor associated with the vehicle.
     sumo2carla_ids : dict
-        Sumo to carla mapping dictionary, this is used only when co-simulation
-        is activated. We need this since the speed info of  vehicles that
-        are controlled by sumo can not be read from carla server. We will
-        need this dict to read vehicle speed from sumo api--traci.
+        Mapping dictionary for Sumo to Carla. Essential for co-simulation as it aids
+        in reading vehicle speeds from the Sumo API (traci) when they can't be fetched
+        from the Carla server.
 
     Attributes
     ----------
     bounding_box : BoundingBox
-        Bounding box of the osbject vehicle.
-
-    location : carla.location
-        Location of the object.
-
+        Bounding box of the obstacle vehicle.
+    location : carla.Location
+        Location of the obstacle vehicle.
     velocity : carla.Vector3D
-        Velocity of the object vehicle.
-
+        Velocity of the obstacle vehicle.
     carla_id : int
-        The obstacle vehicle's id. It should be the same with the
-        corresponding carla.Vehicle's id. If no carla vehicle is
-        matched with the obstacle vehicle, it should be -1.
+        ID of the obstacle vehicle, aligned with the carla.Vehicle's ID. Defaults to -1
+        if no matching Carla vehicle is found.
     """
 
-    def __init__(self, corners, o3d_bbx,
-                 vehicle=None, lidar=None, sumo2carla_ids=None):
+    def __init__(self, corners, o3d_bbx, vehicle=None, lidar=None, sumo2carla_ids=None):
 
         if not vehicle:
             self.bounding_box = BoundingBox(corners)
             self.location = self.bounding_box.location
-            # todo: next version will add rotation estimation
             self.transform = None
             self.o3d_bbx = o3d_bbx
             self.carla_id = -1
@@ -112,23 +103,23 @@ class ObstacleVehicle(object):
         else:
             if sumo2carla_ids is None:
                 sumo2carla_ids = dict()
-            self.set_vehicle(vehicle, lidar, sumo2carla_ids)
+            self.set_vehicle(vehicle, lidar)
 
     def get_transform(self):
         """
-        Return the transform of the object vehicle.
+        Get the transform of the object vehicle.
         """
         return self.transform
 
     def get_location(self):
         """
-        Return the location of the object vehicle.
+        Get the location of the object vehicle.
         """
         return self.location
 
     def get_velocity(self):
         """
-        Return the velocity of the object vehicle.
+        Get the velocity of the object vehicle.
         """
         return self.velocity
 
@@ -151,52 +142,35 @@ class ObstacleVehicle(object):
         ----------
         velocity : carla.Vector3D
             The target velocity in 3d vector format.
-
         """
         self.velocity = velocity
 
-    def set_vehicle(self, vehicle, lidar, sumo2carla_ids):
+    def set_vehicle(self, vehicle_obj, lidar_sensor):
         """
-        Assign the attributes from carla.Vehicle to ObstacleVehicle.
+        Assign attributes from carla.Vehicle to ObstacleVehicle.
 
         Parameters
         ----------
-        vehicle : carla.Vehicle
+        vehicle_obj : carla.Vehicle
             The carla.Vehicle object.
 
-        lidar : carla.sensor.lidar
-            The lidar sensor, it is used to project world coordinates to
-             sensor coordinates.
+        lidar_sensor : carla.sensor.lidar
+            The lidar sensor, used to project world coordinates to sensor coordinates.
 
-        sumo2carla_ids : dict
-            Sumo to carla mapping dictionary, this is used only when
-            co-simulation is activated. We need this since the speed info of
-            vehicles that are controlled by sumo can not be read from carla
-            server. We will need this dict to read vehicle speed
-            from sumo api--traci.
+        sumo_carla_mapping : dict
+            Mapping dictionary between Sumo and Carla IDs, used during co-simulation.
+            Necessary since speed info of vehicles controlled by Sumo cannot be read from the Carla server.
         """
-        self.location = vehicle.get_location()
-        self.transform = vehicle.get_transform()
-        self.bounding_box = vehicle.bounding_box
-        self.carla_id = vehicle.id
-        self.type_id = vehicle.type_id
-        self.color = vehicle.attributes["color"] \
-            if hasattr(vehicle, "attributes") \
-               and "color" in vehicle.attributes else None
+        self.location = vehicle_obj.get_location()
+        self.transform = vehicle_obj.get_transform()
+        self.bounding_box = vehicle_obj.bounding_box
+        self.carla_id = vehicle_obj.id
+        self.type_id = vehicle_obj.type_id
+        self.color = vehicle_obj.attributes["color"] \
+            if hasattr(vehicle_obj, "attributes") and "color" in vehicle_obj.attributes else None
+        self.set_velocity(vehicle_obj.get_velocity())
 
-        self.set_velocity(vehicle.get_velocity())
-        '''
-        # the vehicle controlled by sumo has speed 0 in carla,
-        # thus we need to retrieve the correct number from sumo
-        if len(sumo2carla_ids) > 0:
-            sumo_speed = get_speed_sumo(sumo2carla_ids, self.carla_id)
-            if sumo_speed > 0:
-                # todo: consider the yaw angle in the future
-                speed_vector = carla.Vector3D(sumo_speed, 0, 0)
-                self.set_velocity(speed_vector)
-        '''
-
-        # find the min and max boundary
+        # Calculate min and max boundary
         min_boundary = np.array([self.location.x - self.bounding_box.extent.x,
                                  self.location.y - self.bounding_box.extent.y,
                                  self.location.z + self.bounding_box.location.z
@@ -211,22 +185,19 @@ class ObstacleVehicle(object):
         max_boundary = max_boundary.reshape((4, 1))
         stack_boundary = np.hstack((min_boundary, max_boundary))
 
-        if lidar is None:
+        if lidar_sensor is None:
             return
-        # the boundary coord at the lidar sensor space
-        stack_boundary_sensor_cords = st.world_to_sensor(stack_boundary,
-                                                         lidar.get_transform())
-        # convert unreal space to o3d space
-        stack_boundary_sensor_cords[:1, :] = - \
-            stack_boundary_sensor_cords[:1, :]
-        # (4,2) -> (3, 2)
-        stack_boundary_sensor_cords = stack_boundary_sensor_cords[:-1, :]
+        # Convert the boundary coordinates to the lidar sensor space
+        stack_boundary_sensor_coords = st.world_to_sensor(stack_boundary, lidar_sensor.get_transform())
+        # Convert unreal space to o3d space
+        stack_boundary_sensor_coords[:1, :] = -stack_boundary_sensor_coords[:1, :]
+        # (4, 2) -> (3, 2)
+        stack_boundary_sensor_coords = stack_boundary_sensor_coords[:-1, :]
 
-        min_boundary_sensor = np.min(stack_boundary_sensor_cords, axis=1)
-        max_boundary_sensor = np.max(stack_boundary_sensor_cords, axis=1)
+        min_boundary_sensor = np.min(stack_boundary_sensor_coords, axis=1)
+        max_boundary_sensor = np.max(stack_boundary_sensor_coords, axis=1)
 
-        aabb = \
-            o3d.geometry.AxisAlignedBoundingBox(min_bound=min_boundary_sensor,
-                                                max_bound=max_boundary_sensor)
+        aabb = o3d.geometry.AxisAlignedBoundingBox(min_bound=min_boundary_sensor,
+                                                   max_bound=max_boundary_sensor)
         aabb.color = (1, 0, 0)
         self.o3d_bbx = aabb

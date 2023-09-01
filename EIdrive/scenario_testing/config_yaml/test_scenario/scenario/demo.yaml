@@ -29,19 +29,19 @@ single_cav_list:
     destination: [[ 100, 49, 0.3 ]]
     perception:
       camera:
-        visualize: 0
-        num: 0
+        visualize: 1
+        num: 1
   - id: 4
     spawn_position: [ -9.2, 0, 0.3, 0, 90, 0 ]
     destination: [[ -9.2, 150, 0.3 ]]
     perception:
       camera:
-        visualize: 0
-        num: 0
+        visualize: 1
+        num: 1
   - id: 5
     spawn_position: [ 5.7, 70, 0.3, 0, 270, 0 ]
     destination: [[ 5.7, -50, 0.3 ]]
     perception:
       camera:
-        visualize: 0
-        num: 0
+        visualize: 1
+        num: 1

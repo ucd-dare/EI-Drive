@@ -9,9 +9,14 @@ here we have this class to enable different CAVs share the same model to
 # Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
+
 import cv2
 import torch
 import numpy as np
+# from torchvision.models.detection import ssdlite320_mobilenet_v3_large
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
 class MLManager(object):
@@ -25,8 +30,16 @@ class MLManager(object):
     """
 
     def __init__(self):
+        # device = torch.device('cuda')
+        # print('Device:', device)
 
-        self.object_detector = torch.hub.load('ultralytics/yolov5', 'yolov5m')
+        self.object_detector_yolo = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        self.object_detector_yolo.cuda()
+
+        self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd_processing_utils')
+        self.object_detector_SSD = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd', trust_repo=True)
+        # self.object_detector.to('cuda')
+        self.object_detector_SSD.eval()
 
     def draw_2d_box(self, result, rgb_image, index):
         """
@@ -68,6 +81,24 @@ class MLManager(object):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 1)
 
         return rgb_image
+
+    def draw_2d_box_SSD(self, best_results_per_input, classes_to_labels, image, index):
+        imagechange = image.copy()  # Create a copy of the input image
+
+        for image_idx in range(len(best_results_per_input)):
+            bboxes, classes, confidences = best_results_per_input[image_idx]
+            for idx in range(len(bboxes)):
+                left, bot, right, top = bboxes[idx]
+                x, w = [int(val * 800) for val in [left, right - left]]
+                y, h = [int(val * 600) for val in [bot, top - bot]]
+                cv2.rectangle(imagechange, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                label = classes_to_labels[classes[idx] - 1]
+                confidence = int(confidences[idx] * 100)
+                text = f"{label} {confidence}%"
+                cv2.putText(imagechange, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 1)
+
+        return imagechange
 
 
 def is_vehicle_cococlass(label):

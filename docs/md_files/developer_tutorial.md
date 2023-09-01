@@ -299,7 +299,7 @@ For the current version, the main function we provide is detection. And there ar
 
 * `detect`
 
-    It will detect surrounding vehicles by using specified model.  If `self.activate` flag is set, it will use the Yolov5 stored in the `CavWorld` to detect the obstacle vehicles. Otherwise, it will use the server information directly. 
+    It will detect surrounding vehicles by using specified model. If `self.activate` flag is set, it will use the Yolov5 stored in the `CavWorld` to detect the obstacle vehicles. Otherwise, it will use the server information directly.
 
     ```python
     def detect(self, ego_pos):
@@ -307,7 +307,7 @@ For the current version, the main function we provide is detection. And there ar
         objects = {'vehicles': [],
         'traffic_lights': []}
         if not self.activate:
-        		objects = self.deactivate_mode(objects)
+        		objects = self.server_detection(objects)
         else:
         		objects = self.activate_mode(objects)
         self.count += 1

@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-This script contains the transformations between world and different sensors.
+The transformations between world and sensors.
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import numpy as np
 from matplotlib import cm
@@ -14,51 +11,49 @@ VIRIDIS = np.array(cm.get_cmap('viridis').colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
 
 
-def get_camera_intrinsic(sensor):
+def get_camera_intrinsic_matrix(sensor_obj):
     """
-    Retrieve the camera intrinsic matrix.
+    Get the camera intrinsic matrix.
 
     Parameters
     ----------
-    sensor : carla.sensor
-        Carla rgb camera object.
+    sensor_obj : carla.sensor
+        A Carla RGB camera sensor object.
 
     Returns
     -------
-    matrix_x : np.ndarray
-        The 2d intrinsic matrix.
-
+    intrinsic_matrix : np.ndarray
+        The 2D intrinsic matrix.
     """
-    VIEW_WIDTH = int(sensor.attributes['image_size_x'])
-    VIEW_HEIGHT = int(sensor.attributes['image_size_y'])
-    VIEW_FOV = int(float(sensor.attributes['fov']))
+    view_width = int(sensor_obj.attributes['image_size_x'])
+    view_height = int(sensor_obj.attributes['image_size_y'])
+    view_fov = int(float(sensor_obj.attributes['fov']))
 
-    matrix_k = np.identity(3)
-    matrix_k[0, 2] = VIEW_WIDTH / 2.0
-    matrix_k[1, 2] = VIEW_HEIGHT / 2.0
-    matrix_k[0, 0] = matrix_k[1, 1] = VIEW_WIDTH / \
-        (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
+    intrinsic_matrix = np.identity(3)
+    intrinsic_matrix[0, 2] = view_width / 2.0
+    intrinsic_matrix[1, 2] = view_height / 2.0
+    intrinsic_matrix[0, 0] = intrinsic_matrix[1, 1] = view_width / \
+                                                      (2.0 * np.tan(view_fov * np.pi / 360.0))
 
-    return matrix_k
+    return intrinsic_matrix
 
 
-def create_bb_points(vehicle):
+def generate_bb_points(vehicle_obj):
     """
-    Extract the eight vertices of the bounding box from the vehicle.
+    Generate the vertices of a 3D bounding box based on the vehicle.
 
     Parameters
     ----------
-    vehicle : EIdrive object
-        Opencda ObstacleVehicle that has attributes.
+    vehicle_obj : EIdrive object
+        An instance of Opencda's ObstacleVehicle with relevant attributes.
 
     Returns
     -------
-    bbx : np.ndarray
-        3d bounding box, shape:(8, 4).
-
+    np.ndarray
+        A 3D bounding box represented by its vertices. The array has a shape of (8, 4).
     """
     bbx = np.zeros((8, 4))
-    extent = vehicle.bounding_box.extent
+    extent = vehicle_obj.bounding_box.extent
 
     bbx[0, :] = np.array([extent.x, extent.y, -extent.z, 1])
     bbx[1, :] = np.array([-extent.x, extent.y, -extent.z, 1])
@@ -72,156 +67,156 @@ def create_bb_points(vehicle):
     return bbx
 
 
-def x_to_world_transformation(transform):
+def x_to_world_transformation(transform_obj):
     """
-    Get the transformation matrix from x(it can be vehicle or sensor)
-    coordinates to world coordinate.
+    Computes the transformation matrix to convert from vehicle or sensor coordinates to world coordinates
 
     Parameters
     ----------
-    transform : carla.Transform
-        The transform that contains location and rotation
+    transform_obj : carla.Transform
+        The transform containing location and rotation information.
 
     Returns
     -------
-    matrix : np.ndarray
-        The transformation matrx.
-
+    transformation_matrix : np.ndarray
+        The transform containing location and rotation information.
     """
-    rotation = transform.rotation
-    location = transform.location
+    rotation = transform_obj.rotation
+    location = transform_obj.location
 
-    # used for rotation matrix
-    c_y = np.cos(np.radians(rotation.yaw))
-    s_y = np.sin(np.radians(rotation.yaw))
-    c_r = np.cos(np.radians(rotation.roll))
-    s_r = np.sin(np.radians(rotation.roll))
-    c_p = np.cos(np.radians(rotation.pitch))
-    s_p = np.sin(np.radians(rotation.pitch))
+    # Calculate rotation matrix components
+    yaw_rad = np.radians(rotation.yaw)
+    pitch_rad = np.radians(rotation.pitch)
+    roll_rad = np.radians(rotation.roll)
 
-    matrix = np.identity(4)
-    # translation matrix
-    matrix[0, 3] = location.x
-    matrix[1, 3] = location.y
-    matrix[2, 3] = location.z
+    # Calculate trigonometric values
+    cy, sy = np.cos(yaw_rad), np.sin(yaw_rad)
+    cp, sp = np.cos(pitch_rad), np.sin(pitch_rad)
+    cr, sr = np.cos(roll_rad), np.sin(roll_rad)
 
-    # rotation matrix
-    matrix[0, 0] = c_p * c_y
-    matrix[0, 1] = c_y * s_p * s_r - s_y * c_r
-    matrix[0, 2] = -c_y * s_p * c_r - s_y * s_r
-    matrix[1, 0] = s_y * c_p
-    matrix[1, 1] = s_y * s_p * s_r + c_y * c_r
-    matrix[1, 2] = -s_y * s_p * c_r + c_y * s_r
-    matrix[2, 0] = s_p
-    matrix[2, 1] = -c_p * s_r
-    matrix[2, 2] = c_p * c_r
+    transformation_matrix = np.identity(4)
+    # Translation matrix
+    transformation_matrix[:3, 3] = location.x, location.y, location.z
 
-    return matrix
+    # Rotation matrix
+    rotation_matrix = np.array([[cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
+                                [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
+                                [-sp, cp * sr, cp * cr]])
+
+    transformation_matrix[:3, :3] = rotation_matrix
+
+    return transformation_matrix
 
 
-def bbx_to_world(cords, vehicle):
+def bbx_to_world(bounding_box_coords, obstacle_vehicle):
     """
-    Convert bounding box coordinate at vehicle reference to world reference.
+    Compute the bounding box coordinates from vehicle coordinates to world coordinates.
 
     Parameters
     ----------
-    cords : np.ndarray
-        Bounding box coordinates with 8 vertices, shape (8, 4)
-    vehicle : EIdrive object
-        Opencda ObstacleVehicle.
+    bounding_box_coords : np.ndarray
+        Bounding box coordinates with 8 vertices in the shape of (8, 4).
+    obstacle_vehicle : EIdrive object
+        ObstacleVehicle object.
 
     Returns
     -------
-    bb_world_cords : np.ndarray
-        Bounding box coordinates under world reference.
-
+    bb_world_coords : np.ndarray
+        Bounding box coordinates in world coordinates.
     """
 
-    bb_transform = Transform(vehicle.bounding_box.location)
+    # Transformation from bounding box to vehicle
+    bb_to_vehicle_transform = Transform(obstacle_vehicle.bounding_box.location)
 
-    # bounding box to vehicle transformation matrix
-    bb_vehicle_matrix = x_to_world_transformation(bb_transform)
+    # Transformation matrix from bounding box to vehicle
+    bb_to_vehicle_matrix = x_to_world_transformation(bb_to_vehicle_transform)
 
-    # vehicle to world transformation matrix
-    vehicle_world_matrix = x_to_world_transformation(vehicle.get_transform())
-    # bounding box to world transformation matrix
-    bb_world_matrix = np.dot(vehicle_world_matrix, bb_vehicle_matrix)
+    # Transformation matrix from vehicle to world
+    vehicle_to_world_matrix = x_to_world_transformation(obstacle_vehicle.get_transform())
 
-    # 8 vertices are relative to bbx center, thus multiply with bbx_2_world to
-    # get the world coords.
-    bb_world_cords = np.dot(bb_world_matrix, np.transpose(cords))
+    # Combined transformation matrix from bounding box to world
+    bb_to_world_matrix = np.dot(vehicle_to_world_matrix, bb_to_vehicle_matrix)
 
-    return bb_world_cords
+    # Convert the 8 vertices from bounding box center to world coordinates
+    bb_world_coords = np.dot(bb_to_world_matrix, np.transpose(bounding_box_coords))
+
+    return bb_world_coords
 
 
-def world_to_sensor(cords, sensor_transform):
+def world_to_sensor(world_coords, sensor_transform):
     """
-    Transform coordinates from world reference to sensor reference.
+    Convert transform coordinates from world coordinates to sensor coordinates.
 
     Parameters
     ----------
-    cords : np.ndarray
-        Coordinates under world reference, shape: (4, n).
+    world_coords : np.ndarray
+        Coordinates in world coordinates in the shape of (4, n).
 
     sensor_transform : carla.Transform
-        Sensor position in the world.
+        Sensor's transform in the world.
 
     Returns
     -------
-    sensor_cords : np.ndarray
-        Coordinates in the sensor reference.
-
+    sensor_coords : np.ndarray
+        Coordinates in the sensor coordinates.
     """
+    # Transformation matrix from world to sensor space
     sensor_world_matrix = x_to_world_transformation(sensor_transform)
-    world_sensor_matrix = np.linalg.inv(sensor_world_matrix)
-    sensor_cords = np.dot(world_sensor_matrix, cords)
 
-    return sensor_cords
+    # Inverse transformation matrix from sensor to world space
+    sensor_to_world_matrix = np.linalg.inv(sensor_world_matrix)
+
+    # Transform coordinates from world to sensor reference
+    sensor_coords = np.dot(sensor_to_world_matrix, world_coords)
+
+    return sensor_coords
 
 
-def sensor_to_world(cords, sensor_transform):
+def sensor_to_world(sensor_coords, sensor_transform):
     """
-    Project coordinates in sensor to world reference.
+    Convert transform coordinates from sensor coordinates to world coordinates.
 
     Parameters
     ----------
-    cords : np.ndarray
-        Coordinates under sensor reference.
+    sensor_coords : np.ndarray
+        Coordinates in the sensor's coordinates.
 
     sensor_transform : carla.Transform
-        Sensor position in the world.
+        Sensor's transform in the world.
 
     Returns
     -------
-    world_cords : np.ndarray
-        Coordinates projected to world space.
-
+    world_coords : np.ndarray
+        Coordinates in world coordinates.
     """
+    # Transformation matrix from sensor to world space
     sensor_world_matrix = x_to_world_transformation(sensor_transform)
-    world_cords = np.dot(sensor_world_matrix, cords)
 
-    return world_cords
+    # Project sensor coordinates to world reference
+    world_coords = np.dot(sensor_world_matrix, sensor_coords)
+
+    return world_coords
 
 
 def vehicle_to_sensor(cords, vehicle, sensor_transform):
     """
-    Transform coordinates from vehicle reference to sensor reference.
+    Convert transform coordinates from vehicle coordinates to sensor coordinates.
 
     Parameters
     ----------
     cords : np.ndarray
-         Coordinates under vehicle reference, shape (n, 4).
+         Coordinates in vehicle coordinates in the shape of (n, 4).
 
     vehicle : EIdrive object
         Carla ObstacleVehicle.
 
     sensor_transform : carla.Transform
-        Sensor position in the world.
+        Sensor transform in the world.
 
     Returns
     -------
     sensor_cord : np.ndarray
-        Coordinates in the sensor reference, shape(4, n)
+        Coordinates in the sensor reference in the shape of (4, n)
 
     """
     world_cord = bbx_to_world(cords, vehicle)
@@ -230,9 +225,9 @@ def vehicle_to_sensor(cords, vehicle, sensor_transform):
     return sensor_cord
 
 
-def get_bounding_box(vehicle, camera, sensor_transform):
+def get_2d_bounding_box(vehicle, camera, sensor_transform):
     """
-    Get vehicle bounding box and project to sensor image.
+    Get vehicle's bounding box and convert it to 2D sensor image.
 
     Parameters
     ----------
@@ -240,39 +235,40 @@ def get_bounding_box(vehicle, camera, sensor_transform):
         Ego vehicle.
 
     camera : carla.sensor
-        Carla rgb camera spawned at the vehicles.
+        Carla RGB camera on vehicle.
 
     sensor_transform : carla.Transform
-        Sensor position in the world.
+        Sensor's transform in the world.
 
     Returns
     -------
-    camera_bbx : np.ndarray
-        Bounding box coordinates in sensor image.
-
+    camera_bbx_2d : np.ndarray
+        Bounding box coordinates in the 2D sensor image.
     """
-    camera_k_matrix = get_camera_intrinsic(camera)
-    # bb_cords is relative to bbx center(approximate the vehicle center)
-    bb_cords = create_bb_points(vehicle)
+    # Get the camera intrinsic matrix
+    camera_intrinsic_matrix = get_camera_intrinsic_matrix(camera)
 
-    # bbx coordinates in sensor coordinate system. shape: (3, 8)
-    cords_x_y_z = vehicle_to_sensor(bb_cords, vehicle, sensor_transform)[:3, :]
-    # refer to https://github.com/carla-simulator/carla/issues/553
-    cords_y_minus_z_x = np.concatenate([cords_x_y_z[1, :].reshape(1, 8),
-                                        -cords_x_y_z[2, :].reshape(1, 8),
-                                        cords_x_y_z[0, :].reshape(1, 8)])
-    # bounding box in sensor image. Shape:(8, 3)
-    bbox = np.transpose(np.dot(camera_k_matrix, cords_y_minus_z_x))
+    # Calculate bounding box points relative to the vehicle's center
+    bounding_box_coords_rel = generate_bb_points(vehicle)
 
-    new_x = (bbox[:, 0] / bbox[:, 2]).reshape(8, 1)
-    new_y = (bbox[:, 1] / bbox[:, 2]).reshape(8, 1)
-    new_z = bbox[:, 2].reshape(8, 1)
-    camera_bbox = np.concatenate([new_x, new_y, new_z], axis=1)
+    # Transform bounding box coordinates to the sensor's coordinate system
+    bb_coords_sensor = vehicle_to_sensor(bounding_box_coords_rel, vehicle, sensor_transform)[:3, :]
 
-    return camera_bbox
+    # Rearrange bounding box coordinates for projection
+    coords_y_minus_z_x = np.concatenate([bb_coords_sensor[1, :].reshape(1, 8),
+                                         -bb_coords_sensor[2, :].reshape(1, 8),
+                                         bb_coords_sensor[0, :].reshape(1, 8)])
+
+    # Project bounding box coordinates to 2D sensor image
+    projected_coords = np.dot(camera_intrinsic_matrix, coords_y_minus_z_x)
+    projected_coords /= projected_coords[2]
+
+    camera_bbx_2d = np.transpose(projected_coords[:2, :])
+
+    return camera_bbx_2d
 
 
-def p3d_to_p2d_bb(p3d_bb):
+def draw_2d_bbx_from_3d(p3d_bb):
     """
     Draw 2d bounding box(4 vertices) from 3d bounding box(8 vertices). 2D
     bounding box is represented by two corner points.
@@ -284,7 +280,7 @@ def p3d_to_p2d_bb(p3d_bb):
 
     Returns
     -------
-    p2d_bb : np.ndarray
+    bbx_2d : np.ndarray
         Projected 2d bounding box.
 
     """
@@ -292,13 +288,13 @@ def p3d_to_p2d_bb(p3d_bb):
     min_y = np.amin(p3d_bb[:, 1])
     max_x = np.amax(p3d_bb[:, 0])
     max_y = np.amax(p3d_bb[:, 1])
-    p2d_bb = np.array([[min_x, min_y], [max_x, max_y]])
-    return p2d_bb
+    bbx_2d = np.array([[min_x, min_y], [max_x, max_y]])
+    return bbx_2d
 
 
-def get_2d_bb(vehicle, sensor, senosr_transform):
+def get_2d_bbx(vehicle, sensor, senosr_transform):
     """
-    Summarize 2D bounding box creation.
+    Get 2D bounding box.
 
     Parameters
     ----------
@@ -309,7 +305,7 @@ def get_2d_bb(vehicle, sensor, senosr_transform):
         Carla sensor.
 
     senosr_transform : carla.Transform
-        Sensor position.
+        Sensor transform.
 
     Returns
     -------
@@ -317,14 +313,14 @@ def get_2d_bb(vehicle, sensor, senosr_transform):
         2D bounding box.
 
     """
-    p3d_bb = get_bounding_box(vehicle, sensor, senosr_transform)
-    p2d_bb = p3d_to_p2d_bb(p3d_bb)
+    p3d_bb = get_2d_bounding_box(vehicle, sensor, senosr_transform)
+    p2d_bb = draw_2d_bbx_from_3d(p3d_bb)
     return p2d_bb
 
 
-def project_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
+def convert_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
     """
-    Project lidar to camera space.
+    Convert lidar points to camera space.
 
     Parameters
     ----------
@@ -335,7 +331,7 @@ def project_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
         RGB camera.
 
     point_cloud : np.ndarray
-        Cloud points, shape: (n, 4).
+        Point cloud containing lidar points in the shape of (n, 4).
 
     rgb_image : np.ndarray
         RGB image from camera.
@@ -343,65 +339,51 @@ def project_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
     Returns
     -------
     rgb_image : np.ndarray
-        New rgb image with lidar points projected.
+        New RGB image with projected lidar points.
 
-    points_2d : np.ndarrya
+    points_2d : np.ndarray
         Point cloud projected to camera space.
 
     """
 
-    # Lidar intensity array of shape (p_cloud_size,) but, for now, let's
-    # focus on the 3D points.
+    # Extract intensity array and 3D points from point cloud
     intensity = np.array(point_cloud[:, 3])
-
-    # Point cloud in lidar sensor space array of shape (3, p_cloud_size).
     local_lidar_points = np.array(point_cloud[:, :3]).T
 
-    # Add an extra 1.0 at the end of each 3d point so it becomes of
-    # shape (4, p_cloud_size) and it can be multiplied by a (4, 4) matrix.
-    local_lidar_points = np.r_[
-        local_lidar_points, [np.ones(local_lidar_points.shape[1])]]
+    # Convert local lidar points to homogeneous coordinates
+    local_lidar_points = np.r_[local_lidar_points, [np.ones(local_lidar_points.shape[1])]]
 
-    # This (4, 4) matrix transforms the points from lidar space to world space.
+    # Transform lidar points from lidar space to world space
     lidar_2_world = x_to_world_transformation(lidar.get_transform())
-
-    # transform lidar points from lidar space to world space
     world_points = np.dot(lidar_2_world, local_lidar_points)
 
-    # project lidar world points to camera space
+    # Project lidar world points to camera space
     sensor_points = world_to_sensor(world_points, camera.get_transform())
 
-    # New we must change from UE4's coordinate system to an "standard"
-    # camera coordinate system (the same used by OpenCV):
-
-    # ^ z                       . z
-    # |                        /
-    # |              to:      +-------> x
-    # | . x                   |
-    # |/                      |
-    # +-------> y             v y
-
-    # (x, y ,z) -> (y, -z, x)
+    # Convert to camera coordinates
     point_in_camera_coords = np.array([
         sensor_points[1],
         sensor_points[2] * -1,
         sensor_points[0]])
 
-    # retrieve camera intrinsic
-    K = get_camera_intrinsic(camera)
-    # project the 3d points in camera space to image space
-    points_2d = np.dot(K, point_in_camera_coords)
+    # Get camera intrinsic matrix
+    K = get_camera_intrinsic_matrix(camera)
 
-    # normalize x,y,z
-    points_2d = np.array([
-        points_2d[0, :] / points_2d[2, :],
-        points_2d[1, :] / points_2d[2, :],
-        points_2d[2, :]])
+    # Project 3D points in camera space to image space
+    x_coord = np.dot(K[0, :], point_in_camera_coords)
+    y_coord = np.dot(K[1, :], point_in_camera_coords)
+    z_coord = np.dot(K[2, :], point_in_camera_coords)
+
+    # Normalize x, y, z
+    normalized_x = x_coord / z_coord
+    normalized_y = y_coord / z_coord
+
+    points_2d = np.array([normalized_x, normalized_y, z_coord])
 
     image_w = int(camera.attributes['image_size_x'])
     image_h = int(camera.attributes['image_size_y'])
 
-    # remove points out the camera scope
+    # Filter out points outside the camera's field of view
     points_2d = points_2d.T
     intensity = intensity.T
     points_in_canvas_mask = \
@@ -411,21 +393,20 @@ def project_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
     new_points_2d = points_2d[points_in_canvas_mask]
     new_intensity = intensity[points_in_canvas_mask]
 
-    # Extract the screen coords (uv) as integers.
+    # Calculate integer screen coordinates
     u_coord = new_points_2d[:, 0].astype(np.int)
     v_coord = new_points_2d[:, 1].astype(np.int)
 
-    # Since at the time of the creation of this script, the intensity function
-    # is returning high values, these are adjusted to be nicely visualized.
+    # Adjust intensity for visualization
     new_intensity = 4 * new_intensity - 3
     color_map = np.array([
         np.interp(new_intensity, VID_RANGE, VIRIDIS[:, 0]) * 255.0,
         np.interp(new_intensity, VID_RANGE, VIRIDIS[:, 1]) * 255.0,
-        np.interp(new_intensity, VID_RANGE, VIRIDIS[:, 2]) * 255.0]).\
+        np.interp(new_intensity, VID_RANGE, VIRIDIS[:, 2]) * 255.0]). \
         astype(np.int).T
 
     for i in range(len(new_points_2d)):
         rgb_image[v_coord[i] - 1: v_coord[i] + 1,
-                  u_coord[i] - 1: u_coord[i] + 1] = color_map[i]
+        u_coord[i] - 1: u_coord[i] + 1] = color_map[i]
 
     return rgb_image, points_2d

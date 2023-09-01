@@ -108,7 +108,7 @@ class RSUManager(object):
         ego_spd = self.localizer.get_ego_spd()
 
         # object detection todo: pass it to other CAVs for V2X percetion
-        objects = self.perception_manager.detect(ego_pos)
+        objects = self.perception_manager.object_detect(ego_pos)
 
     def run_step(self):
         """

@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Utility functions for 3d lidar visualization
-and processing by utilizing open3d.
+Utility functions for 3d lidar visualization and processing by utilizing open3d.
 """
-
-# Author: CARLA Team, Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import time
 
@@ -17,7 +12,7 @@ from scipy.stats import mode
 
 import EIdrive.core.sensing.perception.sensor_transformation as st
 from EIdrive.core.sensing.perception.obstacle_vehicle import \
-    is_vehicle_cococlass, ObstacleVehicle
+    is_vehicle_in_cococlass, ObstacleVehicle
 from EIdrive.core.sensing.perception.static_obstacle import StaticObstacle
 
 VIRIDIS = np.array(cm.get_cmap('plasma').colors)
@@ -49,7 +44,7 @@ LABEL_COLORS = np.array([
 ]) / 255.0  # normalize each channel [0-1] since is what Open3D uses
 
 
-def o3d_pointcloud_encode(raw_data, point_cloud):
+def convert_raw_to_o3d_pointcloud(raw_data, point_cloud):
     """
     Encode the raw point cloud(np.array) to Open3d PointCloud object.
 
@@ -60,10 +55,9 @@ def o3d_pointcloud_encode(raw_data, point_cloud):
 
     point_cloud : o3d.PointCloud
         Open3d PointCloud.
-
     """
 
-    # Isolate the intensity and compute a color for it
+    # Extract intensity values and compute corresponding colors
     intensity = raw_data[:, -1]
     intensity_col = 1.0 - np.log(intensity) / np.log(np.exp(-0.004 * 100))
     int_color = np.c_[
@@ -71,19 +65,18 @@ def o3d_pointcloud_encode(raw_data, point_cloud):
         np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 1]),
         np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 2])]
 
-    # Isolate the 3D data
-    points = np.array(raw_data[:, :-1], copy=True)
-    # We're negating the y to correclty visualize a world that matches
-    # what we see in Unreal since Open3D uses a right-handed coordinate system
-    points[:, :1] = -points[:, :1]
+    # Extract 3D data and adjust the y-coordinate for visualization
+    xyz_data = np.array(raw_data[:, :-1], copy=True)
+    xyz_data[:, 0] = -xyz_data[:, 0]  # Negate x-coordinate for correct visualization
 
-    point_cloud.points = o3d.utility.Vector3dVector(points)
+    # Assign the processed data to the point cloud object
+    point_cloud.points = o3d.utility.Vector3dVector(xyz_data)
     point_cloud.colors = o3d.utility.Vector3dVector(int_color)
 
 
 def o3d_visualizer_init(actor_id):
     """
-    Initialize the visualizer.
+    Initialize the Open3D visualizer.
 
     Parameters
     ----------
@@ -92,94 +85,94 @@ def o3d_visualizer_init(actor_id):
 
     Returns
     -------
-    vis : o3d.visualizer
-        Initialize open3d visualizer.
+    visualizer : o3d.visualization.Visualizer
+        Initialized Open3D visualizer.
 
     """
-    vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name=str(actor_id),
-                      width=900,
-                      height=600,
-                      left=2380,
-                      top=1470)
-    vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-    vis.get_render_option().point_size = 1
-    vis.get_render_option().show_coordinate_frame = True
+    visualizer = o3d.visualization.Visualizer()
+    visualizer.create_window(window_name=str(actor_id),
+                             width=900,
+                             height=600,
+                             left=2380,
+                             top=1470)
+    render_option = visualizer.get_render_option()
+    render_option.background_color = [0.05, 0.05, 0.05]
+    render_option.point_size = 1
+    render_option.show_coordinate_frame = True
 
-    return vis
+    return visualizer
 
 
-def o3d_visualizer_show(vis, count, point_cloud, objects):
+def visualize_point_cloud(visualizer, current_step, pcl, entity_data):
     """
     Visualize the point cloud at runtime.
 
     Parameters
     ----------
-    vis : o3d.Visualizer
+    visualizer : o3d.Visualizer
         Visualization interface.
 
-    count : int
+    current_step : int
         Current step since simulation started.
 
-    point_cloud : o3d.PointCloud
+    pcl : o3d.PointCloud
         Open3d point cloud.
 
-    objects : dict
-        The dictionary containing objects.
-
-    Returns
-    -------
-
+    entity_data : dict
+        The dictionary containing entities (e.g., vehicles).
     """
 
-    if count == 2:
-        vis.add_geometry(point_cloud)
+    if current_step == 2:
+        visualizer.add_geometry(pcl)
 
-    vis.update_geometry(point_cloud)
+    visualizer.update_geometry(pcl)
 
-    for key, object_list in objects.items():
-        # we only draw vehicles for now
-        if key != 'vehicles':
-            continue
-        for object_ in object_list:
-            aabb = object_.o3d_bbx
-            vis.add_geometry(aabb)
+    def handle_entities(data):
+        for key in data:
+            if key != 'vehicles':
+                continue
+            for entity in data[key]:
+                bounding_box = entity.o3d_bbx
+                visualizer.add_geometry(bounding_box)
 
-    vis.poll_events()
-    vis.update_renderer()
-    # # This can fix Open3D jittering issues:
+    handle_entities(entity_data)
+    visualizer.poll_events()
+    visualizer.update_renderer()
     time.sleep(0.001)
 
-    for key, object_list in objects.items():
-        if key != 'vehicles':
-            continue
-        for object_ in object_list:
-            aabb = object_.o3d_bbx
-            vis.remove_geometry(aabb)
+    def remove_geometries(data):
+        for key in data:
+            if key != 'vehicles':
+                continue
+            for entity in data[key]:
+                bounding_box = entity.o3d_bbx
+                visualizer.remove_geometry(bounding_box)
+
+    remove_geometries(entity_data)
 
 
-def o3d_camera_lidar_fusion(objects,
-                            yolo_bbx,
-                            lidar_3d,
-                            projected_lidar,
+def camera_lidar_fusion_SSD(objects,
+                            bounding_boxes,
+                            raw_lidar_data,
+                            lidar_in_camera_space,
                             lidar_sensor):
     """
-    Utilize the 3D lidar points to extend the 2D bounding box
-    from camera to 3D bounding box under world coordinates.
+    Utilize the 3D lidar points to extend the 2D bounding box from camera to 3D bounding box under world coordinates
+    by SSD.
 
     Parameters
     ----------
     objects : dict
         The dictionary contains all object detection results.
 
-    yolo_bbx : torch.Tensor
+    bounding_boxes : torch.Tensor
         Object detection bounding box at current photo from yolov5,
         shape (n, 5)->(n, [x1, y1, x2, y2, label])
 
-    lidar_3d : np.ndarray
+    raw_lidar_data : np.ndarray
         Raw 3D lidar points in lidar coordinate system.
 
-    projected_lidar : np.ndarray
+    lidar_in_camera_space : np.ndarray
         3D lidar points projected to the camera space.
 
     lidar_sensor : carla.sensor
@@ -187,35 +180,129 @@ def o3d_camera_lidar_fusion(objects,
 
     Returns
     -------
-    objects : dict
-        The update object dictionary that contains 3d bounding boxes.
+    detection_results : dict
+        The updated detection dictionary that contains 3d bounding boxes.
     """
 
-    # convert torch tensor to numpy array first
+    bounding_boxes = np.array(bounding_boxes)
+    for i in range(bounding_boxes.shape[0]):
+        single_detection = bounding_boxes[i]
+        x1, y1, x2, y2 = map(int, single_detection[:4])
+        object_label = int(single_detection[4])
+
+        points_within_box = \
+            (lidar_in_camera_space[:, 0] > x1) & (lidar_in_camera_space[:, 0] < x2) & \
+            (lidar_in_camera_space[:, 1] > y1) & (lidar_in_camera_space[:, 1] < y2) & \
+            (lidar_in_camera_space[:, 2] > 0.0)
+        filtered_points = raw_lidar_data[points_within_box][:, :-1]
+
+        if filtered_points.shape[0] == 0:
+            continue
+
+        x_mode = mode(np.array(np.abs(filtered_points[:, 0]),
+                               dtype=np.int), axis=0)[0][0]
+        y_mode = mode(np.array(np.abs(filtered_points[:, 1]),
+                               dtype=np.int), axis=0)[0][0]
+        inlier_points_condition = (np.abs(filtered_points[:, 0]) > x_mode - 3) & \
+                                  (np.abs(filtered_points[:, 0]) < x_mode + 3) & \
+                                  (np.abs(filtered_points[:, 1]) > y_mode - 3) & \
+                                  (np.abs(filtered_points[:, 1]) < y_mode + 3)
+        inlier_points = filtered_points[inlier_points_condition]
+
+        if inlier_points.shape[0] < 2:
+            continue
+
+        inlier_points[:, :1] = -inlier_points[:, :1]
+        o3d_pcl = o3d.geometry.PointCloud()
+        o3d_pcl.points = o3d.utility.Vector3dVector(inlier_points)
+        bounding_box = o3d_pcl.get_axis_aligned_bounding_box()
+        bounding_box.color = (0, 1, 0)
+
+        box_corners = np.asarray(bounding_box.get_box_points())
+        box_corners[:, :1] = -box_corners[:, :1]
+        box_corners = box_corners.transpose()
+        box_corners = np.r_[box_corners, [np.ones(box_corners.shape[1])]]
+        world_corners = st.sensor_to_world(box_corners, lidar_sensor.get_transform())
+        world_corners = world_corners.transpose()[:, :3]
+
+        if is_vehicle_in_cococlass(object_label):
+            vehicle_obstacle = ObstacleVehicle(world_corners, bounding_box)
+            if 'vehicles' in objects:
+                objects['vehicles'].append(vehicle_obstacle)
+            else:
+                objects['vehicles'] = [vehicle_obstacle]
+        else:
+            non_moving_obstacle = StaticObstacle(world_corners, bounding_box)
+            if 'static' in objects:
+                objects['static'].append(non_moving_obstacle)
+            else:
+                objects['static'] = [non_moving_obstacle]
+
+    return objects
+
+
+def camera_lidar_fusion_yolo(objects,
+                             yolo_bbx,
+                             raw_lidar_data,
+                             lidar_in_camera_space,
+                             lidar_sensor):
+    """
+    Convert 2D bounding boxes from camera images to 3D bounding boxes in world coordinates using 3D LIDAR points
+    by yolov5.
+
+    Parameters
+    ----------
+    objects : dict
+        Dictionary containing all object detection results.
+
+    yolo_bbx : torch.Tensor
+        Bounding boxes detected in the current image using YOLOv5.
+        Shape (n, 5) where n is the number of detected objects and
+        each object is represented as [x1, y1, x2, y2, label].
+
+    raw_lidar_data : np.ndarray
+        Raw 3D LIDAR points in the LIDAR's coordinate system.
+
+    lidar_in_camera_space : np.ndarray
+        3D LIDAR points that have been projected onto the camera's coordinate space.
+
+    lidar_sensor : carla.sensor
+        The LIDAR sensor.
+
+    Returns
+    -------
+    objects : dict
+        Updated dictionary containing the original object detection results
+        along with their corresponding 3D bounding boxes.
+    """
+
+    # Convert torch tensor to numpy array first
     if yolo_bbx.is_cuda:
         yolo_bbx = yolo_bbx.cpu().detach().numpy()
     else:
         yolo_bbx = yolo_bbx.detach().numpy()
 
-    for i in range(yolo_bbx.shape[0]):
+    i = 0
+    while i < yolo_bbx.shape[0]:
         detection = yolo_bbx[i]
-        # 2d bbx coordinates
-        x1, y1, x2, y2 = int(detection[0]), int(detection[1]),\
+        # 2D bbx coordinates
+        x1, y1, x2, y2 = int(detection[0]), int(detection[1]), \
             int(detection[2]), int(detection[3])
         label = int(detection[5])
 
-        # choose the lidar points in the 2d yolo bounding box
+        # Choose the lidar points in the 2D yolo bounding box
         points_in_bbx = \
-            (projected_lidar[:, 0] > x1) & (projected_lidar[:, 0] < x2) & \
-            (projected_lidar[:, 1] > y1) & (projected_lidar[:, 1] < y2) & \
-            (projected_lidar[:, 2] > 0.0)
-        # ignore intensity channel
-        select_points = lidar_3d[points_in_bbx][:, :-1]
+            (lidar_in_camera_space[:, 0] > x1) & (lidar_in_camera_space[:, 0] < x2) & \
+            (lidar_in_camera_space[:, 1] > y1) & (lidar_in_camera_space[:, 1] < y2) & \
+            (lidar_in_camera_space[:, 2] > 0.0)
+        # Ignore intensity channel
+        select_points = raw_lidar_data[points_in_bbx][:, :-1]
 
         if select_points.shape[0] == 0:
+            i += 1
             continue
 
-        # filter out the outlier
+        # Filter out the outliers
         x_common = mode(np.array(np.abs(select_points[:, 0]),
                                  dtype=np.int), axis=0)[0][0]
         y_common = mode(np.array(np.abs(select_points[:, 1]),
@@ -227,43 +314,44 @@ def o3d_camera_lidar_fusion(objects,
         select_points = select_points[points_inlier]
 
         if select_points.shape[0] < 2:
+            i += 1
             continue
 
-        # to visualize 3d lidar points in o3d visualizer, we need to
-        # revert the x coordinates
+        # To visualize 3D lidar points in o3d visualizer, we need to revert the x coordinates
         select_points[:, :1] = -select_points[:, :1]
 
-        # create o3d.PointCloud object
+        # Create o3d.PointCloud object
         o3d_pointcloud = o3d.geometry.PointCloud()
         o3d_pointcloud.points = o3d.utility.Vector3dVector(select_points)
-        # add o3d bounding box
+        # Add o3d bounding box
         aabb = o3d_pointcloud.get_axis_aligned_bounding_box()
         aabb.color = (0, 1, 0)
 
-        # get the eight corner of the bounding boxes.
+        # Get the eight corners of the bounding boxes.
         corner = np.asarray(aabb.get_box_points())
-        # covert back to unreal coordinate
+        # Convert back to unreal coordinate
         corner[:, :1] = -corner[:, :1]
         corner = corner.transpose()
-        # extend (3, 8) to (4, 8) for homogenous transformation
+        # Extend (3, 8) to (4, 8) for homogeneous transformation
         corner = np.r_[corner, [np.ones(corner.shape[1])]]
-        # project to world reference
+        # Project to world reference
         corner = st.sensor_to_world(corner, lidar_sensor.get_transform())
         corner = corner.transpose()[:, :3]
 
-        if is_vehicle_cococlass(label):
+        if is_vehicle_in_cococlass(label):
             obstacle_vehicle = ObstacleVehicle(corner, aabb)
             if 'vehicles' in objects:
                 objects['vehicles'].append(obstacle_vehicle)
             else:
                 objects['vehicles'] = [obstacle_vehicle]
-        # todo: refine the category
-        # we regard or other obstacle rather than vehicle as static class
+        # We regard other obstacles rather than vehicles as static class
         else:
             static_obstacle = StaticObstacle(corner, aabb)
             if 'static' in objects:
                 objects['static'].append(static_obstacle)
             else:
                 objects['static'] = [static_obstacle]
+
+        i += 1
 
     return objects

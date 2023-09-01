@@ -126,10 +126,9 @@ class EIDriveEnv(gym.Env):
         self.lane_waypoints = []
         self.waypoint_buffer = deque()
 
-
+        single_cav_list = self.gameworld.create_vehicle_agent(application=['single'])
+        self.single_cav_list = single_cav_list
         if not self.use_scenario_runner:
-            single_cav_list = self.gameworld.create_vehicle_agent(application=['single'])
-            self.single_cav_list = single_cav_list
             self.ego_vehicle = single_cav_list[0].vehicle
             self.spawn_points = self.parameters['single_cav_list'][0]['spawn_position']
             dest_idx = np.random.randint(len(self.spawn_points))

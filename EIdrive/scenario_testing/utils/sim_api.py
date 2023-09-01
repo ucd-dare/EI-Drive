@@ -387,7 +387,7 @@ class GameWorld:
                 cav_config['perception']['vid'] = cav_config['id']
 
             # create vehicle manager for each cav
-            vehicle_manager = VehicleAgent(
+            vehicle_agent = VehicleAgent(
                 vehicle, cav_config, application, self.edge,
                 self.carla_map, self.cav_world,
                 data_dumping=data_dump)
@@ -401,13 +401,13 @@ class GameWorld:
                                           z=destination[2])
                 destinations.append(location)
 
-            vehicle_manager.update_info()
-            vehicle_manager.set_destination(
-                vehicle_manager.vehicle.get_location(),
+            vehicle_agent.update_info()
+            vehicle_agent.set_destination(
+                vehicle_agent.vehicle.get_location(),
                 destinations[-1],
                 clean=True)
 
-            single_cav_list.append(vehicle_manager)
+            single_cav_list.append(vehicle_agent)
 
         return single_cav_list
 
@@ -442,7 +442,7 @@ class GameWorld:
                                      cav_config)
         cav_config = OmegaConf.merge(self.scenario_params['controller'],
                                      cav_config)
-        vehicle_manager = VehicleAgent(
+        vehicle_agent = VehicleAgent(
             vehicle, cav_config, ['single'], False, self.carla_map, self.cav_world)
 
         self.world.tick()
@@ -454,14 +454,14 @@ class GameWorld:
                                       z=destination[2])
             destinations.append(location)
 
-        vehicle_manager.update_info()
-        vehicle_manager.set_destination(
-            vehicle_manager.vehicle.get_location(),
+        vehicle_agent.update_info()
+        vehicle_agent.set_destination(
+            vehicle_agent.vehicle.get_location(),
             # TODO: enable multiple destinations in EI-Drive Planner
             destinations[-1],
             clean=True)
 
-        return [vehicle_manager]
+        return [vehicle_agent]
 
     def create_rsu_manager(self, data_dump):
         """

@@ -39,7 +39,8 @@ def run_scenario(scenario_params):
             df = pd.concat(frames)
 
         # create CAV world
-        cav_world = CavWorld()
+        apply_ml = scenario_params.vehicle_perception.perception.apply_ml
+        cav_world = CavWorld(apply_ml=apply_ml)
         # create scenario manager
         gameworld = sim_api.GameWorld(scenario_params,
                                       scenario_params.scenario.edge,

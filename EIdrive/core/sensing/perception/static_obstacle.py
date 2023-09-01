@@ -1,90 +1,92 @@
-# -*- coding: utf-8 -*-
 """
-Static Obstacle base class
+Class for static obstacle.
 """
 
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 import sys
 
 import numpy as np
 import carla
 
 
-class BoundingBox(object):
+class BoundingBox:
     """
-    Bounding box class for obstacle vehicle.
-
-    Params:
-    -corners : nd.nparray
-        Eight corners of the bounding box. (shape:(8, 3))
-    Attributes:
-    -location : carla.location
-        The location of the object.
-    -extent : carla.vector3D
-        The extent of  the object.
-    """
-
-    def __init__(self, corners):
-
-        center_x = np.mean(corners[:, 0])
-        center_y = np.mean(corners[:, 1])
-        center_z = np.mean(corners[:, 2])
-
-        extent_x = (np.max(corners[:, 0]) - np.min(corners[:, 0])) / 2
-        extent_y = (np.max(corners[:, 1]) - np.min(corners[:, 1])) / 2
-        extent_z = (np.max(corners[:, 2]) - np.min(corners[:, 2])) / 2
-
-        self.location = carla.Location(x=center_x, y=center_y, z=center_z)
-        self.extent = carla.Vector3D(x=extent_x, y=extent_y, z=extent_z)
-
-
-class StaticObstacle(object):
-    """
-    The general class for obstacles. Currently, we regard all static obstacles
-     such as stop signs and traffic light as the same class.
+    Class representing a bounding box for obstacles or vehicles.
 
     Parameters
     ----------
-    corner : nd.nparray
-        Eight corners of the bounding box (shape:(8, 3)).
-    o3d_bbx : open3d.AlignedBoundingBox
-        The bounding box object in Open3d.This is
-        mainly used for visualization.
+    corners : np.ndarray
+        The eight corners of the bounding box in a 3D space.
+        Shape: (8, 3).
 
     Attributes
     ----------
-    bounding_box : BoundingBox
-        Bounding box of the osbject vehicle.
+    loc : carla.Location
+        The central location of the object within the bounding box.
+
+    size : carla.Vector3D
+        Dimensions of the object, indicating its width, height, and depth.
     """
 
-    def __init__(self, corner, o3d_bbx):
+    def __init__(self, corners):
+        self.loc = self.compute_location(corners)
+        self.size = self.compute_extent(corners)
 
-        self.bounding_box = BoundingBox(corner)
-        self.o3d_bbx = o3d_bbx
+    @staticmethod
+    def compute_location(corners):
+        avg_x, avg_y, avg_z = np.mean(corners, axis=0)
+        return carla.Location(x=avg_x, y=avg_y, z=avg_z)
+
+    @staticmethod
+    def compute_extent(corners):
+        half_x = (np.max(corners[:, 0]) - np.min(corners[:, 0])) / 2
+        half_y = (np.max(corners[:, 1]) - np.min(corners[:, 1])) / 2
+        half_z = (np.max(corners[:, 2]) - np.min(corners[:, 2])) / 2
+        return carla.Vector3D(x=half_x, y=half_y, z=half_z)
 
 
-class TrafficLight(object):
+class StaticObstacle:
     """
-    The class for traffic light. Currently, we retrieve the traffic light info
-    from the server directly and assign to this class.
+    Representation for a static obstacle. Stop signs and traffic lights are treated uniformly under this class.
 
     Parameters
-    ---------
-    pos : carla.Location
-        The location of this traffic light.
+    ----------
+    bounding_corners : np.ndarray
+        The eight corners of the obstacle's bounding box in a 3D space.
+        Shape: (8, 3).
 
-    light_state : carla.TrafficLightState
-        Current state of the traffic light.
+    o3d_box : open3d.AlignedBoundingBox
+        Open3D's bounding box representation primarily utilized for visualization purposes.
 
+    Attributes
+    ----------
+    bbx : BoundingBox
+        The bounding box encapsulating the static obstacle.
     """
 
-    def __init__(self, pos, light_state):
-        self._location = pos
-        self.state = light_state
+    def __init__(self, bounding_corners, o3d_box):
+        self.bbx = BoundingBox(bounding_corners)
+        self.o3d_box = o3d_box
+
+
+class TrafficLight:
+    """
+    Traffic light information is directly retrieved from the server and mapped to this class.
+
+    Parameters
+    ----------
+    position : carla.Location
+        Location of the traffic light in the simulation environment.
+
+    state : carla.TrafficLightState
+        Current operational state of the traffic light (e.g., red, green, yellow).
+    """
+
+    def __init__(self, position, state):
+        self.position = position
+        self.state = state
 
     def get_location(self):
-        return self._location
+        return self.position
 
     def get_state(self):
         return self.state
