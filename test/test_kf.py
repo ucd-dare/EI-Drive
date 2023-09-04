@@ -18,14 +18,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 import mocked_carla as mcarla
 from EIdrive.core.sensing.localization.kalman_filter import KalmanFilter
-from EIdrive.core.sensing.localization.coordinate_transform import geo_to_transform
+from EIdrive.core.sensing.localization.convert_coordinate import convert_geo_to_esu
 
 
 class testKalmanFilter(unittest.TestCase):
     def setUp(self):
         self.dt = 0.25
         self.kf = KalmanFilter(self.dt)
-        self.kf.run_step_init(10, 10, 90, 20)
+        self.kf.initiate_kf(10, 10, 90, 20)
 
     def test_parameters(self):
         assert (hasattr(self.kf, 'Q') and
@@ -40,15 +40,15 @@ class testKalmanFilter(unittest.TestCase):
                 self.kf.PEst.shape == (4, 4))
 
     def test_run_step(self):
-        assert isinstance(self.kf.run_step(10, 10, 10, 10, 3)[0], float)
-        assert isinstance(self.kf.run_step(10, 10, 10, 10, 3)[1], float)
-        assert isinstance(self.kf.run_step(10, 10, 10, 10, 3)[2], float)
-        assert isinstance(self.kf.run_step(10, 10, 10, 10, 3)[3], float)
+        assert isinstance(self.kf.run_kf_filter(10, 10, 10, 10, 3)[0], float)
+        assert isinstance(self.kf.run_kf_filter(10, 10, 10, 10, 3)[1], float)
+        assert isinstance(self.kf.run_kf_filter(10, 10, 10, 10, 3)[2], float)
+        assert isinstance(self.kf.run_kf_filter(10, 10, 10, 10, 3)[3], float)
 
     def test_geo_to_transform(self):
-        assert isinstance(geo_to_transform(100, 70, 10, 10, 10, 10)[0], float)
-        assert isinstance(geo_to_transform(100, 70, 10, 10, 10, 10)[1], float)
-        assert isinstance(geo_to_transform(100, 70, 10.0, 10, 10, 10.0)[2], float)
+        assert isinstance(convert_geo_to_esu(100, 70, 10, 10, 10, 10)[0], float)
+        assert isinstance(convert_geo_to_esu(100, 70, 10, 10, 10, 10)[1], float)
+        assert isinstance(convert_geo_to_esu(100, 70, 10.0, 10, 10, 10.0)[2], float)
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import uuid
 import carla
 from collections import deque
 
-from EIdrive.core.sensing.localization.localization_manager \
+from EIdrive.core.sensing.localization.localizer \
     import Localizer
 from EIdrive.core.sensing.perception.sensor_perception \
     import Perception
@@ -161,7 +161,7 @@ class VehicleAgent(object):
         self.localizer.localize()
 
         ego_pos = self.localizer.get_ego_pos()
-        ego_spd = self.localizer.get_ego_spd()
+        ego_spd = self.localizer.get_ego_speed()
 
         # object detection
         objects = self.perception.object_detect(ego_pos)

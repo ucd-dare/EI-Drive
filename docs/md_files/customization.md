@@ -34,7 +34,7 @@ then he/she just needs to create a `localization_manager.py` under `opencda/cust
 folder and initializes the `CustomizedLocalizationManager` with Extended Kalman Filter:
 
 ```python
-from EIdrive.core.sensing.localization.localization_manager import Localizer
+from EIdrive.core.sensing.localization.localizer import Localizer
 from EIdrive.customize.core.sensing.localization.extented_kalman_filter import ExtentedKalmanFilter
 
 
@@ -47,7 +47,7 @@ class CustomizedLocalizationManager(Localizer):
 Then go to `VehicleManager` class, import this customized module and set it as the localizer.
 
 ```python
-from EIdrive.core.sensing.localization.localization_manager import Localizer
+from EIdrive.core.sensing.localization.localizer import Localizer
 from EIdrive.customize.core.sensing.localization.localization_manager import CustomizedLocalizer
 
 

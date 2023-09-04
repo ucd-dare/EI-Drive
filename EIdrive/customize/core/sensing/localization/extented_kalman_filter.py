@@ -142,7 +142,7 @@ class ExtentedKalmanFilter(object):
              gnss sensor at current timestamp.
             -heading (float): heading direction at current timestamp.
             -velocity (float): current speed.
-            -yaw_rate_imu (float): yaw rate rad/s from IMU sensor.
+            -imu_yaw_rate (float): yaw rate rad/s from IMU sensor.
         Returns:
             - xEST (np.array): The corrected x, y, heading,
               and velocity information.

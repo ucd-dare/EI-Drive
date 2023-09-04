@@ -416,7 +416,7 @@ class BehaviorAgent(object):
     def update_information(self, ego_pos, ego_speed, objects):
         # update localization information
         self._ego_speed = ego_speed
-        self._ego_pos = ego_pos
+        self.ego_pos = ego_pos
         self.break_distance = self._ego_speed / 3.6 * self.emergency_param
     
         # update the localization info to trajectory planner

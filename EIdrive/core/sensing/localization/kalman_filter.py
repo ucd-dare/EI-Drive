@@ -1,75 +1,76 @@
-# -*- coding: utf-8 -*-
 """
-Use Kalman Filter on GPS + IMU for better localization.
-Reference: https://www.bzarg.com/p/how-a-kalman-filter-works-in-pictures/
+Use Kalman Filter to fuse GPS + IMU for localization.
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>, Xin Xia<x35xia@g.ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import math
 import numpy as np
 
 
-class KalmanFilter(object):
+class KalmanFilter:
     """
-    Kalman Filter implementation for gps and imu.
+    Implements a Kalman Filter for GPS and IMU data fusion.
 
     Parameters
     ----------
     dt : float
-        The step time for kalman filter calculation.
+        Time interval between filter steps.
 
     Attributes
     ----------
     Q : numpy.array
-        predict state covariance.
+        Covariance matrix for state prediction.
 
     R : numpy.array
-        Observation x,y position covariance.
+        Covariance matrix for observation in x, y position.
 
     time_step : float
-        The step time for kalman filter calculation.
+        Interval between filter updates (same as dt).
 
     xEst : numpy.array
-        Estimated x values.
+        Array of estimated states.
 
     PEst : numpy.array
-        The estimated P values.
+        Covariance matrix of estimated states.
     """
 
     def __init__(self, dt):
+        # Covariance for the prediction step (Q matrix).
         self.Q = np.diag([
-            0.2,  # variance of location on x-axis
-            0.2,  # variance of location on y-axis
-            np.deg2rad(0.1),  # variance of yaw angle
-            0.001  # variance of velocity
-        ]) ** 2  # predict state covariance
+            0.2,  # Variance in x position.
+            0.2,  # Variance in y position.
+            np.deg2rad(0.1),  # Variance in yaw.
+            0.001  # Variance in velocity.
+        ]) ** 2
 
-        # Observation x,y position covariance
-        self.R = np.diag([0.5, 0.5, 0.2]) ** 2
+        # Covariance for observation (R matrix).
+        self.R = np.diag([
+            0.5,  # Variance in x observation.
+            0.5,  # Variance in y observation.
+            0.2  # Variance in yaw observation.
+        ]) ** 2
 
         self.time_step = dt
 
+        # Initializing estimated states (x) and covariance (P) matrix.
         self.xEst = np.zeros((4, 1))
         self.PEst = np.eye(4)
 
-    def motion_model(self, x, u):
+    def dynamic_model(self, x, u):
         """
-        Predict current position and yaw based on
-        previous result (X = F * X_prev + B * u).
+        Predicts the next state using the dynamic model: X = F * X_prev + B * u.
 
         Parameters
         ----------
         x : np.array
-            [x_prev, y_prev, yaw_prev, v_prev], shape: (4, 1).
+            Previous state with [x_position, y_position, yaw_angle, velocity]. Shape: (4, 1).
 
         u : np.array
-            [v_current, imu_yaw_rate], shape:(2, 1).
+            Control inputs with [current_velocity, yaw_rate_from_imu]. Shape: (2, 1).
 
         Returns
         -------
         x : np.array
-            Predicted state.
+            Predicted state for the next time step.
         """
         F = np.array([[1.0, 0, 0, 0],
                       [0, 1.0, 0, 0],
@@ -87,18 +88,17 @@ class KalmanFilter(object):
 
     def observation_model(self, x):
         """
-        Project the state matrix to sensor measurement matrix.
+        Converts the state into a format expected by the sensor, i.e., the measurement model.
 
         Parameters
-        __________
+        ----------
         x : np.array
-            [x, y, yaw, v], shape: (4. 1).
+            State vector with elements [x_position, y_position, yaw_angle, velocity]. Shape: (4, 1).
 
         Returns
         -------
-        z : np.array)
-            Predicted measurement.
-
+        z : np.array
+            Transformed state representing the predicted sensor measurement.
         """
         H = np.array([
             [1, 0, 0, 0],
@@ -110,9 +110,9 @@ class KalmanFilter(object):
 
         return z
 
-    def run_step_init(self, x, y, heading, velocity):
+    def initiate_kf(self, x, y, heading, velocity):
         """
-        Initial state filling.
+        Initial state filling of Kalman filter.
 
         Parameters
         ----------
@@ -126,7 +126,7 @@ class KalmanFilter(object):
             The heading direction.
 
         velocity : float
-            The velocity speed.
+            Velocity.
 
         """
         self.xEst[0] = x
@@ -134,64 +134,70 @@ class KalmanFilter(object):
         self.xEst[2] = heading
         self.xEst[3] = velocity
 
-    def run_step(self, x, y, heading, velocity, yaw_rate_imu):
+    def run_kf_filter(self, x, y, heading, v, imu_yaw_rate):
         """
-        Apply KF on current measurement and previous prediction.
+        Updates the state using Kalman Filter based on current measurements and previous predictions.
 
         Parameters
         ----------
         x : float
-            x(esu) coordinate from gnss sensor at current timestamp
+            x-coordinate from GNSS sensor for the current time step.
 
         y : float
-            y(esu) coordinate from gnss sensor at current timestamp
+            y-coordinate from GNSS sensor for the current time step.
 
         heading : float
-            heading direction at current timestamp.
+            Heading direction for the current time step.
 
-        velocity : float
-            current speed.
+        v : float
+            Speed for the current time step.
 
-        yaw_rate_imu : float
-            yaw rate rad/s from IMU sensor.
+        imu_yaw_rate : float
+            Yaw rate in rad/s sourced from the IMU sensor.
 
         Returns
         -------
-        Xest : np.array
-            The corrected x, y, heading, and velocity information.
+        corrected_info : tuple
+            Tuple containing corrected x, y, heading, and velocity values.
         """
-        # gps observation
+        # Measurement vector from GNSS
         z = np.array([x, y, heading]).reshape(3, 1)
-        # velocity and imu yaw rate
-        u = np.array([velocity, yaw_rate_imu]).reshape(2, 1)
 
-        # state prediction
-        xPred = self.motion_model(self.xEst, u)
-        # sensor measurement prediction
+        # Control input vector (velocity and IMU yaw rate)
+        u = np.array([v, imu_yaw_rate]).reshape(2, 1)
+
+        # Predict the next state based on the dynamic model
+        xPred = self.dynamic_model(self.xEst, u)
+
+        # Predict the next measurement based on the observation model
         zPred = self.observation_model(xPred)
         y = z - zPred
 
-        # projection matrix
+        # Observation matrix
         H = np.array([
             [1, 0, 0, 0],
             [0, 1, 0, 0],
             [0, 0, 1, 0]
         ])
 
-        # prediction matrix
-        F = np.array([[1.0, 0, 0, 0],
-                      [0, 1.0, 0, 0],
-                      [0, 0, 1.0, 0],
-                      [0, 0, 0, 0]])
+        # State transition matrix
+        F = np.array([
+            [1.0, 0, 0, 0],
+            [0, 1.0, 0, 0],
+            [0, 0, 1.0, 0],
+            [0, 0, 0, 0]
+        ])
 
+        # Covariance prediction for the next step
         PPred = F @ self.PEst @ F.T + self.Q
         S = np.linalg.inv(H @ PPred @ H.T + self.R)
         K = PPred @ H.T @ S
 
+        # Update estimated state and covariance matrix
         self.xEst = xPred + K @ y
         self.PEst = K @ H @ PPred
 
         return self.xEst[0][0], \
             self.xEst[1][0], \
-            self.xEst[2][0],\
+            self.xEst[2][0], \
             self.xEst[3][0]

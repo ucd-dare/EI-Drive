@@ -5,7 +5,7 @@ Customized Localization Module.
 # Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
-from EIdrive.core.sensing.localization.localization_manager \
+from EIdrive.core.sensing.localization.localizer \
     import Localizer
 from EIdrive.customize.core.sensing.localization.extented_kalman_filter \
     import ExtentedKalmanFilter

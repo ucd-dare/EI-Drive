@@ -8,8 +8,8 @@ Basic class for RSU(Roadside Unit) management.
 from EIdrive.core.common.data_dumper import DataDumper
 from EIdrive.core.sensing.perception.sensor_perception import \
     Perception
-from EIdrive.core.sensing.localization.rsu_localization_manager import \
-    LocalizationManager
+from EIdrive.core.sensing.localization.rsu_localizer import \
+    RsuLocalizer
 
 
 class RSUManager(object):
@@ -77,9 +77,9 @@ class RSUManager(object):
             config_yaml['spawn_position']
 
         # localization module
-        self.localizer = LocalizationManager(carla_world,
-                                             sensing_config['localization'],
-                                             self.carla_map)
+        self.localizer = RsuLocalizer(carla_world,
+                                      sensing_config['localization'],
+                                      self.carla_map)
         # perception module
         self.perception_manager = Perception(vehicle=None,
                                              config_yaml=sensing_config['perception'],
