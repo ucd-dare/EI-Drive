@@ -1,10 +1,12 @@
+"""
+The script shows a demo for V2X communication through edge.
+"""
+
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
-from EIdrive.core.common.cav_world import CavWorld
-from EIdrive.scenario_testing.evaluations.evaluate_manager import \
-    EvaluationManager
-from EIdrive.core.common.misc import get_speed
+from EIdrive.core.basic.auxiliary import get_speed
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
+from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -12,9 +14,6 @@ import numpy as np
 import math
 import pandas as pd
 import sys
-import time
-
-from pynput import keyboard
 
 
 player_ids = []
@@ -38,36 +37,26 @@ def run_scenario(scenario_params):
             frames = [pd.read_csv(f'{i}{path}') for i in range(6)]
             df = pd.concat(frames)
 
-        # create CAV world
-        apply_ml = scenario_params.vehicle_perception.perception.apply_ml
-        cav_world = CavWorld(apply_ml=apply_ml)
-        # create scenario manager
+        # Create game world
         gameworld = sim_api.GameWorld(scenario_params,
                                       scenario_params.scenario.edge,
-                                      town='Town06',
-                                      cav_world=cav_world)
+                                      map_name='Town06')
         if scenario_params.common_params.record:
-            gameworld.client. \
-                start_recorder("single_town06_carla.log", True)
-        single_cav_list = \
-            gameworld.create_vehicle_agent(application=['single'], data_dump=False)
+            gameworld.client. start_recorder("single_town06_carla.log", True)
+        vehicle_list = gameworld.create_vehicle_agent()
 
         # Record the id of players
-        for vm in single_cav_list:
-            player_ids.append(vm.vehicle.id)
-        # create background traffic in carla
-        traffic_manager, bg_veh_list = \
-            gameworld.create_traffic_carla()
-        # create evaluation manager
-        eval_manager = \
-            EvaluationManager(gameworld.cav_world,
-                              script_name='demo',
-                              current_time='')
-        spectator = gameworld.world.get_spectator()
+        for vehicle_agent in vehicle_list:
+            player_ids.append(vehicle_agent.vehicle.id)
 
-        # run steps
+        # Create background traffic in carla
+        traffic_manager, background_vehicle_list = gameworld.create_traffic_flow()
+
+        spectator = gameworld.world.get_spectator()
+        spec_controller = SpectatorController(spectator)
+
         v_speeds_list = []
-        for i in range(len(single_cav_list)):
+        for i in range(len(vehicle_list)):
             v_speeds_list.append([])
 
         latency_list = []
@@ -84,7 +73,7 @@ def run_scenario(scenario_params):
                 exit(0)
             if kl.keys['p']:
                 continue
-            # draw edge
+            # Draw edge
             if t % 5 == 1 and scenario_params.scenario.edge:
                 gameworld.world.debug.draw_point(
                     carla.Location(
@@ -136,22 +125,11 @@ def run_scenario(scenario_params):
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
 
-            gameworld.tick(single_cav_list)
+            gameworld.tick(vehicle_list)
 
-            # zoom in/out spectator
-            if t < 60:
-                z_location = z_location - 0.55
-            elif t < 100:
-                z_location = z_location + 0.25
-            spectator.set_transform(carla.Transform(
-                carla.Location(
-                    x=0, y=45.5, z=z_location),
-                carla.Rotation(
-                    pitch=-
-                    90)))
+            spec_controller.full_bird_view(vehicle_list)
 
-            # draw trajectory
-
+            # Draw trajectory
             if scenario_params.scenario.edge:
                 if t < 185:
                     df_temp = df[(df['tick'] == t + 8) | (df['tick'] == t + 11) | (df['tick'] == t + 14)]
@@ -184,10 +162,10 @@ def run_scenario(scenario_params):
                             color=carla.Color(0, 255, 0),
                             life_time=0.1)
 
-                # compute latency
-                car0 = single_cav_list[0].vehicle.get_transform()
-                car1 = single_cav_list[1].vehicle.get_transform()
-                car2 = single_cav_list[2].vehicle.get_transform()
+                # Compute latency
+                car0 = vehicle_list[0].vehicle.get_transform()
+                car1 = vehicle_list[1].vehicle.get_transform()
+                car2 = vehicle_list[2].vehicle.get_transform()
                 x0 = car0.location.x
                 y0 = car0.location.y
                 x1 = car1.location.x
@@ -201,11 +179,10 @@ def run_scenario(scenario_params):
                 latency_list[1].append(latency02)
                 latency_list[2].append(latency12)
 
-            # run step
-            for i, single_cav in enumerate(single_cav_list):
-                v_speeds_list[i].append(get_speed(single_cav.vehicle))
+            for i, vehicle_agent in enumerate(vehicle_list):
+                v_speeds_list[i].append(get_speed(vehicle_agent.vehicle))
 
-            # draw figures
+            # Draw figures
             matplotlib.use('TkAgg')
             plt.cla()
 
@@ -251,13 +228,12 @@ def run_scenario(scenario_params):
                 sys.exit(0)
 
     finally:
-        # eval_manager.evaluate()
         if scenario_params.common_params.record:
             gameworld.client.stop_recorder()
 
         gameworld.close()
 
-        for v in single_cav_list:
+        for v in vehicle_list:
             v.destroy()
-        for v in bg_veh_list:
+        for v in background_vehicle_list:
             v.destroy()

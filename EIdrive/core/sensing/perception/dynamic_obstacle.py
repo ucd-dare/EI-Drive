@@ -73,10 +73,6 @@ class DynamicObstacle(object):
         Associated carla.Vehicle instance.
     lidar : carla.sensor.Lidar
         The LiDAR sensor associated with the vehicle.
-    sumo2carla_ids : dict
-        Mapping dictionary for Sumo to Carla. Essential for co-simulation as it aids
-        in reading vehicle speeds from the Sumo API (traci) when they can't be fetched
-        from the Carla server.
 
     Attributes
     ----------
@@ -91,7 +87,7 @@ class DynamicObstacle(object):
         if no matching Carla vehicle is found.
     """
 
-    def __init__(self, corners, o3d_bbx, vehicle=None, lidar=None, sumo2carla_ids=None):
+    def __init__(self, corners, o3d_bbx, vehicle=None, lidar=None):
 
         if not vehicle:
             self.bounding_box = BoundingBox(corners)
@@ -101,8 +97,6 @@ class DynamicObstacle(object):
             self.carla_id = -1
             self.velocity = carla.Vector3D(0.0, 0.0, 0.0)
         else:
-            if sumo2carla_ids is None:
-                sumo2carla_ids = dict()
             self.set_vehicle(vehicle, lidar)
 
     def get_transform(self):

@@ -2,7 +2,7 @@ test_scenario: demo
 edge: false
 manual_path: 'traj.csv'
 manual_horizon: 5 # The horizon of trajectories when manually input
-single_cav_list:
+vehicle_list:
   - id: 0
     spawn_position: [-38.1, 46.35, 0.3, 0, 0, 0]
     destination: [[66.1, 45.5, 0.3]]

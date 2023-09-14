@@ -8,7 +8,6 @@ from srunner.tools.route_parser import RouteParser
 from srunner.tools.route_manipulation import interpolate_trajectory
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
-from EIdrive.core.common.cav_world import CavWorld
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 
 
@@ -17,7 +16,7 @@ class Tracer():
         self.scenario_manager = scenario_manager
         self.route_config = route_config
         self.max_record_ticks = scenario_params.scenario_runner.max_record_ticks
-        cav_params = scenario_params['scenario']['single_cav_list'][0]
+        vehicle_config = scenario_params['scenario']['vehicle_list'][0]
 
         self.world = scenario_manager.world
         self.world.on_tick(self._capture_vehicle_movement)
@@ -25,14 +24,14 @@ class Tracer():
             self.world, route_config.trajectory)
         src = self.route[0][0]
 
-        cav_params['spawn_position'] = [src.location.x, src.location.y, src.location.z + 0.5,
-                                        src.rotation.roll, src.rotation.yaw, src.rotation.pitch]
-        cav_params['destination'] = [
+        vehicle_config['spawn_position'] = [src.location.x, src.location.y, src.location.z + 0.5,
+                                            src.rotation.roll, src.rotation.yaw, src.rotation.pitch]
+        vehicle_config['destination'] = [
             (waypoint[0].location.x, waypoint[0].location.y, waypoint[0].location.z) for waypoint in self.route[1:]]
 
-        single_cav_list = self.scenario_manager.create_vehicle_agent()
-        self.single_cav = single_cav_list[0]
-        self.ego_vehicle = self.single_cav.vehicle
+        vehicle_list = self.scenario_manager.create_vehicle_agent()
+        self.single_vehicle = vehicle_list[0]
+        self.ego_vehicle = self.single_vehicle.vehicle
 
         self.spectator = self.world.get_spectator()
         self.spectator_altitude = 50
@@ -68,7 +67,7 @@ class Tracer():
             lambda data: self._camera_listener(self.sensor_names[1])(data))
 
     def _magnitute(self, vector):
-        return (vector.x**2 + vector.y**2 + vector.z**2)**0.5
+        return (vector.x ** 2 + vector.y ** 2 + vector.z ** 2) ** 0.5
 
     def _capture_vehicle_movement(self, world_snapshot):
         if world_snapshot is None:
@@ -131,6 +130,7 @@ class Tracer():
     def _camera_listener(self, sensor_name):
         def _callback(sensor_data):
             self._capture_sensor_data(sensor_name, sensor_data)
+
         return _callback
 
     def _capture_sensor_data(self, sensor_name, sensor_data):
@@ -188,7 +188,7 @@ class Tracer():
         self._save_sensor_images(self.dataset_sensor)
 
         print('Saving dataset...')
-        df = pd.DataFrame(columns=MOVEMENT_DATA+CONTROL_DATA+SENSOR_DATA)
+        df = pd.DataFrame(columns=MOVEMENT_DATA + CONTROL_DATA + SENSOR_DATA)
         for frame, data in tqdm(self.dataset_client.items()):
             if frame in self.dataset_server and frame in self.dataset_sensor:
                 data = {
@@ -216,9 +216,9 @@ class Tracer():
             self._capture_vehicle_control(
                 self.ego_vehicle, world_snapshot.frame)
 
-            self.single_cav.update_info()
-            control = self.single_cav.run_step()
-            self.single_cav.vehicle.apply_control(control)
+            self.single_vehicle.update_info()
+            control = self.single_vehicle.run_step()
+            self.single_vehicle.vehicle.apply_control(control)
 
             timestep += 1
 
@@ -230,7 +230,6 @@ class Tracer():
 
 def run_scenario(opt, scenario_params):
     scenario_runner = None
-    cav_world = None
     gameworld = None
 
     try:
@@ -238,22 +237,18 @@ def run_scenario(opt, scenario_params):
             scenario_params.scenario_runner.routesConfig,
             None,
             scenario_params.scenario_runner.routeId)[0]
-        # Create CAV world
-        cav_world = CavWorld(opt.apply_ml)
-        # Create scenario manager
+
+        # Create game world
         gameworld = sim_api.GameWorld(scenario_params,
-                                             opt.apply_ml,
-                                             opt.version,
-                                             town=route_config.town,
-                                             cav_world=cav_world)
+                                      opt.apply_ml,
+                                      opt.version,
+                                      map_name=route_config.town)
 
         tracer = Tracer(gameworld, scenario_params, route_config)
         tracer.trace_route()
 
     finally:
-        if cav_world is not None:
-            cav_world.destroy()
-        print("Destroyed cav_world")
+        print("Destroyed ml_model")
         if gameworld is not None:
             gameworld.close()
         print("Destroyed gameworld")

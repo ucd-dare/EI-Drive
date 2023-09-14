@@ -197,7 +197,7 @@ class World(object):
         except RuntimeError as error:
             print('RuntimeError: {}'.format(error))
             print('  The server could not send the OpenDRIVE (.xodr) file:')
-            print('  Make sure it exists, has the same name of your town, and is correct.')
+            print('  Make sure it exists, has the same name of your map_name, and is correct.')
             sys.exit(1)
         self.hud = hud
         self.player = None
@@ -268,7 +268,7 @@ class World(object):
             self.modify_vehicle_physics(self.player)
         while self.player is None:
             if not self.map.get_spawn_points():
-                print('There are no spawn points available in your map/town.')
+                print('There are no spawn points available in your map/map_name.')
                 print('Please add some Vehicle Spawn Point to your UE4 scene.')
                 sys.exit(1)
             spawn_points = self.map.get_spawn_points()

@@ -15,7 +15,7 @@ import numpy as np
 import carla
 from collections import deque
 
-from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
+from EIdrive.core.basic.auxiliary import get_speed, positive, distance_angle_to_target
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
@@ -130,7 +130,6 @@ class DQNAgent(object):
         # destination temp push flag
         self.destination_push_flag = 0
 
-        # white list of vehicle managers that the cav does not consider as
         # obstacles
         self.white_list = []
         self.obstacle_vehicles = []
@@ -265,12 +264,12 @@ class DQNAgent(object):
         if self._ego_pos:
             cur_loc = self._ego_pos.location
             cur_yaw = self._ego_pos.rotation.yaw
-            _, angle = cal_distance_angle(
+            _, angle = distance_angle_to_target(
                 self.start_waypoint.transform.location, cur_loc, cur_yaw)
 
             while angle > 90:
                 self.start_waypoint = self.start_waypoint.next(1)[0]
-                _, angle = cal_distance_angle(
+                _, angle = distance_angle_to_target(
                     self.start_waypoint.transform.location, cur_loc, cur_yaw)
 
         end_waypoint = self._map.get_waypoint(end_location)

@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Script to run different test_scenario.
 """
-
-# Author: Wei Shao <phdweishao@gmail.com>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import argparse
 import importlib
@@ -14,7 +10,6 @@ import time
 from omegaconf import DictConfig, OmegaConf
 from omegaconf import OmegaConf
 
-from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
 from EIdrive.version import __version__
 import os
 

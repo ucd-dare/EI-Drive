@@ -19,7 +19,7 @@ The workflow of opencda can be summarized as follows.
 step, ` scenario_manager.tick()` will be called to tick the server. Then all the CAVs will update the surrounding information and execute a single step. The single CAVs may join the platoon in the middle of the travel, so we need to check whether any single CAV has joined a platoon and remove it from the `single_cav_list` if so.
 
 ```python
-from EIdrive.scenario_testing.utils.customized_map_api import customized_map_helper
+from EIdrive.scenario_testing.utils.customized_map import customized_map_helper
 
 
 def run_scenario(opt, config_yaml):
@@ -122,7 +122,7 @@ Now we will introduce each of them:
         cav_vehicle_bp = self.world.get_blueprint_library().find('vehicle.lincoln.mkz2017')
         single_cav_list = []
         # Each entry in the list corresponds to a CAV
-        for i, cav_config in enumerate(self.scenario_params['scenario']['single_cav_list']):
+        for i, cav_config in enumerate(self.scenario_params['scenario']['vehicle_list']):
             spawn_transform = function_to_load_spawn_position(cav_config)
             cav_vehicle_bp.set_attribute('color', '0, 0, 255')
             vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
@@ -149,19 +149,19 @@ Now we will introduce each of them:
 
 * `create_platoon_manager()`
 
-    This method will first loop over the predefined platoon list. For each platoon, we will create a `PlatooningManager` object to group all the vehicles within the platoon. In the current version, we assume the first vehicle in the platoon is the lead vehicle. After creating all of the vehicles of each platoon, it will return a list of `PlatooningManager`. As a result, we can control the behavior of each platoon via a single line of code without worrying about details of how each vehicle will react. 
+    This method will first loop over the predefined platoon list. For each platoon, we will create a `PlatooningManager` object to group all the vehicles within the platoon. In the current version, we assume the first vehicle in the platoon is the lead vehicle. After creating all of the vehicles of each platoon, it will return a list of `PlatooningManager`. As a result, we can control the behavior of each platoon via a single line of code without worrying about details of how each vehicle will react.
 
     ```python
     def create_platoon_manager(self, map_helper=None, data_dump=False):    
         platoon_list = []
-        self.cav_world = CavWorld(self.apply_ml)
+        self.ml_model = CavWorld(self.apply_ml)
         # we use lincoln as default choice since our UCLA mobility lab use the
         # same car
         cav_vehicle_bp = \
         self.world.get_blueprint_library().find('vehicle.lincoln.mkz2017')
         # create platoons
         for i, platoon in enumerate(self.scenario_params['scenario']['platoon_list']):
-            platoon_manager = PlatooningManager(platoon, self.cav_world)
+            platoon_manager = PlatooningManager(platoon, self.ml_model)
             for j, cav in enumerate(platoon['members']):
                 # Similar as spawning single CAV, we need to create its start location (spawn_transform)
                 # and set its color etc. 
@@ -169,7 +169,7 @@ Now we will introduce each of them:
                 vehicle = self.world.spawn_actor(cav_vehicle_bp,spawn_transform)
                 # create vehicle manager for each cav
                 vehicle_manager = VehicleManager(vehicle, cav, ['platooning'],
-                          self.carla_map, self.cav_world,
+                          self.carla_map, self.ml_model,
                           current_time=self.scenario_params['current_time'],
                           data_dumping=data_dump)
                 # add the vehicle manager to platoon
@@ -212,13 +212,12 @@ Now we will introduce each of them:
 
 ### VehicleManager
 
-This class will wrap the original `carla.Vehicle` object and associate the vehicles with various modules including localization, perception, control, agent and V2Xmanager. 
+This class will wrap the original `carla.Vehicle` object and associate the vehicles with various modules including localization, perception, control, agent and V2Xmanager.
 
 ```python
 class VehicleManager(object):
-    def __init__(self, vehicle, config_yaml, application, 
-                 carla_map, cav_world, current_time='',data_dumping=False):
-
+    def __init__(self, vehicle, config_yaml, application,
+                 carla_map, cav_world, current_time='', data_dumping=False):
         # an unique uuid for this vehicle
         self.vid = str(uuid.uuid1())
         self.vehicle = vehicle
@@ -236,7 +235,7 @@ class VehicleManager(object):
         self.localizer = LocalizationManager(vehicle, sensing_config['localization'], carla_map)
         # perception module
         self.perception_manager = PerceptionManager(
-            vehicle, sensing_config['perception'], cav_world.ml_manager, data_dumping)
+            vehicle, sensing_config['perception'], cav_world.object_detection_model, data_dumping)
         # AgentBehavior
         self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
         # Control module

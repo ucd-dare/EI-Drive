@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
-Utilize scenario manager to manage CARLA simulation construction. This script
-is used for carla simulation only, and if you want to manage the Co-simulation,
-please use cosim_api.py.
+This file includes GameWorld, which describes the whole environment in simulation. Also, there are some functions
+for script visualization and calculation.
 """
 
 import math
@@ -12,32 +9,25 @@ import sys
 import json
 import cv2
 from random import shuffle
-
 import carla
 import numpy as np
 from omegaconf import OmegaConf
 from collections import deque
 
-from EIdrive.core.common.vehicle_agent import VehicleAgent
-from EIdrive.core.common.rsu_manager import RSUManager
-from EIdrive.core.common.cav_world import CavWorld
-from EIdrive.scenario_testing.utils.customized_map_api import \
-    load_customized_world, bcolors
+from EIdrive.core.basic.vehicle_agent import VehicleAgent
+from EIdrive.core.basic.rsu import RSU
+from EIdrive.scenario_testing.utils.customized_map import create_customized_world, bcolors
+from EIdrive.core.basic.ml_model import MLModel
 
 
-def car_blueprint_filter(blueprint_library, carla_version='0.9.11'):
+def filter_blueprint_lib(blueprint_library):
     """
-    Exclude the uncommon vehicles from the default CARLA blueprint library
-    (i.e., isetta, carlacola, cybertruck, t2).
+    Remove the non-standard vehicles from the CARLA blueprint collection.
 
     Parameters
     ----------
     blueprint_library : carla.blueprint_library
-        The blueprint library that contains all models.
-
-    carla_version : str
-        CARLA simulator version, currently support 0.9.11 and 0.9.12. We need
-        this as since CARLA 0.9.12 the blueprint name has been changed a lot.
+        The collection of all available vehicle models.
 
     Returns
     -------
@@ -45,152 +35,135 @@ def car_blueprint_filter(blueprint_library, carla_version='0.9.11'):
         The list of suitable blueprints for vehicles.
     """
 
-    if carla_version == '0.9.11':
-        print('old version')
-        blueprints = [
-            blueprint_library.find('vehicle.audi.a2'),
-            blueprint_library.find('vehicle.audi.tt'),
-            blueprint_library.find('vehicle.dodge_charger.police'),
-            blueprint_library.find('vehicle.jeep.wrangler_rubicon'),
-            blueprint_library.find('vehicle.chevrolet.impala'),
-            blueprint_library.find('vehicle.mini.cooperst'),
-            blueprint_library.find('vehicle.audi.etron'),
-            blueprint_library.find('vehicle.mercedes-benz.coupe'),
-            blueprint_library.find('vehicle.bmw.grandtourer'),
-            blueprint_library.find('vehicle.toyota.prius'),
-            blueprint_library.find('vehicle.citroen.c3'),
-            blueprint_library.find('vehicle.mustang.mustang'),
-            blueprint_library.find('vehicle.tesla.model3'),
-            blueprint_library.find('vehicle.lincoln.mkz2017'),
-            blueprint_library.find('vehicle.seat.leon'),
-            blueprint_library.find('vehicle.nissan.patrol'),
-            blueprint_library.find('vehicle.nissan.micra'),
-        ]
-
-    else:
-        blueprints = [
-            blueprint_library.find('vehicle.audi.a2'),
-            blueprint_library.find('vehicle.audi.tt'),
-            blueprint_library.find('vehicle.dodge.charger_police'),
-            blueprint_library.find('vehicle.dodge.charger_police_2020'),
-            blueprint_library.find('vehicle.dodge.charger_2020'),
-            blueprint_library.find('vehicle.jeep.wrangler_rubicon'),
-            blueprint_library.find('vehicle.chevrolet.impala'),
-            blueprint_library.find('vehicle.mini.cooper_s'),
-            blueprint_library.find('vehicle.audi.etron'),
-            blueprint_library.find('vehicle.mercedes.coupe'),
-            blueprint_library.find('vehicle.mercedes.coupe_2020'),
-            blueprint_library.find('vehicle.bmw.grandtourer'),
-            blueprint_library.find('vehicle.toyota.prius'),
-            blueprint_library.find('vehicle.citroen.c3'),
-            blueprint_library.find('vehicle.ford.mustang'),
-            blueprint_library.find('vehicle.tesla.model3'),
-            blueprint_library.find('vehicle.lincoln.mkz_2017'),
-            blueprint_library.find('vehicle.lincoln.mkz_2020'),
-            blueprint_library.find('vehicle.seat.leon'),
-            blueprint_library.find('vehicle.nissan.patrol'),
-            blueprint_library.find('vehicle.nissan.micra'),
-        ]
+    blueprints = [
+        blueprint_library.find('vehicle.audi.a2'),
+        blueprint_library.find('vehicle.audi.tt'),
+        blueprint_library.find('vehicle.dodge.charger_police'),
+        blueprint_library.find('vehicle.dodge.charger_police_2020'),
+        blueprint_library.find('vehicle.dodge.charger_2020'),
+        blueprint_library.find('vehicle.jeep.wrangler_rubicon'),
+        blueprint_library.find('vehicle.chevrolet.impala'),
+        blueprint_library.find('vehicle.mini.cooper_s'),
+        blueprint_library.find('vehicle.audi.etron'),
+        blueprint_library.find('vehicle.mercedes.coupe'),
+        blueprint_library.find('vehicle.mercedes.coupe_2020'),
+        blueprint_library.find('vehicle.bmw.grandtourer'),
+        blueprint_library.find('vehicle.toyota.prius'),
+        blueprint_library.find('vehicle.citroen.c3'),
+        blueprint_library.find('vehicle.ford.mustang'),
+        blueprint_library.find('vehicle.tesla.model3'),
+        blueprint_library.find('vehicle.lincoln.mkz_2017'),
+        blueprint_library.find('vehicle.lincoln.mkz_2020'),
+        blueprint_library.find('vehicle.seat.leon'),
+        blueprint_library.find('vehicle.nissan.patrol'),
+        blueprint_library.find('vehicle.nissan.micra'),
+    ]
 
     return blueprints
 
 
-def multi_class_vehicle_blueprint_filter(label, blueprint_library, bp_meta):
+def multi_class_vehicle_blueprint_filter(label, blueprint_library, blueprint_dict):
     """
-    Get a list of blueprints that have the class equals the specified label.
+    Fetch a list of blueprints whose class matches the provided label.
 
     Parameters
     ----------
     label : str
-        Specified blueprint.
+        Provided blueprint.
 
     blueprint_library : carla.blueprint_library
-        The blueprint library that contains all models.
+        The collection of all available vehicle models.
 
-    bp_meta : dict
+    blueprint_dict : dict
         Dictionary of {blueprint name: blueprint class}.
 
     Returns
     -------
     blueprints : list
-        List of blueprints that have the class equals the specified label.
+        List of blueprints whose class matches with the provided label.
 
     """
-    blueprints = [
-        blueprint_library.find(k)
-        for k, v in bp_meta.items() if v["class"] == label
-    ]
+    blueprints = [blueprint_library.find(k) for k, v in blueprint_dict.items() if v["class"] == label]
     return blueprints
 
 
-def map_visualize(cav):
-    if not cav.gamemap.activate:
+def gamemap_visualize(vehicle):
+    """
+    Visualize the gamemap.
+
+    Parameters
+    ----------
+    vehicle : carla.vehicle
+        The carla vehicle agent.
+
+    """
+    if not vehicle.gamemap.activate:
         return
-    cav.gamemap.render_static_agents()
-    cav.gamemap.render_dynamic_agents()
-    if cav.gamemap.visualize:
-        cv2.imshow('the bev map of agent %s' % cav.gamemap.agent_id,
-                   cav.gamemap.vis_bev)
+    vehicle.gamemap.render_static_agents()
+    vehicle.gamemap.render_dynamic_agents()
+    if vehicle.gamemap.visualize:
+        cv2.imshow('the bev map of agent %s' % vehicle.gamemap.agent_id, vehicle.gamemap.vis_bev)
         cv2.waitKey(1)
 
 
-def calculateVehicleControl(cav):
+def calculate_control(vehicle):
     """
-    Calculate the control that should be applied to the vehicle.
+    Calculate the vehicle control based on trajectory and speed buffer. If it is manual control, then the trajectory
+    is given by provided files.
+
+    Parameters
+    ----------
+    vehicle : carla.vehicle
+        The carla vehicle agent.
+
+    Returns
+    -------
+
     """
-    target_pos = deque()
+    trajectory_buffer = deque()
     target_speed = deque()
 
-    if hasattr(cav, 'is_manually') and cav.is_manually:
-        for i in range(cav.manual_horizon):
-            if cav.tick + i <= cav.df.shape[0] - 1:
+    if hasattr(vehicle, 'is_manually') and vehicle.is_manually:
+        for i in range(vehicle.manual_horizon):
+            if vehicle.tick + i <= vehicle.df.shape[0] - 1:
                 tem_pos = carla.Transform(carla.Location(
-                    x=cav.df.iloc[cav.tick + i][cav.car_id * 4],
-                    y=cav.df.iloc[cav.tick + i][cav.car_id * 4 + 1],
-                    z=cav.df.iloc[cav.tick + i][cav.car_id * 4 + 2]))
-                tem_speed = cav.df.iloc[cav.tick + i][cav.car_id * 4 + 3]
+                    x=vehicle.df.iloc[vehicle.tick + i][vehicle.car_id * 4],
+                    y=vehicle.df.iloc[vehicle.tick + i][vehicle.car_id * 4 + 1],
+                    z=vehicle.df.iloc[vehicle.tick + i][vehicle.car_id * 4 + 2]))
+                tem_speed = vehicle.df.iloc[vehicle.tick + i][vehicle.car_id * 4 + 3]
             else:
                 tem_pos = carla.Transform(carla.Location(
-                    x=cav.df.iloc[-1][cav.car_id * 4],
-                    y=cav.df.iloc[-1][cav.car_id * 4 + 1],
-                    z=cav.df.iloc[-1][cav.car_id * 4 + 2]))
-                tem_speed = cav.df.iloc[-1][cav.car_id * 4 + 3]
-            target_pos.append(tem_pos)  # here the target_pos is Transform class
+                    x=vehicle.df.iloc[-1][vehicle.car_id * 4],
+                    y=vehicle.df.iloc[-1][vehicle.car_id * 4 + 1],
+                    z=vehicle.df.iloc[-1][vehicle.car_id * 4 + 2]))
+                tem_speed = vehicle.df.iloc[-1][vehicle.car_id * 4 + 3]
+            trajectory_buffer.append(tem_pos)  # here the trajectory_buffer is Transform class
             target_speed.append(tem_speed)
 
     else:
-        # target_pos is trajectory buffer
-        target_speed, target_pos = cav.agent.rule_based_trajectory_planning(target_speed)
+        target_speed, trajectory_buffer = vehicle.agent_behavior.rule_based_trajectory_planning(target_speed)
 
-    control = cav.agent.vehicle_control(target_speed, target_pos)
+    control = vehicle.agent_behavior.vehicle_control(target_speed, trajectory_buffer)
 
-    # dump data
-    if cav.data_dumper:
-        cav.data_dumper.save_data(cav.perception_manager, cav.localizer, cav.agent)
-
-    cav.tick = cav.tick + 1
+    vehicle.tick = vehicle.tick + 1
 
     return control
 
 
 class GameWorld:
     """
-    The manager that controls simulation construction, background traffic
-    generation and CAVs spawning.
+    The class that contains map, vehicle, and all simulation config. All the agents run under the frame of GameWorld.
 
     Parameters
     ----------
     scenario_params : dict
-        The dictionary contains all simulation configurations.
-
-    carla_version : str
-        CARLA simulator version, it currently supports 0.9.11 and 0.9.12
+        All simulation configurations.
 
     xodr_path : str
-        The xodr file to the customized map, default: None.
+        The xodr file path to the customized map.
 
-    town : str
-        Town name if not using customized map, eg. 'Town06'.
+    map_name : str
+        Map name if not using customized map, eg. 'Town06'.
 
     Attributes
     ----------
@@ -203,217 +176,183 @@ class GameWorld:
     origin_settings : dict
         The origin setting of the simulation server.
 
-    cav_world : EIdrive object
-        CAV World that contains the information of all CAVs.
+    ml_model : EIdrive object
+        ML model object.
 
     carla_map : carla.map
-        Car;a HD Map.
+        Carla map.
 
     """
 
     def __init__(self, scenario_params,
                  edge=False,
                  xodr_path=None,
-                 town=None,
-                 cav_world=None):
+                 map_name=None):
         self.scenario_params = scenario_params
         self.carla_version = scenario_params.common_params.version
 
-        simulation_config = scenario_params['world']
+        world_config = scenario_params['world']
 
-        # set random seed if stated
-        if 'seed' in simulation_config:
-            np.random.seed(simulation_config['seed'])
-            random.seed(simulation_config['seed'])
+        # Set random seed
+        if 'seed' in world_config:
+            np.random.seed(world_config['seed'])
+            random.seed(world_config['seed'])
 
-        self.client = \
-            carla.Client('localhost', simulation_config['client_port'])
+        self.client = carla.Client('localhost', world_config['client_port'])
         self.client.set_timeout(10.0)
 
         if xodr_path:
-            self.world = load_customized_world(xodr_path, self.client)
-        elif town:
+            self.world = create_customized_world(xodr_path, self.client)
+        elif map_name:
             try:
-                self.world = self.client.load_world(town)
+                self.world = self.client.load_world(map_name)
             except RuntimeError:
                 print(
-                    f"{bcolors.FAIL} %s is not found in your CARLA repo! "
-                    f"Please download all town maps to your CARLA "
-                    f"repo!{bcolors.ENDC}" % town)
+                    f"{bcolors.FAIL} %s is not present in your CARLA repository! "
+                    f"Ensure all maps are available in your CARLA repository!"
+                    f"{bcolors.ENDC}" % map_name)
         else:
             self.world = self.client.get_world()
 
         if not self.world:
-            sys.exit('World loading failed')
+            sys.exit('World creating failed')
 
         self.origin_settings = self.world.get_settings()
         new_settings = self.world.get_settings()
 
-        new_settings.no_rendering_mode = simulation_config['no_rendering_mode']
+        new_settings.no_rendering_mode = world_config['no_rendering_mode']
 
-        if simulation_config['sync_mode']:
+        if world_config['sync_mode']:
             new_settings.synchronous_mode = True
-            new_settings.fixed_delta_seconds = \
-                simulation_config['fixed_delta_seconds']
+            new_settings.fixed_delta_seconds = world_config['fixed_delta_seconds']
         else:
-            sys.exit(
-                'ERROR: Current version only supports sync simulation mode')
+            sys.exit('ERROR: Current version only supports sync simulation mode')
 
         self.world.apply_settings(new_settings)
 
-        # set weather
-        weather = self.set_weather(simulation_config['weather'])
+        # Weather settings
+        weather = self.set_weather(world_config['weather'])
         self.world.set_weather(weather)
 
-        # Define probabilities for each type of blueprint
-        self.use_multi_class_bp = scenario_params["blueprint"][
+        # Configuring blueprint probabilities. It is used to create multiple background traffic.
+        self.multi_blueprint_used = scenario_params["blueprint"][
             'use_multi_class_bp'] if 'blueprint' in scenario_params else False
-        if self.use_multi_class_bp:
-            # bbx/blueprint meta
+        if self.multi_blueprint_used:
             with open(scenario_params['blueprint']['bp_meta_path']) as f:
-                self.bp_meta = json.load(f)
-            self.bp_class_sample_prob = scenario_params['blueprint'][
-                'bp_class_sample_prob']
+                self.blueprint_data = json.load(f)
+            self.bp_class_sample_prob = scenario_params['blueprint']['bp_class_sample_prob']
 
-            # normalize probability
+            # Normalize the probability
             self.bp_class_sample_prob = {
                 k: v / sum(self.bp_class_sample_prob.values()) for k, v in
                 self.bp_class_sample_prob.items()}
 
-        self.cav_world = cav_world
+        try:
+            apply_ml = scenario_params.vehicle_perception.perception.apply_ml is True
+        except AttributeError:
+            apply_ml = False
+
+        self.ml_model = MLModel(apply_ml=apply_ml)
         self.carla_map = self.world.get_map()
         self.edge = edge
 
     @staticmethod
-    def set_weather(weather_settings):
+    def set_weather(weather_config):
         """
-        Set CARLA weather params.
+        Set the weather in simulation.
 
         Parameters
         ----------
-        weather_settings : dict
-            The dictionary that contains all parameters of weather.
+        weather_config : dict
+            The configuration for weather.
 
         Returns
         -------
+        weather :
         The CARLA weather setting.
         """
         weather = carla.WeatherParameters(
-            sun_altitude_angle=weather_settings['sun_altitude_angle'],
-            cloudiness=weather_settings['cloudiness'],
-            precipitation=weather_settings['precipitation'],
-            precipitation_deposits=weather_settings['precipitation_deposits'],
-            wind_intensity=weather_settings['wind_intensity'],
-            fog_density=weather_settings['fog_density'],
-            fog_distance=weather_settings['fog_distance'],
-            fog_falloff=weather_settings['fog_falloff'],
-            wetness=weather_settings['wetness']
+            sun_altitude_angle=weather_config['sun_altitude_angle'],
+            cloudiness=weather_config['cloudiness'],
+            precipitation=weather_config['precipitation'],
+            precipitation_deposits=weather_config['precipitation_deposits'],
+            wind_intensity=weather_config['wind_intensity'],
+            fog_density=weather_config['fog_density'],
+            fog_distance=weather_config['fog_distance'],
+            fog_falloff=weather_config['fog_falloff'],
+            wetness=weather_config['wetness']
         )
         return weather
 
-    def create_vehicle_agent(self, application=['single'],
-                             map_helper=None,
-                             data_dump=False):
+    def create_vehicle_agent(self):
         """
-        Create a list of single CAVs.
-
-        Parameters
-        ----------
-        application : list
-            The delete_application purpose, a list, eg. ['single'], ['platoon'].
-
-        map_helper : function
-            A function to help spawn vehicle on a specific position in
-            a specific map.
-
-        data_dump : bool
-            Whether to dump sensor data.
+        Create a list of vehicle.
 
         Returns
         -------
-        single_cav_list : list
-            A list contains all single CAVs' vehicle manager.
+        vehicle_list : list
+            A list of all vehicle agents.
+
         """
-        print('Creating single CAVs.')
-        # By default, we use lincoln as our cav model.
-        default_model = 'vehicle.lincoln.mkz2020' \
-            if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2020'
+        print('Creating vehicles.')
 
-        cav_vehicle_bp = \
-            self.world.get_blueprint_library().find(default_model)
-        single_cav_list = []
+        default_model = 'vehicle.lincoln.mkz_2020'
+        vehicle_blueprint = self.world.get_blueprint_library().find(default_model)
+        vehicle_list = []
 
-        for i, cav_config in enumerate(
-                self.scenario_params['scenario']['single_cav_list']):
-            cav_config = OmegaConf.merge(self.scenario_params['vehicle_perception'],
-                                         cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['vehicle_localization'],
-                                         cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['behavior'],
-                                         cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['game_map'],
-                                         cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['controller'],
-                                         cav_config)
-            cav_config = OmegaConf.merge(self.scenario_params['scenario'],
-                                         cav_config)
-            # if the spawn position is a single scalar, we need to use map
-            # helper to transfer to spawn transform
-            if 'spawn_special' not in cav_config:
-                spawn_transform = carla.Transform(
-                    carla.Location(
-                        x=cav_config['spawn_position'][0],
-                        y=cav_config['spawn_position'][1],
-                        z=cav_config['spawn_position'][2]),
-                    carla.Rotation(
-                        pitch=cav_config['spawn_position'][5],
-                        yaw=cav_config['spawn_position'][4],
-                        roll=cav_config['spawn_position'][3]))
-            else:
-                spawn_transform = map_helper(self.carla_version,
-                                             *cav_config['spawn_special'])
+        for i, vehicle_config in enumerate(self.scenario_params['scenario']['vehicle_list']):
+            vehicle_config = OmegaConf.merge(self.scenario_params['vehicle_perception'], vehicle_config)
+            vehicle_config = OmegaConf.merge(self.scenario_params['vehicle_localization'], vehicle_config)
+            vehicle_config = OmegaConf.merge(self.scenario_params['behavior'], vehicle_config)
+            vehicle_config = OmegaConf.merge(self.scenario_params['game_map'], vehicle_config)
+            vehicle_config = OmegaConf.merge(self.scenario_params['controller'], vehicle_config)
+            vehicle_config = OmegaConf.merge(self.scenario_params['scenario'], vehicle_config)
 
+            spawn_transform = carla.Transform(
+                carla.Location(
+                    x=vehicle_config['spawn_position'][0],
+                    y=vehicle_config['spawn_position'][1],
+                    z=vehicle_config['spawn_position'][2]),
+                carla.Rotation(
+                    pitch=vehicle_config['spawn_position'][5],
+                    yaw=vehicle_config['spawn_position'][4],
+                    roll=vehicle_config['spawn_position'][3]))
+
+            # TODO: Set proper color for vehicles.
             if 0 == i or 6 == i:
-                cav_vehicle_bp.set_attribute('color', '0, 0, 255')
+                vehicle_blueprint.set_attribute('color', '0, 0, 255')
             elif 1 == i or 7 == i:
-                cav_vehicle_bp.set_attribute('color', '255, 0, 0')
+                vehicle_blueprint.set_attribute('color', '255, 0, 0')
             elif 2 == i or 8 == i:
-                cav_vehicle_bp.set_attribute('color', '0, 255, 0')
+                vehicle_blueprint.set_attribute('color', '0, 255, 0')
             else:
-                cav_vehicle_bp.set_attribute('color', '0, 0, 0')
-            vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
+                vehicle_blueprint.set_attribute('color', '0, 0, 0')
+            vehicle = self.world.spawn_actor(vehicle_blueprint, spawn_transform)
 
-            if 'id' in cav_config:
-                cav_config['perception']['vid'] = cav_config['id']
+            if 'id' in vehicle_config:
+                vehicle_config['perception']['vid'] = vehicle_config['id']
 
-            # create vehicle manager for each cav
-            vehicle_agent = VehicleAgent(
-                vehicle, cav_config, application, self.edge,
-                self.carla_map, self.cav_world,
-                data_dumping=data_dump)
+            # Create vehicle agent.
+            vehicle_agent = VehicleAgent(vehicle, vehicle_config, self.edge, self.carla_map, self.ml_model)
 
             self.world.tick()
 
             destinations = []
-            for destination in cav_config['destination']:
+            for destination in vehicle_config['destination']:
                 location = carla.Location(x=destination[0],
                                           y=destination[1],
                                           z=destination[2])
                 destinations.append(location)
 
             vehicle_agent.update_info()
-            vehicle_agent.set_destination(
-                vehicle_agent.vehicle.get_location(),
-                destinations[-1],
-                clean=True)
+            vehicle_agent.set_local_planner(vehicle_agent.vehicle.get_location(), destinations[-1], clean=True)
+            vehicle_list.append(vehicle_agent)
 
-            single_cav_list.append(vehicle_agent)
-
-        return single_cav_list
+        return vehicle_list
 
     def create_vehicle_agent_from_scenario_runner(self, vehicle):
         """
-        Create a single CAV with a loaded ego vehicle from SR.
+        Create vehicle agent with a loaded ego vehicle from SR.
         Different from the create_vehicle_manager API creating Carla vehicle from scratch,
         SR creates on its own only supports 'single' vehicle.
 
@@ -424,38 +363,32 @@ class GameWorld:
 
         Returns
         -------
-        single_cav_list : list
-            A list contains the singla CAV derived from the ego vehicle.
+        vehicle_list : list
+            A list contains the vehicle agent derived from the ego vehicle.
         """
-        single_cav_params = self.scenario_params['scenario']['single_cav_list']
-        if len(single_cav_params) != 1:
+        vehicle_config = self.scenario_params['scenario']['vehicle_list']
+        if len(vehicle_config) != 1:
             raise ValueError('Only support one ego vehicle for ScenarioRunner')
 
-        cav_config = single_cav_params[0]
-        cav_config = OmegaConf.merge(self.scenario_params['vehicle_perception'],
-                                     cav_config)
-        cav_config = OmegaConf.merge(self.scenario_params['vehicle_localization'],
-                                     cav_config)
-        cav_config = OmegaConf.merge(self.scenario_params['behavior'],
-                                     cav_config)
-        cav_config = OmegaConf.merge(self.scenario_params['game_map'],
-                                     cav_config)
-        cav_config = OmegaConf.merge(self.scenario_params['controller'],
-                                     cav_config)
-        vehicle_agent = VehicleAgent(
-            vehicle, cav_config, ['single'], False, self.carla_map, self.cav_world)
+        vehicle_config = vehicle_config[0]
+        vehicle_config = OmegaConf.merge(self.scenario_params['vehicle_perception'], vehicle_config)
+        vehicle_config = OmegaConf.merge(self.scenario_params['vehicle_localization'], vehicle_config)
+        vehicle_config = OmegaConf.merge(self.scenario_params['behavior'], vehicle_config)
+        vehicle_config = OmegaConf.merge(self.scenario_params['game_map'], vehicle_config)
+        vehicle_config = OmegaConf.merge(self.scenario_params['controller'], vehicle_config)
+        vehicle_agent = VehicleAgent(vehicle, vehicle_config, False, self.carla_map, self.ml_model)
 
         self.world.tick()
 
         destinations = []
-        for destination in cav_config['destination']:
+        for destination in vehicle_config['destination']:
             location = carla.Location(x=destination[0],
                                       y=destination[1],
                                       z=destination[2])
             destinations.append(location)
 
         vehicle_agent.update_info()
-        vehicle_agent.set_destination(
+        vehicle_agent.set_local_planner(
             vehicle_agent.vehicle.get_location(),
             # TODO: enable multiple destinations in EI-Drive Planner
             destinations[-1],
@@ -463,68 +396,61 @@ class GameWorld:
 
         return [vehicle_agent]
 
-    def create_rsu_manager(self, data_dump):
+    def create_rsu_manager(self):
         """
         Create a list of RSU.
-
-        Parameters
-        ----------
-        data_dump : bool
-            Whether to dump sensor data.
 
         Returns
         -------
         rsu_list : list
-            A list contains all rsu managers..
+            A list of all RSU.
+            
         """
         print('Creating RSU.')
         rsu_list = []
         for i, rsu_config in enumerate(
                 self.scenario_params['scenario']['rsu_list']):
-            rsu_manager = RSUManager(self.world, rsu_config,
-                                     self.carla_map,
-                                     self.cav_world,
-                                     self.scenario_params['current_time'],
-                                     data_dump)
+            rsu_manager = RSU(self.world, rsu_config,
+                              self.carla_map,
+                              self.ml_model
+                              )
 
             rsu_list.append(rsu_manager)
 
         return rsu_list
 
-    def spawn_vehicles_by_list(self, tm, traffic_config, bg_list):
+    def create_vehicles_by_list(self, traffic_manager, traffic_config, background_traffic):
         """
-        Spawn the traffic vehicles by the given list.
+        Spawn the background traffic vehicles according to the provided list.
 
         Parameters
         ----------
-        tm : carla.TrafficManager
+        traffic_manager : carla.TrafficManager
             Traffic manager.
 
         traffic_config : dict
             Background traffic configuration.
 
-        bg_list : list
-            The list contains all background traffic.
+        background_traffic : list
+            The list of all background traffic vehicle.
 
         Returns
         -------
-        bg_list : list
-            Update traffic list.
+        background_traffic : list
+            Update background traffic list.
         """
 
         blueprint_library = self.world.get_blueprint_library()
-        if not self.use_multi_class_bp:
-            ego_vehicle_random_list = car_blueprint_filter(blueprint_library,
-                                                           self.carla_version)
+        if not self.multi_blueprint_used:
+            ego_vehicle_random_list = filter_blueprint_lib(blueprint_library)
         else:
             label_list = list(self.bp_class_sample_prob.keys())
-            prob = [self.bp_class_sample_prob[itm] for itm in label_list]
+            prob = [self.bp_class_sample_prob[label] for label in label_list]
 
-        # if not random select, we always choose lincoln.mkz with green color
+        # Default color
         color = '0, 255, 0'
-        default_model = 'vehicle.lincoln.mkz2017' \
-            if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2017'
-        ego_vehicle_bp = blueprint_library.find(default_model)
+        default_model = 'vehicle.lincoln.mkz2017' if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2017'
+        ego_vehicle_blueprint = blueprint_library.find(default_model)
 
         for i, vehicle_config in enumerate(traffic_config['vehicle_list']):
             spawn_transform = carla.Transform(
@@ -538,75 +464,71 @@ class GameWorld:
                     roll=vehicle_config['spawn_position'][3]))
 
             if not traffic_config['random']:
-                ego_vehicle_bp.set_attribute('color', color)
+                ego_vehicle_blueprint.set_attribute('color', color)
 
             else:
-                # sample a bp from various classes
-                if self.use_multi_class_bp:
+                # Sample an ego vehicle blueprint from a list with given probability
+                if self.multi_blueprint_used:
                     label = np.random.choice(label_list, p=prob)
                     # Given the label (class), find all associated blueprints in CARLA
                     ego_vehicle_random_list = multi_class_vehicle_blueprint_filter(
-                        label, blueprint_library, self.bp_meta)
-                ego_vehicle_bp = random.choice(ego_vehicle_random_list)
+                        label, blueprint_library, self.blueprint_data)
+                ego_vehicle_blueprint = random.choice(ego_vehicle_random_list)
 
-                if ego_vehicle_bp.has_attribute("color"):
-                    color = random.choice(
-                        ego_vehicle_bp.get_attribute(
-                            'color').recommended_values)
-                    ego_vehicle_bp.set_attribute('color', color)
+                if ego_vehicle_blueprint.has_attribute("color"):
+                    color = random.choice(ego_vehicle_blueprint.get_attribute('color').recommended_values)
+                    ego_vehicle_blueprint.set_attribute('color', color)
 
-            vehicle = self.world.spawn_actor(ego_vehicle_bp, spawn_transform)
+            vehicle = self.world.spawn_actor(ego_vehicle_blueprint, spawn_transform)
             vehicle.set_autopilot(True, 8000)
 
             if 'vehicle_speed_perc' in vehicle_config:
-                tm.vehicle_percentage_speed_difference(
+                traffic_manager.vehicle_percentage_speed_difference(
                     vehicle, vehicle_config['vehicle_speed_perc'])
-            tm.auto_lane_change(vehicle, traffic_config['auto_lane_change'])
+            traffic_manager.auto_lane_change(vehicle, traffic_config['auto_lane_change'])
 
-            bg_list.append(vehicle)
+            background_traffic.append(vehicle)
 
-        return bg_list
+        return background_traffic
 
-    def spawn_vehicle_by_range(self, tm, traffic_config, bg_list):
+    def create_vehicle_by_range(self, traffic_manager, traffic_config, background_traffic):
         """
-        Spawn the traffic vehicles by the given range.
+        Spawn the background traffic vehicles by a provided range.
 
         Parameters
         ----------
-        tm : carla.TrafficManager
+        traffic_manager : carla.TrafficManager
             Traffic manager.
 
         traffic_config : dict
             Background traffic configuration.
 
-        bg_list : list
-            The list contains all background traffic.
+        background_traffic : list
+            The list of all background traffic vehicles.
 
         Returns
         -------
-        bg_list : list
+        background_traffic : list
             Update traffic list.
         """
         blueprint_library = self.world.get_blueprint_library()
-        if not self.use_multi_class_bp:
-            ego_vehicle_random_list = car_blueprint_filter(blueprint_library,
-                                                           self.carla_version)
+        if not self.multi_blueprint_used:
+            ego_vehicle_random_list = filter_blueprint_lib(blueprint_library)
         else:
             label_list = list(self.bp_class_sample_prob.keys())
-            prob = [self.bp_class_sample_prob[itm] for itm in label_list]
+            prob = [self.bp_class_sample_prob[label] for label in label_list]
 
-        # if not random select, we always choose lincoln.mkz with green color
+        # Default color
         color = '0, 255, 0'
-        default_model = 'vehicle.lincoln.mkz2017' \
-            if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2017'
-        ego_vehicle_bp = blueprint_library.find(default_model)
+        default_model = 'vehicle.lincoln.mkz2017' if self.carla_version == '0.9.11' else 'vehicle.lincoln.mkz_2017'
+        ego_vehicle_blueprint = blueprint_library.find(default_model)
 
         spawn_ranges = traffic_config['range']
         spawn_set = set()
-        spawn_num = 0
+        spawn_number = 0
 
         for spawn_range in spawn_ranges:
-            spawn_num += spawn_range[6]
+            spawn_number += spawn_range[6]
             x_min, x_max, y_min, y_max = \
                 math.floor(spawn_range[0]), math.ceil(spawn_range[1]), \
                     math.floor(spawn_range[2]), math.ceil(spawn_range[3])
@@ -614,19 +536,19 @@ class GameWorld:
             for x in range(x_min, x_max, int(spawn_range[4])):
                 for y in range(y_min, y_max, int(spawn_range[5])):
                     location = carla.Location(x=x, y=y, z=0.3)
-                    way_point = self.carla_map.get_waypoint(location).transform
+                    waypoint = self.carla_map.get_waypoint(location).transform
 
-                    spawn_set.add((way_point.location.x,
-                                   way_point.location.y,
-                                   way_point.location.z,
-                                   way_point.rotation.roll,
-                                   way_point.rotation.yaw,
-                                   way_point.rotation.pitch))
+                    spawn_set.add((waypoint.location.x,
+                                   waypoint.location.y,
+                                   waypoint.location.z,
+                                   waypoint.rotation.roll,
+                                   waypoint.rotation.yaw,
+                                   waypoint.rotation.pitch))
         count = 0
         spawn_list = list(spawn_set)
         shuffle(spawn_list)
 
-        while count < spawn_num:
+        while count < spawn_number:
             if len(spawn_list) == 0:
                 break
 
@@ -635,103 +557,97 @@ class GameWorld:
 
             spawn_transform = carla.Transform(carla.Location(x=coordinates[0],
                                                              y=coordinates[1],
-                                                             z=coordinates[
-                                                                   2] + 0.3),
+                                                             z=coordinates[2] + 0.3),
                                               carla.Rotation(
                                                   roll=coordinates[3],
                                                   yaw=coordinates[4],
                                                   pitch=coordinates[5]))
             if not traffic_config['random']:
-                ego_vehicle_bp.set_attribute('color', color)
+                ego_vehicle_blueprint.set_attribute('color', color)
 
             else:
-                # sample a bp from various classes
-                if self.use_multi_class_bp:
+                # Sample an ego vehicle blueprint from a list with given probability
+                if self.multi_blueprint_used:
                     label = np.random.choice(label_list, p=prob)
                     # Given the label (class), find all associated blueprints in CARLA
                     ego_vehicle_random_list = multi_class_vehicle_blueprint_filter(
-                        label, blueprint_library, self.bp_meta)
-                ego_vehicle_bp = random.choice(ego_vehicle_random_list)
-                if ego_vehicle_bp.has_attribute("color"):
-                    color = random.choice(
-                        ego_vehicle_bp.get_attribute(
-                            'color').recommended_values)
-                    ego_vehicle_bp.set_attribute('color', color)
+                        label, blueprint_library, self.blueprint_data)
+                ego_vehicle_blueprint = random.choice(ego_vehicle_random_list)
+                if ego_vehicle_blueprint.has_attribute("color"):
+                    color = random.choice(ego_vehicle_blueprint.get_attribute('color').recommended_values)
+                    ego_vehicle_blueprint.set_attribute('color', color)
 
-            vehicle = \
-                self.world.try_spawn_actor(ego_vehicle_bp, spawn_transform)
+            vehicle = self.world.try_spawn_actor(ego_vehicle_blueprint, spawn_transform)
 
             if not vehicle:
                 continue
 
             vehicle.set_autopilot(True, 8000)
-            tm.auto_lane_change(vehicle, traffic_config['auto_lane_change'])
+            traffic_manager.auto_lane_change(vehicle, traffic_config['auto_lane_change'])
 
             if 'ignore_lights_percentage' in traffic_config:
-                tm.ignore_lights_percentage(vehicle,
-                                            traffic_config[
-                                                'ignore_lights_percentage'])
+                traffic_manager.ignore_lights_percentage(vehicle, traffic_config['ignore_lights_percentage'])
 
-            # each vehicle have slight different speed
-            tm.vehicle_percentage_speed_difference(
+            # Slight difference in speed between vehicles
+            traffic_manager.vehicle_percentage_speed_difference(
                 vehicle,
                 traffic_config['global_speed_perc'] + random.randint(-30, 30))
 
-            bg_list.append(vehicle)
+            background_traffic.append(vehicle)
             count += 1
 
-        return bg_list
+        return background_traffic
 
-    def create_traffic_carla(self):
+    def create_traffic_flow(self):
         """
-        Create traffic flow.
+        Create traffic flow, including traffic manager and background traffic.
 
         Returns
         -------
-        tm : carla.traffic_manager
+        traffic_manager : carla.traffic_manager
             Carla traffic manager.
 
-        bg_list : list
-            The list that contains all the background traffic vehicles.
+        background_traffic : list
+            The list of all the background traffic vehicles.
         """
-        print('Spawning CARLA traffic flow.')
+        print('Creating traffic flow.')
         traffic_config = self.scenario_params['traffic_manager']['carla_traffic_manager']
-        tm = self.client.get_trafficmanager()
+        traffic_manager = self.client.get_trafficmanager()
 
-        tm.set_global_distance_to_leading_vehicle(
-            traffic_config['global_distance'])
-        tm.set_synchronous_mode(traffic_config['sync_mode'])
-        tm.set_osm_mode(traffic_config['set_osm_mode'])
-        tm.global_percentage_speed_difference(
-            traffic_config['global_speed_perc'])
+        traffic_manager.set_global_distance_to_leading_vehicle(traffic_config['global_distance'])
+        traffic_manager.set_synchronous_mode(traffic_config['sync_mode'])
+        traffic_manager.set_osm_mode(traffic_config['set_osm_mode'])
+        traffic_manager.global_percentage_speed_difference(traffic_config['global_speed_perc'])
 
-        bg_list = []
+        background_traffic = []
 
         if isinstance(traffic_config['vehicle_list'], list):
-            bg_list = self.spawn_vehicles_by_list(tm,
-                                                  traffic_config,
-                                                  bg_list)
-
+            background_traffic = self.create_vehicles_by_list(traffic_manager, traffic_config, background_traffic)
         else:
-            bg_list = self.spawn_vehicle_by_range(tm, traffic_config, bg_list)
+            background_traffic = self.create_vehicle_by_range(traffic_manager, traffic_config, background_traffic)
 
-        print('CARLA traffic flow generated.')
-        return tm, bg_list
+        print('CARLA traffic flow has been created.')
+        return traffic_manager, background_traffic
 
-    def tick(self, single_cav_list):
+    def tick(self, vehicle_list):
         """
         Tick the server and run all the agents.
+        
+        Parameters
+        ----------
+        vehicle_list:
+            List of VehicleAgent.
+            
         """
         self.world.tick()
 
-        # apply control for every vehicle
-        for i, single_cav in enumerate(single_cav_list):
-            single_cav.update_info()
-            map_visualize(single_cav)   # visualize the BEV map
-            control = calculateVehicleControl(single_cav)
-            single_cav.vehicle.apply_control(control)
+        for i, vehicle_agent in enumerate(vehicle_list):
+            vehicle_agent.update_info()
+            gamemap_visualize(vehicle_agent)
+            control = calculate_control(vehicle_agent)
+            vehicle_agent.vehicle.apply_control(control)
 
-    def destroyActors(self):
+    def destroy_actors(self):
         """
         Destroy all actors in the world.
         """
@@ -744,5 +660,6 @@ class GameWorld:
         """
         Simulation close.
         """
+        
         # restore to origin setting
         self.world.apply_settings(self.origin_settings)

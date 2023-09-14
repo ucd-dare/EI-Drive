@@ -4,11 +4,11 @@
 
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
-from EIdrive.core.common.cav_world import CavWorld
+from EIdrive.core.basic.ml_model import MLModel
 from EIdrive.scenario_testing.evaluations.evaluate_manager import \
     EvaluationManager
 from EIdrive.scenario_testing.utils.yaml_utils import load_yaml
-from EIdrive.core.common.misc import get_speed
+from EIdrive.core.basic.auxiliary import get_speed
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -31,28 +31,25 @@ def run_scenario(opt, config_yaml):
     try:
         scenario_params = load_yaml(config_yaml)
 
-        # create CAV world
-        cav_world = CavWorld(opt.apply_ml)
         # create scenario manager
         scenario_manager = sim_api.GameWorld(scenario_params,
                                              opt.apply_ml,
                                              opt.version,
-                                             town='Town06',
-                                             cav_world=cav_world)
+                                             map_name='Town06')
         if opt.record:
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         single_cav_list = \
-            scenario_manager.create_vehicle_agent(application=['single'])
+            scenario_manager.create_vehicle_agent()
 
         for vm in single_cav_list:
             player_ids.append(vm.vehicle.id)
         # create background traffic in carla
         traffic_manager, bg_veh_list = \
-            scenario_manager.create_traffic_carla()
+            scenario_manager.create_traffic_flow()
         # create evaluation manager
         eval_manager = \
-            EvaluationManager(scenario_manager.cav_world,
+            EvaluationManager(scenario_manager.ml_model,
                               script_name='demo',
                               current_time=scenario_params['current_time'])
         spectator = scenario_manager.world.get_spectator()

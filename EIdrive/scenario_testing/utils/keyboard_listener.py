@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-keyboard listener: a keyboard listenr to record typeing and can be used for pasue, resume and stop the program using multi-threading.
+Keyboard listener: a keyboard listener to record typying and can be used for pause, resume and stop the program
+using multi-threading.
 """
-# Author: Wei Shao <weishao@ucdavis.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 from pynput import keyboard
 
@@ -11,10 +9,6 @@ from pynput import keyboard
 class KeyListener(object):
     """
     A keyboard listener class to record the states of keys.
-
-    Parameters
-    ----------
-    None
 
     Attributes
     ----------
@@ -30,14 +24,6 @@ class KeyListener(object):
     def start(self):
         """
         Start keyboard listening
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
         """
         listener = keyboard.Listener(
             on_press=self.on_press,
@@ -52,9 +38,6 @@ class KeyListener(object):
         ----------
         key: A KeyCode represents the description of a key code used by the operating system.
 
-        Returns
-        -------
-        Update the dict keys
         """
         try:
             print(f'alphanumeric key {key.char} pressed')
@@ -73,9 +56,6 @@ class KeyListener(object):
         ----------
         key: A KeyCode represents the description of a key code used by the operating system.
 
-        Returns
-        -------
-        Update the dict keys
         """
         if key == keyboard.Key.esc:
             self.keys['esc'] = True

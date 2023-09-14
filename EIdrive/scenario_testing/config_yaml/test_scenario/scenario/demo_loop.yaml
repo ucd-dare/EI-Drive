@@ -1,5 +1,5 @@
 test_scenario: demo_loop
-single_cav_list:
+vehicle_list:
   - id: 0
     spawn_position: [-68.8, 48.9, 0.3, 0, 0, 0]
     destination: [[330, 48.8, 0.3], [300, 48.8, 0.3], [200, 48.8, 0.3], [77.2, 48.8, 0.3]]

@@ -1,7 +1,7 @@
 test_scenario: openscenario_18
 
-single_cav_list:
-  - name: cav1
+vehicle_list:
+  - name: vehicle_1
     destination: [[120.2, 52.6, 0.5]]
     behavior:
       local_planner:

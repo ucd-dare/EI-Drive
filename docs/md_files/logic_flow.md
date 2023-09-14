@@ -42,7 +42,7 @@ cav_world = CavWorld(opt.apply_ml)
 # create scenario manager
 scenario_manager = sim_api.GameWorld(scenario_params,
                                      opt.apply_ml,
-                                     town='Town06',
+                                     map_name='Town06',
                                      cav_world=cav_world)
 ```
 
@@ -71,7 +71,7 @@ Finally, create the `EvaluationManager`
 from EIdrive.scenario_testing.evaluations.evaluate_manager import EvaluationManager
 
 eval_manager =
-EvaluationManager(scenario_manager.cav_world,
+EvaluationManager(scenario_manager.ml_model,
                   script_name='platoon_joining_town06_carla',
                   current_time=scenario_params['current_time'])
 ```
@@ -127,24 +127,26 @@ modules will fuse information from different CAVs, generate trajectory and contr
 
 ```python
 class VehicleManager:
-  	def update_info(self):
-   	    # localization
-        self.localizer.localize()
-        ego_pos = self.localizer.get_ego_pos()
-        ego_spd = self.localizer.get_ego_spd()
+    def update_info(self):
 
-        # object detection
-        objects = self.perception_manager.detect(ego_pos)
+    # localization
+    self.localizer.localize()
+    ego_pos = self.localizer.get_ego_pos()
+    ego_spd = self.localizer.get_ego_spd()
 
-        self.v2x_manager.update_info(ego_pos, ego_spd)
-        self.agent.update_information(ego_pos, ego_spd, objects)
-        # pass position and speed info to controller
-        self.controller.update_info(ego_pos, ego_spd)
+    # object detection
+    objects = self.perception.detect(ego_pos)
 
-    def run_step(self, target_speed=None):
-        target_speed, target_pos = self.agent.run_step(target_speed)
-        control = self.controller.run_step(target_speed, target_pos)
-        return control
+    self.v2x_manager.update_info(ego_pos, ego_spd)
+    self.agent_behavior.update_information(ego_pos, ego_spd, objects)
+    # pass position and speed info to controller
+    self.controller.update_info(ego_pos, ego_spd)
+
+
+def run_step(self, target_speed=None):
+    target_speed, target_pos = self.agent_behavior.run_step(target_speed)
+    control = self.controller.run_step(target_speed, target_pos)
+    return control
 
 ```
 

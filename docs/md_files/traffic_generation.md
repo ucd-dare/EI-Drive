@@ -24,7 +24,7 @@ scenario_manager = sim_api.GameWorld(scenario_params,
                                      xodr_path=xodr_path,
                                      cav_world=cav_world)
 # create background traffic in carla
-traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
+traffic_manager, bg_veh_list = scenario_manager.create_traffic_flow()
 
 while True:
     scenario_manager.tick()

@@ -7,7 +7,7 @@ import numpy as np
 import networkx as nx
 import carla
 from EIdrive.core.plan.local_trajectory_planner import RoadOption
-from EIdrive.core.common.misc import vector
+from EIdrive.core.basic.auxiliary import calculate_vector
 
 
 class GlobalRoutePlanner(object):
@@ -181,7 +181,7 @@ class GlobalRoutePlanner(object):
                 entry_waypoint=entry_wp, exit_waypoint=exit_wp,
                 entry_vector=entry_vector,
                 exit_vector=exit_vector,
-                net_vector=vector(entry_wp.transform.location, exit_wp.transform.location),
+                net_vector=calculate_vector(entry_wp.transform.location, exit_wp.transform.location),
                 intersection=is_intersection, type=RoadOption.LANEFOLLOW)
 
         return graph, node_map, road_id_to_edge

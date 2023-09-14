@@ -8,7 +8,7 @@ from collections import deque
 import carla
 import numpy as np
 
-from EIdrive.core.common.misc import get_speed
+from EIdrive.core.basic.auxiliary import get_speed
 from EIdrive.core.sensing.localization.kalman_filter import KalmanFilter
 from EIdrive.core.sensing.localization.convert_coordinate \
     import convert_geo_to_esu

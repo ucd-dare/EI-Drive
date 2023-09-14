@@ -9,8 +9,8 @@ import numpy as np
 
 from collections import deque
 from enum import Enum
-from EIdrive.core.common.misc import distance_vehicle, draw_trajetory_points, \
-    cal_distance_angle, compute_distance
+from EIdrive.core.basic.auxiliary import distance_to_vehicle, visualize_trajectory, \
+    distance_angle_to_target, calculate_distance
 from EIdrive.core.plan.cubic_spline import Spline2D
 
 
@@ -240,7 +240,7 @@ class LocalPlanner(object):
         past_wpt = self.history_buffer[0][0] if self.history_buffer else current_wpt
 
         # Evaluate lateral offset between past and future waypoints.
-        distance, offset_angle = cal_distance_angle(past_wpt.transform.location, future_wpt.transform.location, future_wpt.transform.rotation.yaw)
+        distance, offset_angle = distance_angle_to_target(past_wpt.transform.location, future_wpt.transform.location, future_wpt.transform.rotation.yaw)
         lateral_offset = abs(distance * math.sin(math.radians(offset_angle - 1 if offset_angle > 90 else offset_angle + 1)))
 
         veh_dims = self.vehicle.bounding_box
@@ -255,7 +255,7 @@ class LocalPlanner(object):
         waypoint_idx = 0
         for i, (wpt, _) in enumerate(self.history_buffer):
             loc = wpt.transform.location
-            _, yaw_angle = cal_distance_angle(loc, current_loc, current_yaw)
+            _, yaw_angle = distance_angle_to_target(loc, current_loc, current_yaw)
 
             if yaw_angle > 90 and not self.potential_curved_road:
                 spline_x.append(loc.x)
@@ -271,7 +271,7 @@ class LocalPlanner(object):
             spline_x.append(current_loc.x)
             spline_y.append(current_loc.y)
         else:
-            _, yaw_angle = cal_distance_angle(current_wpt_loc, current_loc, current_yaw)
+            _, yaw_angle = distance_angle_to_target(current_wpt_loc, current_loc, current_yaw)
             if yaw_angle < 90:
                 spline_x.append(current_wpt_loc.x)
                 spline_y.append(current_wpt_loc.y)
@@ -395,7 +395,7 @@ class LocalPlanner(object):
             adjusted_idx = idx - (len(temp_buffer) - len(self.global_route_buffer))
 
             # Determine if the waypoint is behind the vehicle. If so, remove it.
-            _, yaw_angle = cal_distance_angle(
+            _, yaw_angle = distance_angle_to_target(
                 current_waypoint.transform.location,
                 self.vehicle_pos.location, self.vehicle_pos.rotation.yaw)
 
@@ -410,8 +410,8 @@ class LocalPlanner(object):
 
             # Remove those next waypoint on the other lane and is too close, which leads to abrupt steering actions.
             if last_waypoint.lane_id != current_waypoint.lane_id and len(self.global_route_buffer) >= 2:
-                distance_between = compute_distance(current_waypoint.transform.location,
-                                                    last_waypoint.transform.location)
+                distance_between = calculate_distance(current_waypoint.transform.location,
+                                                      last_waypoint.transform.location)
 
                 if distance_between <= 4.5:
                     del self.global_route_buffer[adjusted_idx]
@@ -431,7 +431,7 @@ class LocalPlanner(object):
 
         # Identify last visited waypoint in global route buffer
         for idx, (waypoint, _) in enumerate(self.global_route_buffer):
-            if distance_vehicle(waypoint, vehicle_transform) < self.min_distance:
+            if distance_to_vehicle(waypoint, vehicle_transform) < self.min_distance:
                 last_visited_idx = idx
 
         # Remove the identified waypoints and append them to history buffer
@@ -455,7 +455,7 @@ class LocalPlanner(object):
         if self.trajectory_buffer:
             last_visited_trajectory_idx = -1
             for idx, (waypoint, _) in enumerate(self.trajectory_buffer):
-                if distance_vehicle(waypoint, vehicle_transform) < \
+                if distance_to_vehicle(waypoint, vehicle_transform) < \
                         max(self.min_distance - 1, 1):
                     last_visited_trajectory_idx = idx
 
@@ -521,10 +521,10 @@ class LocalPlanner(object):
 
         # Debug visualization
         if self.debug_trajectory:
-            draw_trajetory_points(self.vehicle.get_world(), self.path_debug, color=carla.Color(0, 255, 0), size=0.05, lt=0.1)
+            visualize_trajectory(self.vehicle.get_world(), self.path_debug, color=carla.Color(0, 255, 0), size=0.05, life_time=0.1)
         if self.debug:
-            draw_trajetory_points(self.vehicle.get_world(), self.global_route_buffer, z=0.1, size=0.1, color=carla.Color(0, 0, 255), lt=0.2)
-            draw_trajetory_points(self.vehicle.get_world(), self.history_buffer, z=0.1, size=0.1, color=carla.Color(255, 0, 255), lt=0.2)
+            visualize_trajectory(self.vehicle.get_world(), self.global_route_buffer, size=0.1, color=carla.Color(0, 0, 255), life_time=0.2)
+            visualize_trajectory(self.vehicle.get_world(), self.history_buffer, size=0.1, color=carla.Color(255, 0, 255), life_time=0.2)
 
         trajectory_speed = self.desired_speed
         next_point_location = self.target_waypoint.transform.location if hasattr(self.target_waypoint, 'is_junction') else self.target_waypoint.location

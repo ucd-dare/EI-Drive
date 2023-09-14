@@ -33,7 +33,7 @@
         <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
     </scenario>
 <!--
-    <scenario name="AtoB_1" type="AtoB" town="Town06">
+    <scenario name="AtoB_1" type="AtoB" map_name="Town06">
         <ego_vehicle x="489" y="37.1" z="1.5" yaw="345" model="vehicle.nissan.patrol" />
         <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
     </scenario>-->
@@ -43,7 +43,7 @@
         <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
     </scenario>
 <!--
-    <scenario name="AtoB_1" type="AtoB" town="Town06">
+    <scenario name="AtoB_1" type="AtoB" map_name="Town06">
         <ego_vehicle x="66.9" y="248.2" z="1.5" yaw="0" model="vehicle.nissan.patrol" />
         <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
     </scenario>-->

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-# License: TDG-Attribution-NonCommercial-NoDistrib
+"""
+The script runs OpenScenario_15.
+"""
 
 import carla
-from carla.libcarla import VehicleControl
-
 import EIdrive.scenario_testing.utils.sim_api as sim_api
-from EIdrive.core.common.cav_world import CavWorld
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 
 import time
@@ -23,8 +21,6 @@ def exec_scenario_runner(scenario_params):
     ----------
     scenario_params: Parameters of ScenarioRunner
 
-    Returns
-    -------
     """
     scenario_runner = sr.ScenarioRunner(scenario_params.scenario.scenario_runner)
     scenario_runner.run()
@@ -33,17 +29,13 @@ def exec_scenario_runner(scenario_params):
 
 def run_scenario(scenario_params):
     scenario_runner = None
-    cav_world = None
     gameworld = None
 
     try:
-        # Create CAV world
-        cav_world = CavWorld()
-        # Create scenario manager
+        # Create game world
         gameworld = sim_api.GameWorld(scenario_params,
-                                             scenario_params.common_params.version,
-                                             town=scenario_params.scenario.scenario_runner.town,
-                                             cav_world=cav_world)
+                                      scenario_params.common_params.version,
+                                      map_name=scenario_params.scenario.scenario_runner.town)
 
         # Create a background process to init and execute scenario runner
         sr_process = Process(target=exec_scenario_runner,
@@ -69,11 +61,12 @@ def run_scenario(scenario_params):
             num_actors = len(vehicles) + len(walkers)
         print(f'Found all {num_actors} actors')
 
-        single_cav_list = gameworld.create_vehicle_agent_from_scenario_runner(
+        vehicle_list = gameworld.create_vehicle_agent_from_scenario_runner(
             vehicle=ego_vehicle,
         )
 
         spectator = ego_vehicle.get_world().get_spectator()
+
         # Bird view following
         spectator_altitude = 100
         spectator_bird_pitch = -90
@@ -89,21 +82,18 @@ def run_scenario(scenario_params):
             if not key_listener.keys['p']:
                 psutil.Process(sr_process.pid).resume()
 
-            gameworld.tick(single_cav_list)
-            ego_cav = single_cav_list[0].vehicle
+            gameworld.tick(vehicle_list)
+            ego_v = vehicle_list[0].vehicle
 
             # Bird view following
             view_transform = carla.Transform()
-            view_transform.location = ego_cav.get_transform().location
+            view_transform.location = ego_v.get_transform().location
             view_transform.location.z = view_transform.location.z + spectator_altitude
             view_transform.rotation.pitch = spectator_bird_pitch
             spectator.set_transform(view_transform)
 
             time.sleep(0.01)
     finally:
-        if cav_world is not None:
-            cav_world.destroy()
-        print("Destroyed cav_world")
         if gameworld is not None:
             gameworld.close()
         print("Destroyed gameworld")

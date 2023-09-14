@@ -8,7 +8,7 @@ import carla
 import importlib
 
 from collections import deque
-from EIdrive.core.common.misc import get_speed, positive, cal_distance_angle
+from EIdrive.core.basic.auxiliary import get_speed, positive, distance_angle_to_target
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
@@ -128,7 +128,6 @@ class AgentBehavior(object):
         # destination temp push flag
         self.destination_push_flag = 0
 
-        # white list of vehicle managers that the cav does not consider as obstacles
         self.white_list = []
         self.obstacle_vehicles = []
         self.objects = {}
@@ -257,11 +256,11 @@ class AgentBehavior(object):
         if self.vehicle_pos:
             current_location = self.vehicle_pos.location
             current_yaw = self.vehicle_pos.rotation.yaw
-            _, yaw_angle = cal_distance_angle(self.start_waypoint.transform.location, current_location, current_yaw)
+            _, yaw_angle = distance_angle_to_target(self.start_waypoint.transform.location, current_location, current_yaw)
 
             while yaw_angle > 90:
                 self.start_waypoint = self.start_waypoint.next(1)[0]
-                _, yaw_angle = cal_distance_angle(self.start_waypoint.transform.location, current_location, current_yaw)
+                _, yaw_angle = distance_angle_to_target(self.start_waypoint.transform.location, current_location, current_yaw)
 
         end_waypoint = self.map.get_waypoint(destination)
         if reset_end:

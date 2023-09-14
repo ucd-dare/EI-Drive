@@ -17,14 +17,14 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from EIdrive.customize.ml_libs.ml_manager import MLManager
+from EIdrive.customize.ml_libs.object_detection_model import ObjectDetectionModel
 
 
 class TestMlManager(unittest.TestCase):
     def setUp(self):
         current_path = os.path.dirname(os.path.realpath(__file__))
         self.data = cv2.imread(os.path.join(current_path, 'data/test.jpg'))
-        self.ml_manager = MLManager()
+        self.ml_manager = ObjectDetectionModel()
 
     def test_parameters(self):
         assert self.ml_manager.object_detector
@@ -32,4 +32,4 @@ class TestMlManager(unittest.TestCase):
     def test_draw_2d_bbx(self):
         results = self.ml_manager.object_detector(self.data)
         assert len(results) == 1
-        assert self.ml_manager.draw_2d_box(results, self.data, 0).shape == self.data.shape
+        assert self.ml_manager.visualize_yolo_bbx(results, self.data, 0).shape == self.data.shape

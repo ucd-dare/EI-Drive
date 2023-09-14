@@ -15,8 +15,8 @@ import numpy as np
 import open3d as o3d
 
 import EIdrive.core.sensing.perception.sensor_transformation as st
-from EIdrive.core.common.misc import \
-    cal_distance_angle, get_speed
+from EIdrive.core.basic.auxiliary import \
+    distance_angle_to_target, get_speed
 from EIdrive.core.sensing.perception.dynamic_obstacle import \
     DynamicObstacle
 from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
@@ -320,11 +320,8 @@ class Perception:
     config_yaml : dict
         Configuration for perception.
 
-    world : EIdrive object
-        EIdrive World object that saves all vehicle information, ML model, and id mapping dictionary.
-
-    data_dump : bool
-        Whether dumping data, if true, semantic lidar will be spawned.
+    ml_model : EIdrive object
+        ML model object.
 
     carla_world : carla.world
         CARLA world, used for rsu.
@@ -341,8 +338,8 @@ class Perception:
         Open3d point cloud visualizer.
     """
 
-    def __init__(self, vehicle, config_yaml, world,
-                 data_dump=False, carla_world=None, infra_id=None):
+    def __init__(self, vehicle, config_yaml, ml_model,
+                 carla_world=None, infra_id=None):
         self.vehicle = vehicle
         self.carla_world = carla_world if carla_world is not None \
             else self.vehicle.get_world()
@@ -356,19 +353,15 @@ class Perception:
         self.global_position = config_yaml['global']['position'] \
             if 'global_position' in config_yaml else None
 
-        self.cav_world = weakref.ref(world)()
-        ml_manager = world.ml_manager
+        self.ml_model = weakref.ref(ml_model)()
+        object_detection_model = ml_model.object_detection_model
 
-        if self.activate and data_dump:
-            sys.exit("When you dump data, please deactivate the "
-                     "detection function for precise label.")
-
-        if self.activate and not ml_manager:
+        if self.activate and not object_detection_model:
             sys.exit(
                 'If you activate the perception module, '
                 'then apply_ml must be set to true in'
                 'the argument parser to load the detection DL model.')
-        self.ml_manager = ml_manager
+        self.object_detection_model = object_detection_model
 
         # we only spawn the camera when perception module is activated or
         # camera visualization is needed
@@ -394,14 +387,6 @@ class Perception:
         else:
             self.lidar = None
             self.o3d_vis = None
-
-        # if data dump is true, semantic lidar is also spawned
-        self.data_dump = data_dump
-        if data_dump:
-            self.semantic_lidar = SemanticLidarSensor(vehicle,
-                                                      self.carla_world,
-                                                      config_yaml['lidar'],
-                                                      self.global_position)
 
         # count how many steps have been passed
         self.count = 0
@@ -486,7 +471,7 @@ class Perception:
                         rgb_camera.image),
                     cv2.COLOR_BGR2RGB))
         # yolo detection
-        yolo_detection = self.ml_manager.object_detector_yolo(rgb_images)
+        yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
 
         # rgb_images for drawing
         rgb_draw_images = []
@@ -515,7 +500,7 @@ class Perception:
             for (i, rgb_image) in enumerate(rgb_draw_images):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
-                rgb_image = self.ml_manager.draw_2d_box(
+                rgb_image = self.object_detection_model.visualize_yolo_bbx(
                     yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
@@ -577,11 +562,11 @@ class Perception:
         input_tensor = torch.tensor(processed_images).permute(0, 3, 1, 2).float()
 
         with torch.no_grad():
-            detections_batch = self.ml_manager.object_detector_SSD(input_tensor)
+            detections_batch = self.object_detection_model.object_detector_SSD(input_tensor)
 
-        results_per_input = self.ml_manager.utils.decode_results(detections_batch)
-        best_results_per_input = [self.ml_manager.utils.pick_best(results, 0.4) for results in results_per_input]
-        classes_to_labels = self.ml_manager.utils.get_coco_object_dictionary()
+        results_per_input = self.object_detection_model.utils.decode_results(detections_batch)
+        best_results_per_input = [self.object_detection_model.utils.pick_best(results, 0.4) for results in results_per_input]
+        classes_to_labels = self.object_detection_model.utils.get_coco_object_dictionary()
 
         # Assuming each detection in best_results_per_input is in the format
         # [class_id, score, x_min, y_min, x_max, y_max]
@@ -624,9 +609,8 @@ class Perception:
             for (i, rgb_image) in enumerate(rgb_draw_images):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
-                # rgb_image = self.ml_manager.draw_2d_box_SSD(
-                #     rescaled_detections, classes_to_labels, rgb_image, i)
-                rgb_image = self.ml_manager.draw_2d_box_SSD(
+
+                rgb_image = self.object_detection_model.visualize_ssd_bbx(
                     best_results_per_input, classes_to_labels, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
@@ -676,17 +660,14 @@ class Perception:
         """Retrieve and filter vehicles, then update the object dictionary."""
         world = self.carla_world
         vehicle_list = world.get_actors().filter("*vehicle*")
-        thresh = 50 if not self.data_dump else 120
+        thresh = 50
         vehicle_list = [v for v in vehicle_list if self.dist(v) < thresh and v.id != self.id]
 
-        if self.data_dump:
-            vehicle_list = self.filter_vehicle_out_of_range(vehicle_list)
-
         if self.lidar:
-            vehicle_list = [DynamicObstacle(None, None, v, self.lidar.sensor, self.cav_world.sumo2carla_ids) for v in
+            vehicle_list = [DynamicObstacle(None, None, v, self.lidar.sensor) for v in
                             vehicle_list]
         else:
-            vehicle_list = [DynamicObstacle(None, None, v, None, self.cav_world.sumo2carla_ids) for v in vehicle_list]
+            vehicle_list = [DynamicObstacle(None, None, v, None) for v in vehicle_list]
 
         objects.update({'vehicles': vehicle_list})
         return objects
@@ -786,7 +767,7 @@ class Perception:
 
         # Iterate through each vehicle to visualize the bounding box
         for vehicle in objects.get('vehicles', []):
-            _, angle_to_vehicle = cal_distance_angle(vehicle.get_location(), camera_location, camera_yaw_rotation)
+            _, angle_to_vehicle = distance_angle_to_target(vehicle.get_location(), camera_location, camera_yaw_rotation)
 
             # Draw bounding box if vehicle is within camera field of view (FOV)
             if angle_to_vehicle < 60:
@@ -885,6 +866,3 @@ class Perception:
 
         if self.lidar_visualize:
             self.o3d_vis.destroy_window()
-
-        if self.data_dump:
-            self.semantic_lidar.sensor.destroy()

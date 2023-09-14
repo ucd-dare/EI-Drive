@@ -1,7 +1,7 @@
 test_scenario: DQN_demo
 edge: false
 
-single_cav_list:
+vehicle_list:
   - id: 0
     spawn_position: [[66.9, 248.2, 1.5, 0, 0, 0], [-241.4, -15.1, 1.5, 180, 0, 0]]
     destination: [[620, 45.1, 0.3], [620, 45.1, 0.3]]

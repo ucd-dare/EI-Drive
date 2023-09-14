@@ -1,4 +1,4 @@
-controller: &base_controller
+controller:
   type: mpc_controller # this has to be exactly the same name as the controller py file
   args:
     dt: 0.05 # this should be equal to fixed_delta_seconds

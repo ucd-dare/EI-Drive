@@ -9,7 +9,7 @@ from scipy import spatial
 import carla
 import numpy as np
 
-from EIdrive.core.common.misc import cal_distance_angle, draw_trajetory_points
+from EIdrive.core.basic.auxiliary import distance_angle_to_target, visualize_trajectory
 from EIdrive.core.plan.cubic_spline import Spline2D
 
 
@@ -92,7 +92,7 @@ class CollisionDetector:
             return False
 
         # Compute the angle
-        dist, angle = cal_distance_angle(
+        dist, angle = distance_angle_to_target(
             waypoint_target.transform.location, waypoint_candidate.transform.location,
             waypoint_candidate.transform.rotation.yaw)
 
