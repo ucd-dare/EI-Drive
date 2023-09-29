@@ -5,7 +5,7 @@ The transformations between world and sensors.
 import numpy as np
 from matplotlib import cm
 
-from EIdrive.EIdrive_carla import Transform
+import carla
 
 VIRIDIS = np.array(cm.get_cmap('viridis').colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
@@ -126,7 +126,7 @@ def bbx_to_world(bounding_box_coords, obstacle_vehicle):
     """
 
     # Transformation from bounding box to vehicle
-    bb_to_vehicle_transform = Transform(obstacle_vehicle.bounding_box.location)
+    bb_to_vehicle_transform = carla.Transform(obstacle_vehicle.bounding_box.location)
 
     # Transformation matrix from bounding box to vehicle
     bb_to_vehicle_matrix = x_to_world_transformation(bb_to_vehicle_transform)
