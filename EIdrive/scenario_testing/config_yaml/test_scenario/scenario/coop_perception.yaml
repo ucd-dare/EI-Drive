@@ -1,0 +1,60 @@
+test_scenario: coop_perception
+vehicle_list:
+  - id: 0
+    spawn_position: [-42.1, 242.9, 0.3, 0, 0, 0]
+    destination: [[-1.9, 326.7, 0.3]]
+    perception:
+      lidar:
+        visualize: false
+        range: 50
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 1
+    spawn_position: [ -7.1, 211.7, 0.3, 0, 90, 0 ]
+    destination: [[ -5.4, 300.0, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 2
+    spawn_position: [ -9.6, 234.8, 0.3, 0, 90, 0 ]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+#  - id: 3
+#    spawn_position: [ 8.4, 263.8, 0.3, 0, -120, 0 ]
+#    destination: [ [ -1.9, 326.7, 0.3 ] ]
+#    perception:
+#      lidar:
+#        visualize: true
+#        range: 50
+#    behavior:
+#      local_planner:
+#        debug_trajectory: false
+#        debug: false
+#
+rsu_list:
+  - id: -1
+    spawn_position: [ -0.3, 256.6, 3, 0, -130, 0 ]
+    perception:
+      lidar:
+        visualize: false
+        range: 50
+  - id: -2
+    spawn_position: [ 0.0, 232.9, 3, 0, 130, 0 ]
+    perception:
+      lidar:
+        visualize: false
+        range: 50
