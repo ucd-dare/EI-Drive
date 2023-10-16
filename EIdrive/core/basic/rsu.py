@@ -43,26 +43,29 @@ class RSU(object):
     ):
 
         self.rsu_id = config_yaml['id']
+        self.detected_objects = None
 
         # The rsu id is negative
         if self.rsu_id > 0:
             self.rsu_id = -self.rsu_id
+            print('Make sure RSU id is negative.')
 
         # Read map here to avoid repeatedly reading map
         self.carla_map = carla_map
 
         # Load config
-        sensing_config = config_yaml['sensing']
-        sensing_config['localization']['global_position'] = config_yaml['spawn_position']
-        sensing_config['perception']['global_position'] = config_yaml['spawn_position']
+        localization_config = config_yaml['localization']
+        perception_config = config_yaml['perception']
+        localization_config['global_position'] = config_yaml['spawn_position']
+        perception_config['global_position'] = config_yaml['spawn_position']
 
         # Localizer
         self.localizer = RsuLocalizer(carla_world,
-                                      sensing_config['localization'],
+                                      localization_config,
                                       self.carla_map)
         # Perception
         self.perception = Perception(vehicle=None,
-                                     config_yaml=sensing_config['perception'],
+                                     config_yaml=perception_config,
                                      ml_model=ml_model,
                                      carla_world=carla_world,
                                      infra_id=self.rsu_id)
@@ -75,10 +78,9 @@ class RSU(object):
         self.localizer.localize()
 
         ego_pos = self.localizer.get_ego_pos()
-        ego_spd = self.localizer.get_ego_spd()
 
         # object detection
-        objects = self.perception.object_detect(ego_pos)
+        self.detected_objects = self.perception.object_detect(ego_pos)
 
     def destroy(self):
         """

@@ -54,6 +54,8 @@ class VehicleAgent(object):
         self.carla_map = carla_map
         self.car_id = config_yaml['id'] if 'id' in config_yaml else None
         self.manual_horizon = config_yaml.manual_horizon if 'manual_horizon' in config_yaml else None
+        self.stop_mode = False  # If the vehicle keep still
+        self.detected_objects = None
 
         # Split the config yaml file
         localization_config = config_yaml['localization']
@@ -112,14 +114,14 @@ class VehicleAgent(object):
         position = self.localizer.get_ego_pos()
         speed = self.localizer.get_ego_speed()
 
-        # Implement object detection
-        objects = self.perception.object_detect(position)
+        # Implement individual object detection
+        self.detected_objects = self.perception.object_detect(position)
 
         # Update the vehicle info for gamemap
         self.gamemap.set_center(position)
 
         # Update the vehicle info for behavior planner
-        self.agent_behavior.update_information(position, speed, objects)
+        self.agent_behavior.update_information(position, speed, self.detected_objects)
 
     def destroy(self):
         """

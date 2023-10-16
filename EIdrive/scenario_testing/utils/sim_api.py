@@ -140,8 +140,12 @@ def calculate_control(vehicle):
             trajectory_buffer.append(tem_pos)  # here the trajectory_buffer is Transform class
             target_speed.append(tem_speed)
 
-    else:
+    elif not vehicle.stop_mode:
         target_speed, trajectory_buffer = vehicle.agent_behavior.rule_based_trajectory_planning(target_speed)
+    else:
+        # When the stop model is True, stop planning
+        target_speed = None
+        trajectory_buffer = None
 
     control = vehicle.agent_behavior.vehicle_control(target_speed, trajectory_buffer)
 
@@ -284,7 +288,7 @@ class GameWorld:
         )
         return weather
 
-    def create_vehicle_agent(self):
+    def create_vehicle_agent(self, vehicle_blueprints='default'):
         """
         Create a list of vehicle.
 
@@ -296,8 +300,22 @@ class GameWorld:
         """
         print('Creating vehicles.')
 
-        default_model = 'vehicle.lincoln.mkz_2020'
-        vehicle_blueprint = self.world.get_blueprint_library().find(default_model)
+        # Use default vehicle settings if vehicle blueprints are not given
+        if vehicle_blueprints == 'default':
+            vehicle_blueprints = []
+            vehicle_model = 'vehicle.lincoln.mkz_2020'
+            # vehicle_blueprint = self.world.get_blueprint_library().find(vehicle_model)
+            for i in range(len(self.scenario_params['scenario']['vehicle_list'])):
+                print(i)
+                vehicle_blueprint = self.world.get_blueprint_library().find(vehicle_model)
+                if i % 3 == 0:
+                    vehicle_blueprint.set_attribute('color', '0, 0, 255')
+                elif i % 3 == 1:
+                    vehicle_blueprint.set_attribute('color', '255, 0, 0')
+                elif i % 3 == 2:
+                    vehicle_blueprint.set_attribute('color', '0, 255, 0')
+                vehicle_blueprints.append(vehicle_blueprint)
+
         vehicle_list = []
 
         for i, vehicle_config in enumerate(self.scenario_params['scenario']['vehicle_list']):
@@ -318,16 +336,7 @@ class GameWorld:
                     yaw=vehicle_config['spawn_position'][4],
                     roll=vehicle_config['spawn_position'][3]))
 
-            # TODO: Set proper color for vehicles.
-            if 0 == i or 6 == i:
-                vehicle_blueprint.set_attribute('color', '0, 0, 255')
-            elif 1 == i or 7 == i:
-                vehicle_blueprint.set_attribute('color', '255, 0, 0')
-            elif 2 == i or 8 == i:
-                vehicle_blueprint.set_attribute('color', '0, 255, 0')
-            else:
-                vehicle_blueprint.set_attribute('color', '0, 0, 0')
-            vehicle = self.world.spawn_actor(vehicle_blueprint, spawn_transform)
+            vehicle = self.world.spawn_actor(vehicle_blueprints[i], spawn_transform)
 
             if 'id' in vehicle_config:
                 vehicle_config['perception']['vid'] = vehicle_config['id']
@@ -396,7 +405,7 @@ class GameWorld:
 
         return [vehicle_agent]
 
-    def create_rsu_manager(self):
+    def create_rsu(self):
         """
         Create a list of RSU.
 
@@ -408,8 +417,13 @@ class GameWorld:
         """
         print('Creating RSU.')
         rsu_list = []
-        for i, rsu_config in enumerate(
-                self.scenario_params['scenario']['rsu_list']):
+        if 'rsu_list' not in self.scenario_params['scenario']:
+            return rsu_list
+
+        for i, rsu_config in enumerate(self.scenario_params['scenario']['rsu_list']):
+            rsu_config = OmegaConf.merge(self.scenario_params['vehicle_perception'], rsu_config)
+            rsu_config = OmegaConf.merge(self.scenario_params['vehicle_localization'], rsu_config)
+
             rsu_manager = RSU(self.world, rsu_config,
                               self.carla_map,
                               self.ml_model
@@ -629,23 +643,13 @@ class GameWorld:
         print('CARLA traffic flow has been created.')
         return traffic_manager, background_traffic
 
-    def tick(self, vehicle_list):
+    def tick(self):
         """
-        Tick the server and run all the agents.
-        
-        Parameters
-        ----------
-        vehicle_list:
-            List of VehicleAgent.
+        Tick the server.
             
         """
         self.world.tick()
 
-        for i, vehicle_agent in enumerate(vehicle_list):
-            vehicle_agent.update_info()
-            gamemap_visualize(vehicle_agent)
-            control = calculate_control(vehicle_agent)
-            vehicle_agent.vehicle.apply_control(control)
 
     def destroy_actors(self):
         """

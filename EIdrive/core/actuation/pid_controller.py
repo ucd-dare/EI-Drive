@@ -196,7 +196,7 @@ class Controller:
 
         # Check if waypoints are provided and valid
         if not waypoints:
-            print("Waypoints are empty.")
+            # print("Waypoints are empty.")
             return control
         else:
             location = waypoints[0].location

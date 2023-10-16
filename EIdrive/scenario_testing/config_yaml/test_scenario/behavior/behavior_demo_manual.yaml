@@ -1,5 +1,5 @@
 behavior:
-  is_manually: True
+  is_manually: demo
   max_speed: 20 # maximum speed, 60km/h
   tailgate_speed: 121 # when a vehicle needs to be close to another vehicle asap
   max_speed_margin: 3 # max_speed - max_speed_margin = target speed

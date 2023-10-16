@@ -32,14 +32,15 @@ def get_latency(single_cav_list):
 
 def run_scenario(scenario_params):
     try:
-        if scenario_params.scenario.edge:
+        edge = scenario_params.scenario.edge
+        if edge:
             path = scenario_params.scenario.manual_path
             frames = [pd.read_csv(f'{i}{path}') for i in range(6)]
             df = pd.concat(frames)
 
         # Create game world
         gameworld = sim_api.GameWorld(scenario_params,
-                                      scenario_params.scenario.edge,
+                                      edge,
                                       map_name='Town06')
         if scenario_params.common_params.record:
             gameworld.client. start_recorder("single_town06_carla.log", True)
@@ -74,7 +75,7 @@ def run_scenario(scenario_params):
             if kl.keys['p']:
                 continue
             # Draw edge
-            if t % 5 == 1 and scenario_params.scenario.edge:
+            if t % 5 == 1 and edge:
                 gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -99,7 +100,7 @@ def run_scenario(scenario_params):
                     size=0.5,
                     color=carla.Color(0, 255, 0),
                     life_time=0.2)
-            elif not scenario_params.scenario.edge:
+            elif not edge:
                 gameworld.world.debug.draw_point(
                     carla.Location(
                         x=-1.7, y=32, z=0.2),
@@ -125,7 +126,13 @@ def run_scenario(scenario_params):
                     color=carla.Color(255, 0, 0),
                     life_time=0.2)
 
-            gameworld.tick(vehicle_list)
+            gameworld.tick()
+
+            for vehicle_agent in vehicle_list:
+                vehicle_agent.update_info()
+                sim_api.gamemap_visualize(vehicle_agent)
+                control = sim_api.calculate_control(vehicle_agent)
+                vehicle_agent.vehicle.apply_control(control)
 
             spec_controller.full_bird_view(vehicle_list)
 

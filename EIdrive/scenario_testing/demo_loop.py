@@ -40,7 +40,13 @@ def run_scenario(scenario_params):
             if kl.keys['p']:
                 continue
 
-            gameworld.tick(vehicle_list)
+            gameworld.tick()
+
+            for vehicle_agent in vehicle_list:
+                vehicle_agent.update_info()
+                sim_api.gamemap_visualize(vehicle_agent)
+                control = sim_api.calculate_control(vehicle_agent)
+                vehicle_agent.vehicle.apply_control(control)
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform())
 

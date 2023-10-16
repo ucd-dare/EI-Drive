@@ -57,6 +57,7 @@ class BoundingBox(object):
 
         self.location = carla.Location(x=center_x, y=center_y, z=center_z)
         self.extent = carla.Vector3D(x=extent_x, y=extent_y, z=extent_z)
+        self.corners = corners
 
 
 class DynamicObstacle(object):

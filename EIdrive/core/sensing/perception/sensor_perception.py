@@ -62,10 +62,15 @@ class CameraSensor:
         if vehicle:
             world = vehicle.get_world()
 
+        if vehicle is None:
+            is_rsu = True
+        else:
+            is_rsu = False
+
         blueprint = world.get_blueprint_library().find('sensor.camera.rgb')
         blueprint.set_attribute('fov', '100')
 
-        camera_spawn_point = self.calculate_camera_spawn_point(relative_position, global_position)
+        camera_spawn_point = self.calculate_camera_spawn_point(is_rsu, relative_position, global_position)
 
         self.sensor = world.spawn_actor(blueprint, camera_spawn_point, attach_to=vehicle) if vehicle else world.spawn_actor(
             blueprint, camera_spawn_point)
@@ -81,17 +86,20 @@ class CameraSensor:
         self.image_height = int(self.sensor.attributes['image_size_y'])
 
     @staticmethod
-    def calculate_camera_spawn_point(relative_position, global_position):
+    def calculate_camera_spawn_point(is_rsu, relative_position, global_position):
         """
         Calculate the spawn point for the camera based on the given relative and global positions. Adjustments are
         made according to the relative position specified (front, right, left, or default).
 
         Parameters
         ----------
+        is_rsu : bool
+            If it is for RSU.
+
         relative_position : str
             Relative position of the camera with respect to the vehicle.
             Accepted values are 'front', 'left', 'right', or any other value
-            will default to the rear view.
+            will default to the rearview.
 
         global_position : list or None
             A list representing the global position [x, y, z] of the infrastructure.
@@ -110,20 +118,24 @@ class CameraSensor:
             'default': (-2.0, 0, 1.5, 180)
         }
 
-        if global_position:
-            carla_location = carla.Location(*global_position)
-            pitch = -35
+        if not is_rsu:
+            if global_position:
+                carla_location = carla.Location(*global_position)
+                pitch = -35
+            else:
+                carla_location = carla.Location(0, 0, 0)
+                pitch = 0
+
+            x_adj, y_adj, z_adj, yaw = location_adjustments.get(relative_position, location_adjustments['default'])
+
+            carla_location.x += x_adj
+            carla_location.y += y_adj
+            carla_location.z += z_adj
+            carla_rotation = carla.Rotation(roll=0, yaw=yaw, pitch=pitch)
         else:
-            carla_location = carla.Location(0, 0, 0)
-            pitch = 0
+            carla_location = carla.Location(*global_position[:3])
+            carla_rotation = carla.Rotation(*global_position[-3:])
 
-        x_adj, y_adj, z_adj, yaw = location_adjustments.get(relative_position, location_adjustments['default'])
-
-        carla_location.x += x_adj
-        carla_location.y += y_adj
-        carla_location.z += z_adj
-
-        carla_rotation = carla.Rotation(roll=0, yaw=yaw, pitch=pitch)
         spawn_point = carla.Transform(carla_location, carla_rotation)
 
         return spawn_point
@@ -350,7 +362,7 @@ class Perception:
         self.camera_visualize = config_yaml['camera']['visualize']
         self.camera_num = min(config_yaml['camera']['num'], 4)
         self.lidar_visualize = config_yaml['lidar']['visualize']
-        self.global_position = config_yaml['global']['position'] \
+        self.global_position = config_yaml['global_position'] \
             if 'global_position' in config_yaml else None
 
         self.ml_model = weakref.ref(ml_model)()
@@ -369,21 +381,21 @@ class Perception:
             self.rgb_camera = []
             mount_position = ['front', 'right', 'left', 'back']
             for i in range(self.camera_num):
-                self.rgb_camera.append(
-                    CameraSensor(
-                        vehicle, self.carla_world, mount_position[i],
-                        self.global_position))
+                self.rgb_camera.append(CameraSensor(vehicle, self.carla_world, mount_position[i], self.global_position))
 
         else:
             self.rgb_camera = None
 
         # we only spawn the LiDAR when perception module is activated or lidar visualization is needed
-        if self.activate or self.lidar_visualize:
+        if self.activate:
             self.lidar = LidarSensor(vehicle,
                                      self.carla_world,
                                      config_yaml['lidar'],
                                      self.global_position)
-            self.o3d_vis = o3d_visualizer_init(self.id)
+            if self.lidar_visualize:
+                self.o3d_vis = o3d_visualizer_init(self.id)
+            else:
+                self.o3d_vis = None
         else:
             self.lidar = None
             self.o3d_vis = None
@@ -460,6 +472,10 @@ class Perception:
          objects: dict
             Updated object dictionary.
         """
+        # If no camera is created, stop detection.
+        if len(self.rgb_camera) == 0:
+            return {'vehicles': [], 'traffic_lights': []}
+
         # retrieve current cameras and lidar data
         rgb_images = []
         for rgb_camera in self.rgb_camera:
@@ -500,6 +516,8 @@ class Perception:
             for (i, rgb_image) in enumerate(rgb_draw_images):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
+
+                # Visualize object detection bbx
                 rgb_image = self.object_detection_model.visualize_yolo_bbx(
                     yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
@@ -538,6 +556,10 @@ class Perception:
          objects: dict
             Updated object dictionary.
         """
+        # If no camera is created, stop detection.
+        if len(self.rgb_camera) == 0:
+            return {'vehicles': [], 'traffic_lights': []}
+
         rgb_images = []
         for rgb_camera in self.rgb_camera:
             while rgb_camera.image is None:
@@ -648,6 +670,7 @@ class Perception:
          objects: dict
             Updated object dictionary.
         """
+
         objects = self.filter_and_update_vehicles(objects)
         self.visualize_camera(objects)
         self.visualize_lidar()
