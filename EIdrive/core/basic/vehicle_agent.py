@@ -3,10 +3,12 @@ Class for vehicle and its modules.
 """
 
 import uuid
+import math
 from EIdrive.core.sensing.localization.localizer import Localizer
 from EIdrive.core.sensing.perception.sensor_perception import Perception
 from EIdrive.core.plan.agent_behavior import AgentBehavior
 from EIdrive.core.map.game_map import GameMap
+from collections import deque
 import pandas as pd
 
 
@@ -56,6 +58,8 @@ class VehicleAgent(object):
         self.manual_horizon = config_yaml.manual_horizon if 'manual_horizon' in config_yaml else None
         self.stop_mode = False  # If the vehicle keep still
         self.detected_objects = None
+        self.dt = config_yaml['controller']['args']['dt']
+        self.detected_objects_queue = deque(maxlen=1000)
 
         # Split the config yaml file
         localization_config = config_yaml['localization']
@@ -104,7 +108,7 @@ class VehicleAgent(object):
 
         self.agent_behavior.set_local_planner(origin, destination, clean, end_reset)
 
-    def update_info(self):
+    def update_info(self, transmission=False):
         """
         Implement localizer and perception. Also, update information for game map and behavior planner.
         """
@@ -115,7 +119,16 @@ class VehicleAgent(object):
         speed = self.localizer.get_ego_speed()
 
         # Implement individual object detection
-        self.detected_objects = self.perception.object_detect(position)
+        # TODO: Consider both the processing latency and transmission latency.
+        if transmission:
+            latency = math.ceil(1.0 / self.dt)   # The latency in ticks, which represents the maximum length of the queue.
+            if len(self.detected_objects_queue) == latency:
+                # Produce the delayed result
+                self.detected_objects = self.detected_objects_queue.popleft()
+            self.detected_objects_queue.append(self.perception.object_detect(position))
+        else:
+            # Without transmission model, the agent fetches perception result directly.
+            self.detected_objects = self.perception.object_detect(position)
 
         # Update the vehicle info for gamemap
         self.gamemap.set_center(position)

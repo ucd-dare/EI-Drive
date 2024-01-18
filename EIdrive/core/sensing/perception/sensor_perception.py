@@ -5,9 +5,10 @@ Perception module with all sensors.
 import weakref
 import sys
 import time
+import math
 
 import torchvision
-from torchvision import transforms
+from torchvision.transforms import ToTensor
 
 import carla
 import cv2
@@ -23,6 +24,7 @@ from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
 from EIdrive.core.sensing.perception.open3d_visualize import \
     o3d_visualizer_init, convert_raw_to_o3d_pointcloud, visualize_point_cloud, \
     camera_lidar_fusion_yolo
+from collections import deque
 from PIL import Image
 import torch
 # from yolov5.detectclass import YoloDetector
@@ -365,6 +367,12 @@ class Perception:
         self.global_position = config_yaml['global_position'] \
             if 'global_position' in config_yaml else None
 
+        # Transmission model
+        self.transmission_model = config_yaml['transmission_model'] \
+            if 'transmission_model' in config_yaml else None
+        self.latency_in_sec = config_yaml['latency_in_sec'] \
+            if 'latency_in_sec' in config_yaml else None
+
         self.ml_model = weakref.ref(ml_model)()
         object_detection_model = ml_model.object_detection_model
 
@@ -374,6 +382,10 @@ class Perception:
                 'then apply_ml must be set to true in'
                 'the argument parser to load the detection DL model.')
         self.object_detection_model = object_detection_model
+
+        self.yolo_detected_objects_queue = deque(maxlen=1000)
+        self.lidar_object_queue = deque(maxlen=1000)
+        self.server_detected_objects_queue = deque(maxlen=1000)
 
         # we only spawn the camera when perception module is activated or
         # camera visualization is needed
@@ -407,6 +419,9 @@ class Perception:
 
         # the dictionary contains all objects
         self.objects = {}
+
+        # Visualize perception result on camera. This will turn to True after time length of latency.
+        self.after_latency = False
 
     def dist(self, obstacle):
         """
@@ -457,6 +472,18 @@ class Perception:
 
         return objects
 
+    def forward_first(self, model, x, split_layer_index):
+        layers = list(model.children())[:split_layer_index]
+        for layer in layers:
+            x = layer(x)
+        return x
+
+    def forward_second(self, model, x, split_layer_index):
+        layers = list(model.children())[split_layer_index:]
+        for layer in layers:
+            x = layer(x)
+        return x
+
     def yolo_detection(self, objects):
         """
         Detect objects by Yolov5 + Lidar fusion.
@@ -487,7 +514,16 @@ class Perception:
                         rgb_camera.image),
                     cv2.COLOR_BGR2RGB))
         # yolo detection
-        yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
+        if self.transmission_model and self.latency_in_sec > 0:
+            current_yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
+            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
+            if len(self.yolo_detected_objects_queue) == latency:
+                yolo_detection = self.yolo_detected_objects_queue.popleft()
+                self.after_latency = True
+            else:
+                yolo_detection = []
+        else:
+            yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
 
         # rgb_images for drawing
         rgb_draw_images = []
@@ -501,15 +537,26 @@ class Perception:
             rgb_draw_images.append(rgb_image)
 
             # camera lidar fusion
-            objects = camera_lidar_fusion_yolo(
-                objects,
-                yolo_detection.xyxy[i],
-                self.lidar.data,
-                projected_lidar,
-                self.lidar.sensor)
+            if self.transmission_model and self.latency_in_sec > 0:
+                current_objects = camera_lidar_fusion_yolo(
+                    objects,
+                    current_yolo_detection.xyxy[i],
+                    self.lidar.data,
+                    projected_lidar,
+                    self.lidar.sensor)
+            else:
+                objects = camera_lidar_fusion_yolo(
+                    objects,
+                    yolo_detection.xyxy[i],
+                    self.lidar.data,
+                    projected_lidar,
+                    self.lidar.sensor)
 
         # calculate the speed. current we retrieve from the server directly.
-        self.get_speed(objects)
+        if self.transmission_model and self.latency_in_sec > 0:
+            self.get_speed(current_objects)
+        else:
+            self.get_speed(objects)
 
         if self.camera_visualize:
             names = ['front', 'right', 'left', 'back']
@@ -518,8 +565,11 @@ class Perception:
                     break
 
                 # Visualize object detection bbx
-                rgb_image = self.object_detection_model.visualize_yolo_bbx(
-                    yolo_detection, rgb_image, i)
+                if self.transmission_model and self.latency_in_sec > 0:
+                    if self.after_latency:
+                        rgb_image = self.object_detection_model.visualize_yolo_bbx(yolo_detection, rgb_image, i)
+                else:
+                    rgb_image = self.object_detection_model.visualize_yolo_bbx(yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
@@ -535,9 +585,23 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
-        # add traffic light
-        objects = self.get_traffic_lights(objects)
+
+        if self.transmission_model and self.latency_in_sec > 0:
+            if len(self.yolo_detected_objects_queue) == latency:
+                objects = self.lidar_object_queue.popleft()
+            else:
+                objects = {'vehicles': [],
+                           'traffic_lights': []}
+
+        # Add detection result into the queue
+        if self.transmission_model and self.latency_in_sec > 0:
+            self.yolo_detected_objects_queue.append(current_yolo_detection)
+            self.lidar_object_queue.append(current_objects)
+
         self.objects = objects
+
+        # TODO: Here the lidar bbx is not delayed. For some reason, move the latency model in front of visualization
+        #  will not show any bbx.
 
         return objects
 
@@ -671,11 +735,20 @@ class Perception:
             Updated object dictionary.
         """
 
-        objects = self.filter_and_update_vehicles(objects)
+        if self.transmission_model and self.latency_in_sec > 0:
+            current_objects = self.filter_and_update_vehicles(objects)
+            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
+            if len(self.server_detected_objects_queue) == latency:
+                objects = self.server_detected_objects_queue.popleft()
+        else:
+            objects = self.filter_and_update_vehicles(objects)
         self.visualize_camera(objects)
         self.visualize_lidar()
         objects = self.get_traffic_lights(objects)
         self.objects = objects
+
+        if self.transmission_model and self.latency_in_sec > 0:
+            self.server_detected_objects_queue.append(current_objects)
 
         return objects
 

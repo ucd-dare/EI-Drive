@@ -5,6 +5,7 @@ Since vehicle typically use the same ML model, the class has vehicles share the 
 import cv2
 import torch
 import numpy as np
+from collections import deque
 
 
 class ObjectDetectionModel(object):

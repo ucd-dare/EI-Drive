@@ -98,7 +98,7 @@ class ClientSideBoundingBoxes(object):
         display.blit(bb_surface, (0, 0))
 
     @staticmethod
-    def draw_only_bbx(display, bounding_boxes, vehicle, calibration, sensor, rsu_locations=None):
+    def draw_only_bbx(display, bounding_boxes, vehicle, calibration, sensor, rsu_locations=None, corner_form=False):
         """
         Draws bounding boxes on pygame display.
         """
@@ -132,8 +132,11 @@ class ClientSideBoundingBoxes(object):
                 pygame.draw.aalines(bb_surface, color, False, [(rsu_point[i, 0], rsu_point[i, 1]), ego_vehicle_position], 5)
 
         for bbox in bounding_boxes:
-            corners = bbox.corners
-            corners = np.vstack((corners.T, np.ones(corners.shape[0])))
+            if not corner_form:
+                corners = bbox.corners
+                corners = np.vstack((corners.T, np.ones(corners.shape[0])))
+            else:
+                corners = np.vstack((bbox.T, np.ones(bbox.shape[0])))
             cords_x_y_z = ClientSideBoundingBoxes._world_to_sensor(corners, sensor)
             cords_y_minus_z_x = np.concatenate(
                 [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
