@@ -19,6 +19,8 @@ To find out the values of your steering wheel use jstest-gtk in Ubuntu.
 """
 
 from __future__ import print_function
+import numpy as np
+import pygame
 
 # ==============================================================================
 # -- find carla module ---------------------------------------------------------
@@ -43,7 +45,7 @@ except IndexError:
 
 
 import carla
-
+import cv2
 from carla import ColorConverter as cc
 
 import argparse
@@ -97,12 +99,14 @@ try:
     from pygame.locals import K_s
     from pygame.locals import K_w
 except ImportError:
-    raise RuntimeError('cannot import pygame, make sure pygame package is installed')
+    raise RuntimeError(
+        'cannot import pygame, make sure pygame package is installed')
 
 try:
     import numpy as np
 except ImportError:
-    raise RuntimeError('cannot import numpy, make sure numpy package is installed')
+    raise RuntimeError(
+        'cannot import numpy, make sure numpy package is installed')
 
 
 # ==============================================================================
@@ -112,8 +116,11 @@ except ImportError:
 
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
-    name = lambda x: ' '.join(m.group(0) for m in rgx.finditer(x))
-    presets = [x for x in dir(carla.WeatherParameters) if re.match('[A-Z].+', x)]
+
+    def name(x): return ' '.join(m.group(0) for m in rgx.finditer(x))
+
+    presets = [x for x in dir(carla.WeatherParameters)
+               if re.match('[A-Z].+', x)]
     return [(getattr(carla.WeatherParameters, x), name(x)) for x in presets]
 
 
@@ -128,7 +135,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter, gauge):
+    def __init__(self, carla_world, hud, actor_filter, gauge, display):
         self.world = carla_world
         self.hud = hud
         self.gauge = gauge
@@ -137,11 +144,23 @@ class World(object):
         self.lane_invasion_sensor = None
         self.gnss_sensor = None
         self.camera_manager = None
+        self.rear_mirror = None
+        self.display = display
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = actor_filter
+        self.first_time = True
         self.restart()
         self.world.on_tick(hud.on_world_tick)
+        self.setup_rear_mirror()
+
+    def setup_rear_mirror(self):
+        # Pass the pygame.display object here
+        self.rear_mirror = Rear_Mirror(self.player, self.display)
+        self.rear_mirror.setup_camera('rear')
+        self.rear_mirror.setup_camera('left')
+        self.rear_mirror.setup_camera('right')
+        self.rear_mirror.spawn()
 
     def restart(self):
         # Keep same camera config if the camera manager exists.
@@ -151,16 +170,16 @@ class World(object):
         # blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
         blueprints = []
         for blueprint in self.world.get_blueprint_library().filter(self._actor_filter):
-            if blueprint.id == 'vehicle.audi.a2' or blueprint.id == 'vehicle.citroen.c3' or   \
-               blueprint.id == 'vehicle.dodge.charger_police_2020' or blueprint.id == 'vehicle.tesla.model3' or \
-               blueprint.id == 'vehicle.toyota.prius':
+            if blueprint.id == 'vehicle.audi.a2' or blueprint.id == 'vehicle.citroen.c3' or \
+                    blueprint.id == 'vehicle.dodge.charger_police_2020' or blueprint.id == 'vehicle.tesla.model3' or \
+                    blueprint.id == 'vehicle.toyota.prius':
                 blueprints.append(blueprint)
         blueprint = random.choice(blueprints)
 
-
         blueprint.set_attribute('role_name', 'hero')
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            color = random.choice(
+                blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
         # Spawn the player.
         if self.player is not None:
@@ -172,7 +191,8 @@ class World(object):
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         while self.player is None:
             spawn_points = self.world.get_map().get_spawn_points()
-            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+            spawn_point = random.choice(
+                spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
@@ -184,6 +204,11 @@ class World(object):
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
+        if self.first_time == False:
+            self.setup_rear_mirror()
+        else:
+            self.first_time = False
+
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
         self._weather_index %= len(self._weather_presets)
@@ -194,12 +219,14 @@ class World(object):
     def tick(self, clock):
         self.hud.tick(self, clock)
 
-    def render(self, display):
+    def render(self, display, world):
         self.camera_manager.render(display)
         self.hud.render(display)
         v = self.player.get_velocity()
         speed = (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2) * 0.621371)
-        self.gauge.render(speed)
+        self.gauge.render(speed, world)
+        if self.rear_mirror:
+            self.rear_mirror.render()
 
     def destroy(self):
         sensors = [
@@ -213,6 +240,8 @@ class World(object):
                 sensor.destroy()
         if self.player is not None:
             self.player.destroy()
+        if self.rear_mirror is not None:
+            self.rear_mirror.destroy()
 
 
 # ==============================================================================
@@ -236,7 +265,8 @@ class DualControl(object):
         world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
         v = world.player.get_velocity()
-        self.speed = (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2) * 0.621371)
+        self.speed = (3.6 * math.sqrt(v.x ** 2 +
+                                      v.y ** 2 + v.z ** 2) * 0.621371)
 
         # initialize steering wheel
         pygame.joystick.init()
@@ -249,33 +279,33 @@ class DualControl(object):
         self._joystick.init()
 
         self._parser = ConfigParser()
-        self._parser.read('wheel_config.ini')
+        self._parser.read('Demo/wheel_config.ini')
         self._steer_idx = int(
-            self._parser.get('G920 Racing Wheel', 'steering_wheel'))
+            self._parser.get('TM Racing Wheel', 'steering_wheel'))
         self._throttle_idx = int(
-            self._parser.get('G920 Racing Wheel', 'throttle'))
-        self._brake_idx = int(self._parser.get('G920 Racing Wheel', 'brake'))
-        self._reverse_idx = int(self._parser.get('G920 Racing Wheel', 'reverse'))
+            self._parser.get('TM Racing Wheel', 'throttle'))
+        self._brake_idx = int(self._parser.get('TM Racing Wheel', 'brake'))
+        self._reverse_idx = int(self._parser.get('TM Racing Wheel', 'reverse'))
         self._handbrake_idx = int(
-            self._parser.get('G920 Racing Wheel', 'handbrake'))
+            self._parser.get('TM Racing Wheel', 'handbrake'))
 
-        self.starting = mixer.Sound('sound_effects/starting.mp3')
-        self.acceleration = mixer.Sound('sound_effects/acceleration.mp3')
+        self.starting = mixer.Sound('Demo/sound_effects/starting.mp3')
+        self.acceleration = mixer.Sound('Demo/sound_effects/acceleration.mp3')
 
     def parse_events(self, world, clock):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:
+                if event.button == 3:
                     world.restart()
-                elif event.button == 1:
+                elif event.button == 4:
                     world.hud.toggle_info()
                 elif event.button == 2:
                     world.camera_manager.toggle_camera()
-                elif event.button == 3:
-                    world.next_weather()
                 elif event.button == self._reverse_idx:
+                    world.next_weather()
+                elif event.button == 1:
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == 23:
                     world.camera_manager.next_sensor()
@@ -316,15 +346,18 @@ class DualControl(object):
                     elif event.key == K_p:
                         self._autopilot_enabled = not self._autopilot_enabled
                         world.player.set_autopilot(self._autopilot_enabled)
-                        world.hud.notification('Autopilot %s' % ('On' if self._autopilot_enabled else 'Off'))
+                        world.hud.notification('Autopilot %s' % (
+                            'On' if self._autopilot_enabled else 'Off'))
 
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
-                self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
+                self._parse_vehicle_keys(
+                    pygame.key.get_pressed(), clock.get_time())
                 self._parse_vehicle_wheel()
                 self._control.reverse = self._control.gear < 0
             elif isinstance(self._control, carla.WalkerControl):
-                self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time())
+                self._parse_walker_keys(
+                    pygame.key.get_pressed(), clock.get_time())
             world.player.apply_control(self._control)
 
     def _parse_vehicle_keys(self, keys, milliseconds):
@@ -419,8 +452,9 @@ class HUD(object):
         default_font = 'ubuntumono'
         mono = default_font if default_font in fonts else fonts[0]
         mono = pygame.font.match_font(mono)
-        self._font_mono = pygame.font.Font(mono, 48 if os.name == 'nt' else 48)  # size of the text
-        self._notifications = FadingText(font, (width, 40), (0, height - 40))
+        self._font_mono = pygame.font.Font(
+            mono, 48 if os.name == 'nt' else 48)  # size of the text
+        self._notifications = FadingText(font, (width * 2, 60), (0, height - 40))
         self.help = HelpText(pygame.font.Font(mono, 24), width, height)
         self.server_fps = 0
         self.frame = 0
@@ -455,14 +489,19 @@ class HUD(object):
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
             '',
-            'Vehicle: % 20s' % get_actor_display_name(world.player, truncate=20),
+            'Vehicle: % 20s' % get_actor_display_name(
+                world.player, truncate=20),
             'Map:     % 20s' % world.world.get_map().name.split('/')[-1],
-            'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
+            'Simulation time: % 12s' % datetime.timedelta(
+                seconds=int(self.simulation_time)),
             '',
-            'Speed:   % 13.0f mile/h' % (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2) * 0.621371),
+            'Speed:   % 13.0f mile/h' % (3.6 * math.sqrt(v.x **
+                                                         2 + v.y ** 2 + v.z ** 2) * 0.621371),
             u'Heading:% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading),
-            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' %
+                                (t.location.x, t.location.y)),
+            'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' %
+                            (world.gnss_sensor.lat, world.gnss_sensor.lon)),
             'Height:  % 18.0f m' % t.location.z,
             '']
         if isinstance(c, carla.VehicleControl):
@@ -486,9 +525,13 @@ class HUD(object):
             'Number of vehicles: % 8d' % len(vehicles)]
         if len(vehicles) > 1:
             self._info_text += ['Nearby vehicles:']
-            distance = lambda l: math.sqrt(
-                (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
-            vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
+
+            def distance(l):
+                return math.sqrt(
+                    (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
+
+            vehicles = [(distance(x.get_location()), x)
+                        for x in vehicles if x.id != world.player.id]
             for d, vehicle in sorted(vehicles):
                 if d > 200.0:
                     break
@@ -506,10 +549,13 @@ class HUD(object):
 
     def render(self, display):
         if self._show_info:
-            info_surface = pygame.Surface((self.dim[0] / 4.5, self.dim[1]))  # 8 initially
-            info_surface.set_alpha(100)
-            display.blit(info_surface, (0, 0))
-            v_offset = 80   # distance from upper bound, 8 initially
+            info_surface = pygame.Surface(
+                (self.dim[0] / 4.5, self.dim[1]))  # 8 initially
+            fullscreen_size = display.get_size()
+            scaled_surface = pygame.transform.scale(info_surface, (fullscreen_size[0] / 4.5, fullscreen_size[1]))
+            scaled_surface.set_alpha(100)
+            display.blit(scaled_surface, (0, 0))
+            v_offset = 80  # distance from upper bound, 8 initially
             bar_h_offset = 500  # rect distance from left bound, 200 initially
             bar_width = 350  # length of rect e.g. throttle, 212 initially
             for item in self._info_text:
@@ -517,33 +563,43 @@ class HUD(object):
                     break
                 if isinstance(item, list):
                     if len(item) > 1:
-                        points = [((x + 25)*3+60, v_offset + 60 + (1.0 - y) * 30) for x, y in enumerate(item)]
+                        points = [((x + 25) * 3 + 60, v_offset + 60 + (1.0 - y) * 30)
+                                  for x, y in enumerate(item)]
                         # location of the collision line, x + 8 initially
-                        pygame.draw.lines(display, (255, 136, 0), False, points, 2)
+                        pygame.draw.lines(
+                            display, (255, 136, 0), False, points, 2)
                     item = None
                     v_offset += 18  # distance between collision line and text, 18 initially
                 elif isinstance(item, tuple):
                     if isinstance(item[1], bool):
-                        rect = pygame.Rect((bar_h_offset + 160, v_offset + 20), (20, 20))
+                        rect = pygame.Rect(
+                            (bar_h_offset + 160, v_offset + 20), (20, 20))
                         # (left, top), (width, height) (6,6) initially
-                        pygame.draw.rect(display, (255, 255, 255), rect, 0 if item[1] else 1)
+                        pygame.draw.rect(display, (255, 255, 255),
+                                         rect, 0 if item[1] else 1)
                     else:
-                        rect_border = pygame.Rect((bar_h_offset - 10, v_offset + 20), (bar_width, 18))
+                        rect_border = pygame.Rect(
+                            (bar_h_offset - 10, v_offset + 20), (bar_width, 18))
                         # height of rect e.g. throttle, (bar_h_offset, v_offset + 8) initially
-                        pygame.draw.rect(display, (255, 255, 255), rect_border, 1)
+                        pygame.draw.rect(
+                            display, (255, 255, 255), rect_border, 1)
                         f = (item[1] - item[2]) / (item[3] - item[2])
                         if item[2] < 0.0:
-                            rect = pygame.Rect((bar_h_offset + 4.5 + f * (bar_width - 42), v_offset + 20), (18, 18))
+                            rect = pygame.Rect(
+                                (bar_h_offset + 4.5 + f * (bar_width - 42), v_offset + 20), (18, 18))
                             # location of the rect in throttle rect, f * (bar_width - 6) initially
                         else:
-                            rect = pygame.Rect((bar_h_offset - 10, v_offset + 20), (f * bar_width, 18))
+                            rect = pygame.Rect(
+                                (bar_h_offset - 10, v_offset + 20), (f * bar_width, 18))
                         pygame.draw.rect(display, (255, 255, 255), rect)
                     item = item[0]
                 if item:  # At this point has to be a str.
-                    surface = self._font_mono.render(item, True, (255, 255, 255))
-                    display.blit(surface, (80, v_offset))  # distance from text to left bound, 8 initially
+                    surface = self._font_mono.render(
+                        item, True, (255, 255, 255))
+                    # distance from text to left bound, 8 initially
+                    display.blit(surface, (80, v_offset))
                 v_offset += 60  # distance between lines, 18 initially
-        self._notifications.render(display)
+        display.blit(self._notifications.surface, (0, display.get_size()[1] - 60))
         self.help.render(display)
 
 
@@ -557,7 +613,6 @@ class FadingText(object):
         self.font = font
         self.dim = dim
         self.pos = pos
-        # self.pos = (self.dim[0], self.dim[1]-100)
         self.seconds_left = 0
         self.surface = pygame.Surface(self.dim)
 
@@ -573,8 +628,8 @@ class FadingText(object):
         self.seconds_left = max(0.0, self.seconds_left - delta_seconds)
         self.surface.set_alpha(500.0 * self.seconds_left)
 
-    def render(self, display):
-        display.blit(self.surface, self.pos)
+    # def render(self, display):
+    #     display.blit(self.surface, self.pos)
 
 
 # ==============================================================================
@@ -587,7 +642,8 @@ class HelpText(object):
         lines = __doc__.split('\n')
         self.font = font
         self.dim = (680, len(lines) * 22 + 12)
-        self.pos = (0.5 * width - 0.5 * self.dim[0], 0.5 * height - 0.5 * self.dim[1])
+        self.pos = (0.5 * width - 0.5 *
+                    self.dim[0], 0.5 * height - 0.5 * self.dim[1])
         self.seconds_left = 0
         self.surface = pygame.Surface(self.dim)
         self.surface.fill((0, 0, 0, 0))
@@ -618,11 +674,13 @@ class CollisionSensor(object):
         self.hud = hud
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.collision')
-        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        self.sensor = world.spawn_actor(
+            bp, carla.Transform(), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: CollisionSensor._on_collision(weak_self, event))
+        self.sensor.listen(
+            lambda event: CollisionSensor._on_collision(weak_self, event))
 
     def get_collision_history(self):
         history = collections.defaultdict(int)
@@ -656,11 +714,13 @@ class LaneInvasionSensor(object):
         self.hud = hud
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.lane_invasion')
-        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        self.sensor = world.spawn_actor(
+            bp, carla.Transform(), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
+        self.sensor.listen(
+            lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
 
     @staticmethod
     def _on_invasion(weak_self, event):
@@ -685,11 +745,13 @@ class GnssSensor(object):
         self.lon = 0.0
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.gnss')
-        self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
+        self.sensor = world.spawn_actor(bp, carla.Transform(
+            carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: GnssSensor._on_gnss_event(weak_self, event))
+        self.sensor.listen(
+            lambda event: GnssSensor._on_gnss_event(weak_self, event))
 
     @staticmethod
     def _on_gnss_event(weak_self, event):
@@ -705,6 +767,7 @@ class GnssSensor(object):
 # ==============================================================================
 def get_camera_view(vehicle_model):
     if 'vehicle.tesla.model3' == vehicle_model:
+        # carla.Transform(carla.Location(x=-0.12, y=-0.35, z=2), carla.Rotation(pitch=5, yaw=180))#carla.Transform(carla.Location(x=-0.12, y=-0.35, z=1.125), carla.Rotation(pitch=5))
         return carla.Transform(carla.Location(x=-0.12, y=-0.35, z=1.125), carla.Rotation(pitch=5))
     elif 'vehicle.audi.a2' == vehicle_model:
         return carla.Transform(carla.Location(x=-0.2, y=-0.35, z=1.3), carla.Rotation(pitch=5))
@@ -727,7 +790,8 @@ class CameraManager(object):
         self.recording = False
 
         self._camera_transforms = [
-            carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15)),
+            carla.Transform(carla.Location(x=-5.5, z=2.8),
+                            carla.Rotation(pitch=-15)),
             carla.Transform(carla.Location(x=1.6, z=1.7)),
             get_camera_view(parent_actor.type_id)]
         self.transform_index = 1
@@ -735,12 +799,14 @@ class CameraManager(object):
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB'],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)'],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)'],
-            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)'],
-            ['sensor.camera.semantic_segmentation', cc.Raw, 'Camera Semantic Segmentation (Raw)'],
+            ['sensor.camera.depth', cc.LogarithmicDepth,
+             'Camera Depth (Logarithmic Gray Scale)'],
+            ['sensor.camera.semantic_segmentation', cc.Raw,
+             'Camera Semantic Segmentation (Raw)'],
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
              'Camera Semantic Segmentation (CityScapes Palette)'],
             ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)']]
-        
+
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
         for item in self.sensors:
@@ -754,8 +820,10 @@ class CameraManager(object):
         self.index = None
 
     def toggle_camera(self):
-        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
-        self.sensor.set_transform(self._camera_transforms[self.transform_index])
+        self.transform_index = (self.transform_index +
+                                1) % len(self._camera_transforms)
+        self.sensor.set_transform(
+            self._camera_transforms[self.transform_index])
 
     def set_sensor(self, index, notify=True):
         index = index % len(self.sensors)
@@ -772,7 +840,8 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor.listen(
+                lambda image: CameraManager._parse_image(weak_self, image))
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -782,11 +851,14 @@ class CameraManager(object):
 
     def toggle_recording(self):
         self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+        self.hud.notification('Recording %s' %
+                              ('On' if self.recording else 'Off'))
 
     def render(self, display):
         if self.surface is not None:
-            display.blit(self.surface, (0, 0))
+            fullscreen_size = display.get_size()
+            scaled_surface = pygame.transform.scale(self.surface, fullscreen_size)
+            display.blit(scaled_surface, (0, 0))
 
     @staticmethod
     def _parse_image(weak_self, image):
@@ -832,7 +904,7 @@ class MusicPlayer(object):
 
     def _loading(self):
         files = glob.glob(os.getcwd() + '/*.mp3')
-        mixer.music.load(files[random.randint(0, len(files)-1)])
+        mixer.music.load(files[random.randint(0, len(files) - 1)])
 
     def _play(self, loop, start, fading_time):
         mixer.music.play(loop, start, fading_time)
@@ -858,22 +930,26 @@ def game_loop(args):
         if 'fullscreen' == args.screen:
             display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         else:
-            display = pygame.display.set_mode((args.width, args.height),pygame.HWSURFACE | pygame.DOUBLEBUF)
-        FONT = pygame.font.SysFont('Franklin Gothic Heavy', 100)
+            display = pygame.display.set_mode(
+                (args.width, args.height), pygame.HWSURFACE | pygame.DOUBLEBUF)
+        FONT = pygame.font.SysFont('Franklin Gothic Heavy', 90)
         circle_c = (55, 77, 91)
+        display_width, display_height = display.get_size()
         my_gauge = Gauge(
             screen=display,
+            image_path='/home/junshan/Documents/EI-Drive/speedometer.png',
             FONT=FONT,
-            x_cord=args.width / 2,
-            y_cord=220,  # args.height / 2,
+            x_cord=display_width / 1.9,
+            y_cord=display_height / 1.55,
             thickness=50,
             radius=200,
             circle_colour=circle_c,
             glow=False)
         hud = HUD(args.width, args.height)
 
-        sim_world = client.load_world('Town06')
-        world = World(sim_world, hud, args.filter, my_gauge)
+        # sim_world = client.load_world('Town06')
+        sim_world = client.get_world()
+        world = World(sim_world, hud, args.filter, my_gauge, display)
         # world = World(client.get_world(), hud, args.filter)
 
         controller = DualControl(world, args.autopilot)
@@ -884,7 +960,8 @@ def game_loop(args):
             if controller.parse_events(world, clock):
                 return
             world.tick(clock)
-            world.render(display)
+            world.render(display, world)
+            pygame.display.flip()
             pygame.display.flip()
 
     finally:
@@ -895,13 +972,215 @@ def game_loop(args):
         pygame.quit()
 
 
-# ==============================================================================
-# -- Gauge() --------------------------------------------------------------------
-# ==============================================================================
+class Rear_Mirror:
+    def __init__(self, parent_actor, display):
+        self._parent = parent_actor
+        # Initialize an empty dictionary to store camera transforms
+        self._camera_transforms = {}
+        self._camera_transforms_left = {}  # Dictionary for left mirrors
+        self._camera_transforms_right = {}
+        self.setup_camera_transforms()
+        self.display = display
+        self.camera_surface = [None, None, None]
 
+        self.camera_blueprint = None
+        self.camera = None
+        self.camera_left = None  # Left mirror camera
+        self.camera_right = None  # Right mirror camera
+
+    def setup_camera_transforms(self):
+        # Define camera transforms for each vehicle type here
+        self._camera_transforms['vehicle.tesla.model3'] = carla.Transform(
+            carla.Location(x=-1, y=0, z=1.8), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms['vehicle.audi.a2'] = carla.Transform(
+            carla.Location(x=-1, y=0, z=1.8), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms['vehicle.citroen.c3'] = carla.Transform(
+            carla.Location(x=-1, y=0, z=1.8), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms['vehicle.toyota.prius'] = carla.Transform(
+            carla.Location(x=-1, y=0, z=1.8), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms['vehicle.dodge.charger_police_2020'] = carla.Transform(
+            carla.Location(x=-1, y=0, z=1.8), carla.Rotation(pitch=0, yaw=180))
+        # Add more vehicle types as needed
+
+        self._camera_transforms_left['vehicle.tesla.model3'] = carla.Transform(
+            carla.Location(x=-0.2, y=-1.3, z=1.125), carla.Rotation(pitch=5, yaw=0))
+        self._camera_transforms_left['vehicle.audi.a2'] = carla.Transform(
+            carla.Location(x=-0.2, y=-1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_left['vehicle.citroen.c3'] = carla.Transform(
+            carla.Location(x=-0.22, y=-1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_left['vehicle.toyota.prius'] = carla.Transform(
+            carla.Location(x=-0.12, y=-1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_left['vehicle.dodge.charger_police_2020'] = carla.Transform(
+            carla.Location(x=-0.12, y=-1.3, z=1.3), carla.Rotation(pitch=0, yaw=180))
+
+        self._camera_transforms_right['vehicle.tesla.model3'] = carla.Transform(
+            carla.Location(x=-0.2, y=1.3, z=1.125), carla.Rotation(pitch=5, yaw=0))
+        self._camera_transforms_right['vehicle.audi.a2'] = carla.Transform(
+            carla.Location(x=-0.2, y=1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_right['vehicle.citroen.c3'] = carla.Transform(
+            carla.Location(x=-0.22, y=1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_right['vehicle.toyota.prius'] = carla.Transform(
+            carla.Location(x=-0.12, y=1.3, z=1.3), carla.Rotation(pitch=5, yaw=180))
+        self._camera_transforms_right['vehicle.dodge.charger_police_2020'] = carla.Transform(
+            carla.Location(x=-0.12, y=1.3, z=1.3), carla.Rotation(pitch=0, yaw=180))
+
+    def setup_camera(self, camera_type):
+        # Define your camera settings here based on the camera_type
+        # For example, you can have different camera settings for different vehicle types.
+        # Modify this method according to your needs.
+        if camera_type == 'rear':
+            camera_blueprint = 'sensor.camera.rgb'
+            camera_settings = {
+                'image_size_x': 800,
+                'image_size_y': 600,
+                'fov': 90,
+                # 'sensor_tick': 0.1
+            }
+        # Left camera settings
+        elif camera_type == 'left':
+            camera_blueprint = 'sensor.camera.rgb'
+            camera_settings = {
+                'image_size_x': 800,
+                'image_size_y': 600,
+                'fov': 100,
+                # 'sensor_tick': 0.1
+            }
+        # Right camera settings
+        elif camera_type == 'right':
+            camera_blueprint = 'sensor.camera.rgb'
+            camera_settings = {
+                'image_size_x': 800,
+                'image_size_y': 600,
+                'fov': 100,
+                # 'sensor_tick': 0.1
+            }
+        else:
+            raise ValueError(f"Invalid camera_type: {camera_type}")
+
+        self.camera_blueprint = self._parent.get_world(
+        ).get_blueprint_library().find(camera_blueprint)
+        for key, value in camera_settings.items():
+            self.camera_blueprint.set_attribute(key, str(value))
+
+    # ... Rest of the class ...
+
+    def process_image(self, image, camera_index):
+        image_data = np.array(image.raw_data)
+        image_data = image_data.reshape((image.height, image.width, 4))
+        image_data = image_data[:, :, :3]  # Remove the alpha channel
+        image_data = np.flip(image_data, axis=2)  # Convert from BGRA to RGB
+        image_data = np.fliplr(image_data)  # Horizontal flip the image data
+        self.camera_surface[camera_index] = pygame.surfarray.make_surface(
+            image_data.swapaxes(0, 1))
+
+    def render(self):
+        width, height = self.display.get_size()
+        if self.camera_surface and len(self.camera_surface):
+            # Adjust the rear_mirror_scale and position
+            if self.camera_surface[0] is None:
+                pass
+
+            rear_mirror_scale = 0.8
+            rear_mirror_width = int(
+                self.camera_surface[0].get_width() * rear_mirror_scale)
+            rear_mirror_height = int(
+                self.camera_surface[0].get_height() * rear_mirror_scale)
+            rear_mirror_surface = pygame.transform.scale(
+                self.camera_surface[0], (rear_mirror_width, rear_mirror_height))
+
+            # Adjust the x and y coordinates to set the position on the screen
+            rear_mirror_x = width / 2.4
+            rear_mirror_y = height / 20
+
+            self.display.blit(rear_mirror_surface,
+                              (rear_mirror_x, rear_mirror_y))
+
+            for i in range(1, 3):
+                if self.camera_surface[i] is not None:
+                    # Adjust the left/right_mirror_scale and position
+                    left_right_mirror_scale = 0.8
+                    left_right_mirror_width = int(
+                        self.camera_surface[i].get_width() * left_right_mirror_scale)
+                    left_right_mirror_height = int(
+                        self.camera_surface[i].get_height() * left_right_mirror_scale)
+                    left_right_mirror_surface = pygame.transform.scale(
+                        self.camera_surface[i], (left_right_mirror_width, left_right_mirror_height))
+
+                    # Adjust the x and y coordinates to set the position on the screen for left and right mirrors
+                    left_right_mirror_x = height / 15 if i == 1 else width / 1.25
+                    left_right_mirror_y = width / 2.4
+
+                    self.display.blit(left_right_mirror_surface,
+                                      (left_right_mirror_x, left_right_mirror_y))
+
+    def destroy(self):
+        if self.camera is not None:
+            self.camera.destroy()
+        if self.camera_left is not None:
+            self.camera_left.destroy()
+        if self.camera_right is not None:
+            self.camera_right.destroy()
+            self.camera_surface = [None, None, None]
+
+    def spawn(self):
+        vehicle_model = self._parent.type_id
+        camera_transform = self._camera_transforms.get(vehicle_model)
+        left_camera_transform = self._camera_transforms_left.get(vehicle_model)
+        right_camera_transform = self._camera_transforms_right.get(
+            vehicle_model)
+        if camera_transform is None:
+            # Use a default transform if the vehicle model is not found in the dictionary
+            camera_transform = carla.Transform(
+                carla.Location(x=-0.23, y=-1.3, z=2))
+
+        if left_camera_transform is None:
+            # Use a default transform if the vehicle model is not found in the dictionary
+            left_camera_transform = carla.Transform(
+                carla.Location(x=-0.23, y=1.3, z=2))
+        if right_camera_transform is None:
+            # Use a default transform if the vehicle model is not found in the dictionary
+            right_camera_transform = carla.Transform(
+                carla.Location(x=-0.23, y=-1.3, z=2))
+
+        self.camera = self._parent.get_world().spawn_actor(
+            self.camera_blueprint,
+            camera_transform,
+            attach_to=self._parent)
+
+        self.camera_left = self._parent.get_world().spawn_actor(
+            self.camera_blueprint,
+            left_camera_transform,
+            attach_to=self._parent)
+
+        self.camera_right = self._parent.get_world().spawn_actor(
+            self.camera_blueprint,
+            right_camera_transform,
+            attach_to=self._parent)
+
+        weak_self = weakref.ref(self)
+
+        self.camera.listen(
+            lambda image: Rear_Mirror._parse_image(weak_self, image, 0))
+        self.camera_left.listen(
+            lambda image: Rear_Mirror._parse_image(weak_self, image, 1))
+        self.camera_right.listen(
+            lambda image: Rear_Mirror._parse_image(weak_self, image, 2))
+
+    @staticmethod
+    def _parse_image(weak_self, image, camera_index):
+        self = weak_self()
+        if not self:
+            return
+        # Call process_image with correct arguments
+        self.process_image(image, camera_index)
+
+
+# ==============================================================================
+# -- Guage() --------------------------------------------------------------------
+# ==============================================================================
 
 class Gauge:
-    def __init__(self, screen, FONT, x_cord, y_cord, thickness, radius, circle_colour, glow=True):
+    def __init__(self, screen, image_path, FONT, x_cord, y_cord, thickness, radius, circle_colour, glow=True):
         self.screen = screen
         self.Font = FONT
         self.x_cord = x_cord
@@ -910,9 +1189,11 @@ class Gauge:
         self.radius = radius
         self.circle_colour = circle_colour
         self.glow = glow
+        self.image = pygame.image.load(image_path).convert_alpha()
 
-    def render(self, speed):
-        fill_angle = int(speed * 270 / 140)
+    def render(self, speed, world):
+        fill_angle = int(speed * 260 / 140)
+        c = world.player.get_control()
         per = speed
         if speed > 140:
             per = 140
@@ -920,30 +1201,57 @@ class Gauge:
             per = 0
         if per > 100:
             per = 100
-        ac = [int(per * 255 / 140), int(255 - per * 255 / 140), int(0), 255]
-        for indexi in range(len(ac)):
-            if ac[indexi] < 0:
-                ac[indexi] = 0
-            if ac[indexi] > 255:
-                ac[indexi] = 255
-        # print(ac)
+        ac = [255, 255, 255, 255]  # Set color to white
+        if c.reverse == 1:
+            reversetext = self.Font.render(f"R", True, [255, 0, 0, 0])
+            reversetext_rect = reversetext.get_rect(
+                center=(int(self.x_cord), int(self.y_cord - 80)))
+            self.screen.blit(reversetext, reversetext_rect)
+        else:
+            reversetext = self.Font.render(f"D", True, [0, 255, 0, 0])
+            reversetext_rect = reversetext.get_rect(
+                center=(int(self.x_cord), int(self.y_cord - 80)))
+            self.screen.blit(reversetext, reversetext_rect)
 
         pertext = self.Font.render(f"{int(speed)} MPH", True, ac)
-        pertext_rect = pertext.get_rect(center=(int(self.x_cord), int(self.y_cord)))
+        pertext_rect = pertext.get_rect(
+            center=(int(self.x_cord), int(self.y_cord - 10)))
         self.screen.blit(pertext, pertext_rect)
 
-        for i in range(0, self.thickness):
+        gauge_scale = 0.35  # Adjust the scale factor as needed
+        gauge_surface = pygame.transform.scale(self.image, (int(self.image.get_width() * gauge_scale),
+                                                            int(self.image.get_height() * gauge_scale)))
+        gauge_rect = gauge_surface.get_rect(
+            center=(int(self.x_cord), int(self.y_cord - 25)))
+        self.screen.blit(gauge_surface, gauge_rect)
 
-            pygame.gfxdraw.arc(self.screen, int(self.x_cord), int(self.y_cord), self.radius - i, -225, 270 - 225,
-                               self.circle_colour)
-            if speed > 4:
-                pygame.gfxdraw.arc(self.screen, int(self.x_cord), int(self.y_cord), self.radius - i, -225,
-                                   fill_angle - 225 - 8, ac)
+        if speed > 20:
+            angle_r = math.radians(fill_angle - 220)
+            needle_length = (self.radius - self.thickness) * 1.55
+            needle_width = 4  # Adjust the width of the needle as needed
+
+            needle_end_x = int(self.x_cord + needle_length * math.cos(angle_r))
+            needle_end_y = int(self.y_cord + needle_length * math.sin(angle_r))
+
+            pygame.draw.line(self.screen, ac, (self.x_cord, self.y_cord + 40),
+                             (needle_end_x, needle_end_y), needle_width)
+        else:
+            angle_r = math.radians(fill_angle - 220)
+            needle_length = (self.radius - self.thickness) * 1.55
+            needle_width = 4  # Adjust the width of the needle as needed
+
+            needle_end_x = int(self.x_cord + needle_length * math.cos(angle_r))
+            needle_end_y = int(self.y_cord + needle_length * math.sin(angle_r))
+
+            pygame.draw.line(self.screen, ac, (self.x_cord, self.y_cord + 40),
+                             (needle_end_x, needle_end_y), needle_width)
 
         if speed < 4:
             return
 
         if self.glow:
+            # Perform other glowing effects or additional drawing as needed
+
             for i in range(0, 15):
                 ac[3] = int(150 - i * 10)
                 pygame.gfxdraw.arc(self.screen, int(self.x_cord), int(self.y_cord), self.radius + i, -225,
@@ -961,7 +1269,8 @@ class Gauge:
             lx = int(lx + self.x_cord)
             ly = int(ly + self.y_cord)
 
-            pygame.draw.circle(self.screen, ac, (lx, ly), int(self.thickness / 2), 0)
+            pygame.draw.circle(self.screen, ac, (lx, ly),
+                               int(self.thickness / 2), 0)
 
             for i in range(0, 10):
                 ac[3] = int(150 - i * 15)
@@ -1000,8 +1309,8 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='3840x2160',
-        help='window resolution (default: 2560x1440)')
+        default='1920x1080',
+        help='window resolution (default: 1920x1080)')
     argparser.add_argument(
         '--screen',
         metavar='fullscreen',
