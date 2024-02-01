@@ -368,8 +368,8 @@ class Perception:
             if 'global_position' in config_yaml else None
 
         # Transmission model
-        self.transmission_model = config_yaml['transmission_model'] \
-            if 'transmission_model' in config_yaml else None
+        self.runtime_latency = config_yaml['runtime_latency'] \
+            if 'runtime_latency' in config_yaml else None
         self.latency_in_sec = config_yaml['latency_in_sec'] \
             if 'latency_in_sec' in config_yaml else None
 
@@ -514,16 +514,7 @@ class Perception:
                         rgb_camera.image),
                     cv2.COLOR_BGR2RGB))
         # yolo detection
-        if self.transmission_model and self.latency_in_sec > 0:
-            current_yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
-            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
-            if len(self.yolo_detected_objects_queue) == latency:
-                yolo_detection = self.yolo_detected_objects_queue.popleft()
-                self.after_latency = True
-            else:
-                yolo_detection = []
-        else:
-            yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
+        yolo_detection = self.object_detection_model.object_detector_yolo(rgb_images)
 
         # rgb_images for drawing
         rgb_draw_images = []
@@ -537,26 +528,15 @@ class Perception:
             rgb_draw_images.append(rgb_image)
 
             # camera lidar fusion
-            if self.transmission_model and self.latency_in_sec > 0:
-                current_objects = camera_lidar_fusion_yolo(
-                    objects,
-                    current_yolo_detection.xyxy[i],
-                    self.lidar.data,
-                    projected_lidar,
-                    self.lidar.sensor)
-            else:
-                objects = camera_lidar_fusion_yolo(
-                    objects,
-                    yolo_detection.xyxy[i],
-                    self.lidar.data,
-                    projected_lidar,
-                    self.lidar.sensor)
+            objects = camera_lidar_fusion_yolo(
+                objects,
+                yolo_detection.xyxy[i],
+                self.lidar.data,
+                projected_lidar,
+                self.lidar.sensor)
 
         # calculate the speed. current we retrieve from the server directly.
-        if self.transmission_model and self.latency_in_sec > 0:
-            self.get_speed(current_objects)
-        else:
-            self.get_speed(objects)
+        self.get_speed(objects)
 
         if self.camera_visualize:
             names = ['front', 'right', 'left', 'back']
@@ -565,11 +545,8 @@ class Perception:
                     break
 
                 # Visualize object detection bbx
-                if self.transmission_model and self.latency_in_sec > 0:
-                    if self.after_latency:
-                        rgb_image = self.object_detection_model.visualize_yolo_bbx(yolo_detection, rgb_image, i)
-                else:
-                    rgb_image = self.object_detection_model.visualize_yolo_bbx(yolo_detection, rgb_image, i)
+                rgb_image = self.object_detection_model.visualize_yolo_bbx(
+                    yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
@@ -585,25 +562,23 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
+        # add traffic light
+        objects = self.get_traffic_lights(objects)
 
-        if self.transmission_model and self.latency_in_sec > 0:
+        if self.runtime_latency and self.latency_in_sec > 0:
+            # TODO: the dt is still hard code.
+            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which is the maximum length of the queue.
             if len(self.yolo_detected_objects_queue) == latency:
-                objects = self.lidar_object_queue.popleft()
+                final_objects = self.yolo_detected_objects_queue.popleft()
+                self.yolo_detected_objects_queue.append(objects)
+                self.objects = final_objects
             else:
-                objects = {'vehicles': [],
-                           'traffic_lights': []}
+                self.yolo_detected_objects_queue.append(objects)
+                self.objects = objects
+        else:
+            self.objects = objects
 
-        # Add detection result into the queue
-        if self.transmission_model and self.latency_in_sec > 0:
-            self.yolo_detected_objects_queue.append(current_yolo_detection)
-            self.lidar_object_queue.append(current_objects)
-
-        self.objects = objects
-
-        # TODO: Here the lidar bbx is not delayed. For some reason, move the latency model in front of visualization
-        #  will not show any bbx.
-
-        return objects
+        return self.objects
 
     def ssd_detection(self, objects):
         """
@@ -735,7 +710,7 @@ class Perception:
             Updated object dictionary.
         """
 
-        if self.transmission_model and self.latency_in_sec > 0:
+        if self.runtime_latency and self.latency_in_sec > 0:
             current_objects = self.filter_and_update_vehicles(objects)
             latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
             if len(self.server_detected_objects_queue) == latency:
@@ -747,7 +722,7 @@ class Perception:
         objects = self.get_traffic_lights(objects)
         self.objects = objects
 
-        if self.transmission_model and self.latency_in_sec > 0:
+        if self.runtime_latency and self.latency_in_sec > 0:
             self.server_detected_objects_queue.append(current_objects)
 
         return objects

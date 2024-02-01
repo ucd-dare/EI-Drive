@@ -1,5 +1,5 @@
 """
-The script is used for transmission model test. It is designed for transmission delay based on ground truth.
+The script is used for transmission model test. It is designed for transmission delay based on camera + Lidar.
 There will be a firetruck blocks the view.
 """
 
@@ -14,7 +14,7 @@ import numpy as np
 import sys
 import carla
 import pygame
-import weakref
+import math
 
 player_ids = []
 
@@ -23,32 +23,18 @@ def customized_bp(world):
     """
     Provide customized vehicle blueprints.
     """
-    # Vehicle_0 is ego, 1 on left, 2 and 3 is firetruck.
+    # Vehicle_0 on bottom, 1 on left, 2 is firetruck, 3 on top.
     vehicle_blueprints = []
     vehicle_model = 'vehicle.lincoln.mkz_2020'
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '0, 0, 0')
     vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint.set_attribute('color', '0, 0, 255')
-    vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.carlamotors.firetruck')
+    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
+    vehicle_blueprint.set_attribute('color', '255, 0, 0')
     vehicle_blueprints.append(vehicle_blueprint)
     vehicle_blueprint = world.get_blueprint_library().find('vehicle.carlamotors.firetruck')
     vehicle_blueprints.append(vehicle_blueprint)
     return vehicle_blueprints
-
-
-def corner_matrix_transform(corners):
-    new = np.zeros((8, 3))
-    new[2, :] = corners[0, :]
-    new[7, :] = corners[1, :]
-    new[1, :] = corners[2, :]
-    new[0, :] = corners[3, :]
-    new[5, :] = corners[4, :]
-    new[4, :] = corners[5, :]
-    new[6, :] = corners[6, :]
-    new[3, :] = corners[7, :]
-    return new
 
 
 def run_scenario(scenario_params):
@@ -59,7 +45,7 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params, map_name='town06')
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town03')
 
         pygame.init()
         gameDisplay = pygame.display.set_mode(
@@ -129,36 +115,47 @@ def run_scenario(scenario_params):
                 rsu.update_info()
 
             bbx_list = []
+            true_extent = []
+            true_transform = []
 
-            # Get the ground truth bbx as the perception result from RSU
-            rsu_bbx = ClientSideBoundingBoxes._create_bb_points(vehicle_list[1].vehicle)
-            location = vehicle_list[1].vehicle.get_transform().location
-            rsu_bbx = rsu_bbx[:, :-1]
-            rsu_bbx[:, 0] += location.x + 5
-            rsu_bbx[:, 1] += location.y
-            rsu_bbx[:, 2] += location.z
-            rsu_bbx = corner_matrix_transform(rsu_bbx)
-            bbx_list.append(rsu_bbx)
+            # Add detection result to the list
+            # TODO: The data fusion result should replace vehicle.detected_objects.
+            #  This will involve more work. Now we just simply use a merge function outside vehicle_agent object to
+            #  represent receiving data.
+            if vehicle_list[0].detected_objects['vehicles']:
+                bbx = vehicle_list[0].detected_objects['vehicles'][0].bounding_box
+                bbx_list.append(bbx)
+            if rsu_list[0].detected_objects['vehicles'] and coop_perception:
+                bbx = rsu_list[0].detected_objects['vehicles'][0].bounding_box
+                bbx_list.append(bbx)
 
-            # Get the ground truth bbx as the perception result from ego vehicle
-            ego_bbx = ClientSideBoundingBoxes._create_bb_points(vehicle_list[0].vehicle)
-            location = vehicle_list[0].vehicle.get_transform().location
-            ego_bbx = ego_bbx[:, :-1]
-            ego_bbx[:, 0] += location.x + 5
-            ego_bbx[:, 1] += location.y
-            ego_bbx[:, 2] += location.z
-            ego_bbx = corner_matrix_transform(ego_bbx)
-            bbx_list.append(ego_bbx)
+            for v in vehicle_list:
+                true_extent.append(v.vehicle.bounding_box.extent)
+                true_transform.append(v.vehicle.get_transform())
 
-            # Data fusion
-            # bbx_list = merge_bbx_list(bbx_list)
+            # Data fusion result
+            bbx_list = merge_bbx_list(bbx_list)
+
+            # Define transmission latency
+            transmission_latency = True
+            latency_in_sec = 0.3
+            transmission_data_queue = []
+
+            # The process of transmission latency
+            if transmission_latency and latency_in_sec > 0:
+                latency = math.ceil(latency_in_sec / 0.05)  # The latency in ticks
+                if len(transmission_data_queue) == latency:
+                    final_objects = transmission_data_queue.popleft()
 
             # Visualize the bbx
             if coop_perception:
                 # Visualize data fusion result
                 ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
-                                                      cam.camera_actor.calibration, cam.camera_actor, rsu_locations,
-                                                      corner_form=True)
+                                                      cam.camera_actor.calibration, cam.camera_actor, rsu_locations)
+            else:
+                # Visualize perception result only from ego vehicle
+                ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
+                                                      cam.camera_actor.calibration, cam.camera_actor)
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
 

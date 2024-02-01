@@ -47,7 +47,7 @@ def run_scenario(scenario_params):
             gameworld.tick()
 
             for vehicle_agent in vehicle_list:
-                vehicle_agent.update_info(transmission=True)
+                vehicle_agent.update_info()
                 sim_api.gamemap_visualize(vehicle_agent)
                 control = sim_api.calculate_control(vehicle_agent)
                 vehicle_agent.vehicle.apply_control(control)

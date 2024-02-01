@@ -4,7 +4,7 @@ vehicle_list:
     spawn_position: [-65.0, -139.5, 0.3, 0, 180, 0]
     destination: [[-113.5, -138.8, 0.3]]
     perception:
-      transmission_model: true
+      runtime_latency: true
       latency_in_sec: 1
       lidar:
         visualize: false
@@ -32,8 +32,8 @@ vehicle_list:
     spawn_position: [ -78.1, -60.7, 0.3, 0, -90, 0 ]
     destination: [ [ -78.0, -153.0, 0.3 ], [ -76.0, -179.5, 0.3 ]]
     perception:
-      transmission_model: false
-      latency_in_sec: 2
+      runtime_latency: false
+      latency_in_sec: 0.5
       camera:
         visualize: 1
         num: 1

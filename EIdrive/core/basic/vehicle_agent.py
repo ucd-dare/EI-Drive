@@ -108,7 +108,7 @@ class VehicleAgent(object):
 
         self.agent_behavior.set_local_planner(origin, destination, clean, end_reset)
 
-    def update_info(self, transmission=False):
+    def update_info(self):
         """
         Implement localizer and perception. Also, update information for game map and behavior planner.
         """
@@ -119,16 +119,7 @@ class VehicleAgent(object):
         speed = self.localizer.get_ego_speed()
 
         # Implement individual object detection
-        # TODO: Consider both the processing latency and transmission latency.
-        if transmission:
-            latency = math.ceil(1.0 / self.dt)   # The latency in ticks, which represents the maximum length of the queue.
-            if len(self.detected_objects_queue) == latency:
-                # Produce the delayed result
-                self.detected_objects = self.detected_objects_queue.popleft()
-            self.detected_objects_queue.append(self.perception.object_detect(position))
-        else:
-            # Without transmission model, the agent fetches perception result directly.
-            self.detected_objects = self.perception.object_detect(position)
+        self.detected_objects = self.perception.object_detect(position)
 
         # Update the vehicle info for gamemap
         self.gamemap.set_center(position)
