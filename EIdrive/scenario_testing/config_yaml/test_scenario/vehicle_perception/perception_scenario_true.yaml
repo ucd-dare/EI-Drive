@@ -1,0 +1,19 @@
+perception:
+  activate: true # when not activated, objects positions will be retrieved from server directly
+  apply_ml: true
+  model: yolo
+  camera:
+    visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
+    num: 1 # how many cameras are mounted on the vehicle. Maximum 3(frontal, left and right cameras)
+  lidar:
+    visualize: true # whether to visualize lidar points using open3d
+    channels: 32
+    range: 50
+    points_per_second: 100000
+    rotation_frequency: 20 # the simulation is 20 fps
+    upper_fov: 10.0
+    lower_fov: -30.0
+    dropoff_general_rate: 0.0
+    dropoff_intensity_limit: 1.0
+    dropoff_zero_intensity: 0.0
+    noise_stddev: 0.0
