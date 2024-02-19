@@ -1,5 +1,5 @@
 """
-The script is used for transmission model test. It is designed for transmission delay based on camera + Lidar.
+The script is used for transmission model test. It is designed for transmission latency.
 There will be a firetruck blocks the view.
 """
 
@@ -9,6 +9,7 @@ from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
 from EIdrive.scenario_testing.utils.perception_utils import merge_bbx_list, visualize_bbx_by_open3d, \
     ClientSideBoundingBoxes, PygameCamera, VIEW_WIDTH, VIEW_HEIGHT, VIEW_FOV
 from EIdrive.core.sensing.perception.dynamic_obstacle import BoundingBox
+from collections import deque
 import open3d as o3d
 import numpy as np
 import sys
@@ -52,6 +53,13 @@ def run_scenario(scenario_params):
             (VIEW_WIDTH, VIEW_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame.display.set_caption('CARLA Visualization')
         pygame_clock = pygame.time.Clock()
+
+        font_size = 80
+        font = pygame.font.SysFont(None, font_size)
+        text_color = (0, 255, 0)  # Green color
+
+        right_margin = 1500
+        top_margin = 200
 
         if scenario_params.common_params.record:
             gameworld.client.start_recorder("coop_perception.log", True)
@@ -107,21 +115,40 @@ def run_scenario(scenario_params):
             pygame_clock.tick_busy_loop(60)
             cam.render(cam.display)
 
-            for vehicle_agent in vehicle_list:
-                vehicle_agent.update_info()
+            # Render text
+            vehicle_latency = vehicle_list[0].perception.transmission_latency_in_sec
+            rsu_latency = rsu_list[0].perception.transmission_latency_in_sec
+            rsu_text = font.render(f"RSU latency is {rsu_latency}", True, text_color)
+            v_text = font.render(f"Vehicle latency is {vehicle_latency}", True, text_color)
+            first_line_rect = rsu_text.get_rect()
+            second_line_rect = v_text.get_rect()
+            rsu_text_position = VIEW_WIDTH - right_margin, top_margin
+            gap = 20
+            v_text_position = (VIEW_WIDTH - right_margin,
+                            top_margin + first_line_rect.height + gap)
+            gameDisplay.blit(rsu_text, rsu_text_position)
+            gameDisplay.blit(v_text, v_text_position)
+
+            for index, vehicle_agent in enumerate(vehicle_list):
+                if index == 0 and t < 160:
+                    vehicle_agent.update_info(1)
+                elif index == 0 and t >= 160:
+                    vehicle_agent.update_info(0.2)
+                else:
+                    vehicle_agent.update_info()
                 sim_api.gamemap_visualize(vehicle_agent)
 
             for rsu in rsu_list:
-                rsu.update_info()
+                if t < 160:
+                    rsu.update_info(1)
+                else:
+                    rsu.update_info(0.2)
 
             bbx_list = []
             true_extent = []
             true_transform = []
 
             # Add detection result to the list
-            # TODO: The data fusion result should replace vehicle.detected_objects.
-            #  This will involve more work. Now we just simply use a merge function outside vehicle_agent object to
-            #  represent receiving data.
             if vehicle_list[0].detected_objects['vehicles']:
                 bbx = vehicle_list[0].detected_objects['vehicles'][0].bounding_box
                 bbx_list.append(bbx)
@@ -135,17 +162,6 @@ def run_scenario(scenario_params):
 
             # Data fusion result
             bbx_list = merge_bbx_list(bbx_list)
-
-            # Define transmission latency
-            transmission_latency = True
-            latency_in_sec = 0.3
-            transmission_data_queue = []
-
-            # The process of transmission latency
-            if transmission_latency and latency_in_sec > 0:
-                latency = math.ceil(latency_in_sec / 0.05)  # The latency in ticks
-                if len(transmission_data_queue) == latency:
-                    final_objects = transmission_data_queue.popleft()
 
             # Visualize the bbx
             if coop_perception:

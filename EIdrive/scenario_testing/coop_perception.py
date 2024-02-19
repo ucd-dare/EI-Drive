@@ -44,7 +44,7 @@ def run_scenario(scenario_params):
     gameworld = None
 
     ground_truth_bbx = False  # When it is true, show the ground truth bbx
-    coop_perception = True  # With the help of RSU
+    coop_perception = False  # With the help of RSU
 
     try:
         # Create game world
