@@ -13,8 +13,8 @@ scenario_runner:
   town: town03
   scenario: Scenario_9
   num_actors: 2
-  configFile: './EIdrive/scenario_testing/test_scenario/scenario_9.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_9.py'
+  configFile: 'EIdrive/scenario_testing/test_scenario/scenario_9.xml'
+  additionalScenario: 'EIdrive/scenario_testing/test_scenario/scenario_9.py'
   host: localhost
   port: 2000
   timeout: 10
