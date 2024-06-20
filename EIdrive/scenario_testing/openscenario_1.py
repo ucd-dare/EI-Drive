@@ -15,7 +15,7 @@ import scenario_runner as sr
 
 def exec_scenario_runner(scenario_params):
     """
-    Execute the ScenarioRunner process
+    Execute the ScenarioRunner process.
 
     Parameters
     ----------
