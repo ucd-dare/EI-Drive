@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<scenarios>
+    <!--<ego_vehicle x="-104.3" y="250.2" z="0.3" yaw="0" model="vehicle.nissan.patrol" />-->
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+
+        <ego_vehicle x="-241.4" y="-15.1" z="1.5" yaw="180" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="-104.3" y="250.2" z="0.3" yaw="0" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="-20" y="250.2" z="1.5" yaw="0" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="-35" y="250.2" z="1.5" yaw="0" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="-365.9" y="183.1" z="1.5" yaw="90" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="658.9" y="21.5" z="1.5" yaw="270" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+<!--
+    <scenario name="AtoB_1" type="AtoB" map_name="Town06">
+        <ego_vehicle x="489" y="37.1" z="1.5" yaw="345" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>-->
+
+    <scenario name="AtoB_1" type="AtoB" town="Town06">
+        <ego_vehicle x="-5.8" y="334.8" z="1.5" yaw="90" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+<!--
+    <scenario name="AtoB_1" type="AtoB" map_name="Town06">
+        <ego_vehicle x="66.9" y="248.2" z="1.5" yaw="0" model="vehicle.nissan.patrol" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>-->
+</scenarios>

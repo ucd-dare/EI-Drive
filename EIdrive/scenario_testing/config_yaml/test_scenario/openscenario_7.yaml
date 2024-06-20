@@ -1,0 +1,9 @@
+defaults:
+  - common_params: common_param
+  - vehicle_perception: perception_scenario_false
+  - vehicle_localization: localization_demo_false
+  - game_map: map_activated
+  - behavior: behavior_scenario
+  - controller: pid_controller
+  - traffic_manager: lane_change_false
+  - scenario: openscenario_7

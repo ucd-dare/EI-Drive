@@ -1,0 +1,17 @@
+controller:
+  type: pid_controller # this has to be exactly the same name as the controller py file
+  args:
+    lat:
+      k_p: 0.9
+      k_d: 0.02
+      k_i: 0.5
+    lon:
+      k_p: 0.75
+      k_d: 0.02
+      k_i: 0.4
+    dt: 0.05 # this should be equal to fixed_delta_seconds
+    max_brake: 1.0
+    max_throttle: 1.0
+    max_steering: 0.3
+    max_steering_rate: 0.2
+    time_interval: 0.1
