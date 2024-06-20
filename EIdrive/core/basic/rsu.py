@@ -70,7 +70,7 @@ class RSU(object):
                                      carla_world=carla_world,
                                      infra_id=self.rsu_id)
 
-    def update_info(self):
+    def update_info(self, dynamic_latency=None):
         """
         Retrieve relative info for localization and perception.
         """
@@ -80,6 +80,8 @@ class RSU(object):
         ego_pos = self.localizer.get_ego_pos()
 
         # object detection
+        if dynamic_latency is not None:
+            self.perception.update_trans_latency(dynamic_latency)
         self.detected_objects = self.perception.object_detect(ego_pos)
 
     def destroy(self):

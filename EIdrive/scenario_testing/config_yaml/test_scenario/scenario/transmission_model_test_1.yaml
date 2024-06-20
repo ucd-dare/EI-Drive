@@ -4,8 +4,8 @@ vehicle_list:
     spawn_position: [-65.0, -139.5, 0.3, 0, 180, 0]
     destination: [[-113.5, -138.8, 0.3]]
     perception:
-      runtime_latency: true
-      latency_in_sec: 1
+      transmission_latency: true
+      transmission_latency_in_sec: 1
       lidar:
         visualize: false
         range: 50
@@ -32,15 +32,15 @@ vehicle_list:
     spawn_position: [ -78.1, -60.7, 0.3, 0, -90, 0 ]
     destination: [ [ -78.0, -153.0, 0.3 ], [ -76.0, -179.5, 0.3 ]]
     perception:
-      runtime_latency: false
-      latency_in_sec: 0.5
+      transmission_latency: false
+      transmission_latency_in_sec: 0.5
       camera:
         visualize: 1
         num: 1
     behavior:
       ignore_traffic_light: false # whether to ignore traffic light
       overtake_allowed: false # whether overtake allowed, typically false for platoon leader
-      max_speed: 25
+      max_speed: 30
       local_planner:
         debug_trajectory: true
         debug: false

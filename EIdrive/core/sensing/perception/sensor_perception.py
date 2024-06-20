@@ -368,10 +368,10 @@ class Perception:
             if 'global_position' in config_yaml else None
 
         # Transmission model
-        self.runtime_latency = config_yaml['runtime_latency'] \
-            if 'runtime_latency' in config_yaml else None
-        self.latency_in_sec = config_yaml['latency_in_sec'] \
-            if 'latency_in_sec' in config_yaml else None
+        self.transmission_latency = config_yaml['transmission_latency'] \
+            if 'transmission_latency' in config_yaml else None
+        self.transmission_latency_in_sec = config_yaml['transmission_latency_in_sec'] \
+            if 'transmission_latency_in_sec' in config_yaml else None
 
         self.ml_model = weakref.ref(ml_model)()
         object_detection_model = ml_model.object_detection_model
@@ -422,6 +422,9 @@ class Perception:
 
         # Visualize perception result on camera. This will turn to True after time length of latency.
         self.after_latency = False
+
+    def update_trans_latency(self, latency):
+        self.transmission_latency_in_sec = latency
 
     def dist(self, obstacle):
         """
@@ -565,9 +568,9 @@ class Perception:
         # add traffic light
         objects = self.get_traffic_lights(objects)
 
-        if self.runtime_latency and self.latency_in_sec > 0:
+        if self.transmission_latency and self.transmission_latency_in_sec > 0:
             # TODO: the dt is still hard code.
-            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which is the maximum length of the queue.
+            latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which is the maximum length of the queue.
             if len(self.yolo_detected_objects_queue) == latency:
                 final_objects = self.yolo_detected_objects_queue.popleft()
                 self.yolo_detected_objects_queue.append(objects)
@@ -710,9 +713,9 @@ class Perception:
             Updated object dictionary.
         """
 
-        if self.runtime_latency and self.latency_in_sec > 0:
+        if self.transmission_latency and self.transmission_latency_in_sec > 0:
             current_objects = self.filter_and_update_vehicles(objects)
-            latency = math.ceil(self.latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
+            latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
             if len(self.server_detected_objects_queue) == latency:
                 objects = self.server_detected_objects_queue.popleft()
         else:
@@ -722,7 +725,7 @@ class Perception:
         objects = self.get_traffic_lights(objects)
         self.objects = objects
 
-        if self.runtime_latency and self.latency_in_sec > 0:
+        if self.transmission_latency and self.transmission_latency_in_sec > 0:
             self.server_detected_objects_queue.append(current_objects)
 
         return objects

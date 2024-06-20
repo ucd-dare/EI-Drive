@@ -44,7 +44,7 @@ def run_scenario(scenario_params):
     gameworld = None
 
     ground_truth_bbx = False  # When it is true, show the ground truth bbx
-    coop_perception = True  # With the help of RSU
+    coop_perception = False  # With the help of RSU
 
     try:
         # Create game world
@@ -125,7 +125,6 @@ def run_scenario(scenario_params):
             if vehicle_list[0].detected_objects['vehicles']:
                 bbx = vehicle_list[0].detected_objects['vehicles'][0].bounding_box
                 bbx_list.append(bbx)
-                
             if rsu_list[0].detected_objects['vehicles'] and coop_perception:
                 bbx = rsu_list[0].detected_objects['vehicles'][0].bounding_box
                 bbx_list.append(bbx)
@@ -139,7 +138,7 @@ def run_scenario(scenario_params):
 
             # Visualize the bbx
             if ground_truth_bbx:
-                # Get z-coordinate of the base of the ego vehicle's bounding boxp
+                # Get z-coordinate of the base of the ego vehicle's bounding box
                 ego_vehicle_bbox = ClientSideBoundingBoxes.get_bounding_box(cam.vehicle, cam.camera_actor)
                 ego_base_z = ego_vehicle_bbox[0, 2] - cam.vehicle.bounding_box.extent.z
 

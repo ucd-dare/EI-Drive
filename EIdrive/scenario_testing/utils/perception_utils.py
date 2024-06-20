@@ -33,7 +33,6 @@ class ClientSideBoundingBoxes(object):
         return bounding_boxes
 
     @staticmethod
-    
     def draw_ground_truth_bbx(display, bounding_boxes, ego_vehicle_position, vehicle_info, ego_bbox=None,
                               line_between_vehicle=True):
         """
@@ -98,10 +97,8 @@ class ClientSideBoundingBoxes(object):
 
         display.blit(bb_surface, (0, 0))
 
-#bbx is being merged when there is no other bbx to merge to
-
     @staticmethod
-    def draw_only_bbx(display, bounding_boxes, vehicle, calibration, sensor, rsu_locations, corner_form=False):
+    def draw_only_bbx(display, bounding_boxes, vehicle, calibration, sensor, rsu_locations=None, corner_form=False):
         """
         Draws bounding boxes on pygame display.
         """
@@ -125,9 +122,8 @@ class ClientSideBoundingBoxes(object):
             rsu_locations_matrix = np.vstack((rsu_locations_matrix.T, np.ones(rsu_locations_matrix.shape[0])))
             cords_x_y_z = ClientSideBoundingBoxes._world_to_sensor(rsu_locations_matrix, sensor)
             cords_y_minus_z_x = np.concatenate(
-                [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])0
+                [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
             rsu_point = np.transpose(np.dot(calibration, cords_y_minus_z_x))
-            print(rsu_point)
             rsu_point = np.concatenate([rsu_point[:, 0] / rsu_point[:, 2], rsu_point[:, 1] / rsu_point[:, 2]], axis=1)
             ego_vehicle_position = (int(rsu_point[-1, 0]), int(rsu_point[-1, 1]))
 

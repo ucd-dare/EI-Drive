@@ -11,10 +11,10 @@ vehicle_list:
 # Parameters needed for ScenarioRunner
 scenario_runner:
   town: town01
-  scenario: openscenario_1
+  scenario: Scenario_1
   num_actors: 2
-  configFile: '/home/junshan/EI-Drive-main/EIdrive/scenario_testing/test_scenario/scenario_1.xml'
-  additionalScenario: '/home/junshan/EI-Drive-main/EIdrive/scenario_testing/openscenario_1.py'
+  configFile: './EIdrive/scenario_testing/test_scenario/scenario_1.xml'
+  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/scenario_1.py'
   host: localhost
   port: 2000
   timeout: 10

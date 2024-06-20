@@ -1,5 +1,5 @@
 """
-The script is used for transmission model test. It is designed for algorithm runtime delay.
+The script is used for transmission model test. It is designed to test transmission delay.
 There will be a vehicle follow another vehicle.
 """
 

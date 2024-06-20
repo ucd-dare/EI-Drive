@@ -149,6 +149,9 @@ def calculate_control(vehicle):
 
     control = vehicle.agent_behavior.vehicle_control(target_speed, trajectory_buffer)
 
+    if vehicle.stop_mode:
+        control.brake = 1.0
+
     vehicle.tick = vehicle.tick + 1
 
     return control
