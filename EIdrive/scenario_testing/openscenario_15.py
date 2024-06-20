@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_15.
+
+Ego vehicle is at an intersection in Town 3. The vehicle to the Ego vehicle's left takes a wide right turn.
+Objective is to avoid the vehicle and continue straight on the road.
 """
 
 import carla

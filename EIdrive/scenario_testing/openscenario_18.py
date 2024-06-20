@@ -1,5 +1,9 @@
 """
 The script runs OpenScenario_18.
+
+Ego vehicle is on a straight road in Town 6. There is 1 vehicle traveling ahead of the Ego vehicle. 
+A pedestrian illegally crosses the road in front of the Ego vehicle.
+Objective is to avoid the pedestrian and continue on the road.
 """
 
 import carla

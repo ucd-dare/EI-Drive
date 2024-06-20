@@ -1,5 +1,9 @@
 """
 The script runs OpenScenario_1.
+
+Ego Vehicle is on a straight road in Town 1. A truck block's the Ego vehicle's path. 3 vehicles pass by on other lane going the opposite direction.
+Objective is to overtake the truck while avoiding the incoming vehicles.
+
 """
 
 import carla

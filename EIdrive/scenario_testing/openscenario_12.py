@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_12.
+
+Ego vehicle is on a straight road in Town 12. There is a vehicle ahead of it. A vehicle merges into Ego vehicle's lane from in front of a still truck.
+Objective is to avoid the merging vehicle and continue on the road.
 """
 
 import carla

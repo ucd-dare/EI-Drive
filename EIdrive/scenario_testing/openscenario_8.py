@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_8.
+
+Ego vehicle is on a straight road in Town 1. There are three vehicles in front of it. Two vehicles crash.
+Objective is to avoid the crashed vehicles and continue on the road.
 """
 
 import carla

@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_16.
+
+Ego vehicle is on a straight road in Town 1. There are two vehicles in front of it. The closer vehicle is swerving in the road.
+Objective is to safely maintain distance from the vehicles in front. 
 """
 
 import carla

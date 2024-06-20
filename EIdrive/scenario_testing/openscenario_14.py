@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_14.
+
+Ego vehicle is on the on-ramp to a highway in Town 6. There are multiple vehicles on the highway. 
+Objective is to safely merge into the highway and maintain a safe distance from the vehicles.
 """
 
 import carla

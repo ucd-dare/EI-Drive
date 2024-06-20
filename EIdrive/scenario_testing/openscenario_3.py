@@ -1,5 +1,8 @@
 """
 The script runs OpenScenario_3.
+
+Ego vehicle is at an intersection in Town 3. There is a vehicle hidden by a truck also entering the intersection.
+Objective is to cross the intersection and avoid the hidden vehicle.
 """
 
 import carla

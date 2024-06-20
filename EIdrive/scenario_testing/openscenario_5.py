@@ -1,5 +1,9 @@
 """
 The script runs OpenScenario_5.
+
+Ego vehicle is at an intersection in Town 3. There is a vehicle crossing the intersection and another vehicle taking a left turn.
+Ego vehicle's vision of crossing vehicle is blocked by trucks.
+Objective is to take a right turn and avoid the other vehicles.
 """
 
 import carla
