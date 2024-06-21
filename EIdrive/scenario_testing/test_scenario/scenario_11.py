@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 """
-Overtake Scenario:
-
-The scripts simulate a scenario where an ego vehicle has to overtake a background vehicle
-that is ahead of the ego vehicle and at a lower speed. There are two fearless pedestrians
-that suddenly appear in front of the ego vehicle and the ego vehicle has to avoid a collision
+Ego vehicle is at an intersection in Town 5. There is a vehicle turning into the Ego vehicle's lane. 
+Ego vehicle's vision of turning vehicle is blocked by a truck. There is another still vehicle at the entrance of the intersection.
+Objective is to cross the intersection and continue on the road.
 """
 
 import py_trees
@@ -21,13 +19,6 @@ from srunner.scenarios.basic_scenario import BasicScenario
 
 
 class Scenario_11(BasicScenario):
-    """
-    The class spawns two background vehicles and two pedestrians in front of the ego vehicle.
-    The ego vehicle is driving behind and overtaking the fast vehicle ahead
-
-    self.other_actors[0] = fast car
-    self.other_actors[1] = slow car
-    """
 
     timeout = 1200
 
@@ -36,7 +27,7 @@ class Scenario_11(BasicScenario):
         """
         Setup all relevant parameters and create scenario
         """
-        print("Running Unprotected Left Turn Scenario")
+        print("Running Scenario 11")
         self.timeout = timeout
         self._map = CarlaDataProvider.get_map()
         self._reference_waypoint = self._map.get_waypoint(
