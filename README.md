@@ -19,7 +19,7 @@ git clone https://github.com/ucd-dare/EI-Drive
 cd EI-Drive
 ```
 
-Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version. 
+Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version.
 Also download [Scenario Runner](https://github.com/carla-simulator/scenario_runner/releases) of version ``0.9.13``.
 
 Set the following environment variables:
