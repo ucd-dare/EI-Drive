@@ -10,6 +10,31 @@ The key features of EI-Drive are:
 * <strong>Realistic Sensing and Perception Module</strong>: Besides the sensing and perception system in CARLA and OpenCDA, EI-drive provides various ways to simulate the noise and latency in different sensing modes based on the empirical results. EI-drive also provides various approaches to fuse heterogeneous sensing sources and representative approaches to simplified high-dimensional perception data.
 * <strong>RL-friendly Support</strong>: EI-drive provides multiple RL-friendly modules to support the execution and evaluation of different RL algorithms. For example, EI-drive provides a data center module to record the trajectories of agents. All collected data can be stored in various formats and easily be queried for downstream applications such as offline RL and inverse RL. EI-drive also provides a human-control module to collect human-driven behavior trajectories for studying mixed-road driving.
 
+## Prerequisites
+
+Clone the repository:
+
+```bash
+git clone https://github.com/ucd-dare/EI-Drive
+cd EI-Drive
+```
+
+Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version. 
+Also download [Scenario Runner](https://github.com/carla-simulator/scenario_runner/releases) of version ``0.9.13``.
+
+Set the following environment variables:
+```bash
+export CARLA_ROOT=/path/to/carla 
+export SCENARIO_RUNNER_ROOT=/path/to/scenario_runner
+export PYTHONPATH="$CARLA_ROOT/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.14-py3.7-linux-x86_64.egg":${PYTHONPATH}
+```
+
+Create the EI-Drive environment using conda
+
+```bash
+conda create python=3.7 --name EI-Drive
+conda activate EI-Drive
+```
 
 ## Contributors
 
