@@ -14,6 +14,7 @@ import numpy as np
 import math
 import pandas as pd
 import sys
+from pathlib import Path
 
 
 player_ids = []
@@ -35,7 +36,7 @@ def run_scenario(scenario_params):
         edge = scenario_params.scenario.edge
         if edge:
             path = scenario_params.scenario.manual_path
-            frames = [pd.read_csv(f'{i}{path}') for i in range(6)]
+            frames = [pd.read_csv(Path("EIdrive/assets/DemoAsset/") / f'{i}{path}') for i in range(6)]
             df = pd.concat(frames)
 
         # Create game world
