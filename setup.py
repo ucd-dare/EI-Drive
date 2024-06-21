@@ -14,10 +14,10 @@ setup(
     name='EI-Drive',
     version=__version__,
     packages=find_packages(),
-    url='https://github.com/swsamleo/EI-Drive.git',
+    url='https://github.com/ucd-dare/EI-Drive.git',
     license='MIT',
-    author='Wei Shao',
-    author_email='phdweishao@gmail.com',
+    author='todo',
+    author_email='todo',
     description='A framework for fast developing cooperative driving automation and autonomous '
                 'vehicle modules in multi-resolution simulation environment"',
     long_description=open("README.md").read(),

@@ -29,20 +29,15 @@ export SCENARIO_RUNNER_ROOT=/path/to/scenario_runner
 export PYTHONPATH="$CARLA_ROOT/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.14-py3.7-linux-x86_64.egg":${PYTHONPATH}
 ```
 
-Create the EI-Drive environment using conda
-
+And run this command in your terminal:
 ```bash
-conda create python=3.7 --name EI-Drive
-conda activate EI-Drive
+source ~/.bashrc
 ```
 
-## Contributors
+Create the EI-Drive environment using conda:
 
-### Lab Principal Investigator:
-- Prof. Junshan Zhang
-
-### Project Lead: <br>
- - Dr. Wei Shao ([linkedin](https://www.linkedin.com/in/wei-shao-94972295?original_referer=https%3A%2F%2Fwww.google.com%2F), [github](https://github.com/swsamleo))  <br>
-
-### Team Members:
- - Chengyu Zhou
+```bash
+conda env create -f environment.yml
+conda activate EI-Drive
+python setup.py develop
+```
