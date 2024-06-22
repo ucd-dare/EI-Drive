@@ -14,8 +14,8 @@ scenario_runner:
   town: town06
   scenario: AtoB_1
   num_actors: 1
-  configFile: './EIdrive/scenario_testing/test_scenario/AtoB.xml'
-  additionalScenario: '/home/ucdavis/Desktop/EI-Drive/EIdrive/scenario_testing/test_scenario/atob.py'
+  configFile: 'EIdrive/scenario_testing/test_scenario/AtoB.xml'
+  additionalScenario: 'EIdrive/scenario_testing/test_scenario/atob.py'
   host: localhost
   port: 2000
   timeout: 10
