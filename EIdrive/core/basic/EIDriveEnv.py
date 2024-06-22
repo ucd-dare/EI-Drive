@@ -13,7 +13,7 @@ import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.core.basic.ml_model import MLModel
 from collections import deque
 import matplotlib.pyplot as plt
-import scenario_runner as sr
+from scenario_runner import scenario_runner as sr
 
 
 class EIDriveEnv(gym.Env):

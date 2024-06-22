@@ -4,8 +4,8 @@ from tqdm import tqdm
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool as Pool
 
-from srunner.tools.route_parser import RouteParser
-from srunner.tools.route_manipulation import interpolate_trajectory
+from scenario_runner.srunner.tools.route_parser import RouteParser
+from scenario_runner.srunner.tools.route_manipulation import interpolate_trajectory
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener

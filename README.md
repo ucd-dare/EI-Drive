@@ -20,13 +20,11 @@ cd EI-Drive
 ```
 
 Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version.
-Also download [Scenario Runner](https://github.com/carla-simulator/scenario_runner/releases) of version ``0.9.13``.
 
 Set the following environment variables:
 ```bash
 export CARLA_ROOT=/path/to/carla 
-export SCENARIO_RUNNER_ROOT=/path/to/scenario_runner
-export PYTHONPATH="$CARLA_ROOT/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.14-py3.7-linux-x86_64.egg":${PYTHONPATH}
+export PYTHONPATH="$CARLA_ROOT/PythonAPI/carla/":"$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.14-py3.7-linux-x86_64.egg":${PYTHONPATH}
 ```
 
 And run this command in your terminal:

@@ -10,7 +10,7 @@ import time
 from multiprocessing import Process
 import psutil
 
-import scenario_runner as sr
+from scenario_runner import scenario_runner as sr
 
 
 def exec_scenario_runner(scenario_params):

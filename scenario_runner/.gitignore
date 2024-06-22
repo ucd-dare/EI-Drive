@@ -1,0 +1,17 @@
+*.pyc
+scenario_runner/srunner/autoagents/*.pyc
+scenario_runner/srunner/autoagents/__pycache__/
+scenario_runner/srunner/scenariomanager/*.pyc
+scenario_runner/srunner/scenariomanager/__pycache__/
+scenario_runner/srunner/scenarios/*.pyc
+scenario_runner/srunner/scenarios/__pycache__/
+scenario_runner/srunner/utilities/*.pyc
+scenario_runner/srunner/utilities/__pycache__/
+results*.txt
+*.json
+*.log
+.project
+.pydevproject
+*.png
+*.svg
+*.dot
