@@ -31,6 +31,7 @@ import torch
 
 from EIdrive.scenario_testing import demo
 
+from EIdrive.imagePrinter import save_image
 
 class CameraSensor:
     """
@@ -423,6 +424,10 @@ class Perception:
         # Visualize perception result on camera. This will turn to True after time length of latency.
         self.after_latency = False
 
+        self.rgbCount = 0
+        self.lidarCount = 0
+
+        
     def update_trans_latency(self, latency):
         self.transmission_latency_in_sec = latency
 
@@ -551,9 +556,15 @@ class Perception:
                 rgb_image = self.object_detection_model.visualize_yolo_bbx(
                     yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
+                # Creates the window for RBG camera
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
+                
+                # Save the rgb image
+                save_image(rgb_image, "rgbYolo", self.rgbCount)
+                self.rgbCount += 1
+
             cv2.waitKey(1)
 
         if self.lidar_visualize:
@@ -565,6 +576,10 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
+            
+            # save the lidar image
+            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarYolo/image{self.lidarCount}.jpg", do_render=True)
+            self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
 
@@ -680,6 +695,11 @@ class Perception:
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
+                
+                # Save the rgb image
+                save_image(rgb_image, "rgbSSD", self.rgbCount)
+                self.rgbCount += 1
+
             cv2.waitKey(1)
 
         if self.lidar_visualize:
@@ -691,6 +711,9 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
+            # save the lidar image
+            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarSSD/image{self.lidarCount}.jpg", do_render=True)
+            self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
         self.objects = objects
@@ -765,6 +788,10 @@ class Perception:
                 cv2.imshow('%s camera of actor %d' % (names[i], self.id), rgb_image)
                 self.camera_window_pos(names[i])
 
+                # Save the rgb image
+                save_image(rgb_image, "rgbServer", self.rgbCount)
+                self.rgbCount += 1
+
                 cv2.waitKey(1)
 
     def camera_window_pos(self, name):
@@ -789,6 +816,10 @@ class Perception:
 
             convert_raw_to_o3d_pointcloud(self.lidar.data, self.lidar.o3d_pointcloud)
             visualize_point_cloud(self.o3d_vis, self.count, self.lidar.o3d_pointcloud, self.objects)
+
+            # save the lidar image
+            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarServer/image{self.lidarCount}.jpg", do_render=True)
+            self.lidarCount += 1
 
     def filter_vehicle_out_of_range(self, vehicle_list):
         """
