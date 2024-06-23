@@ -18,7 +18,7 @@ from EIdrive.core.basic.vehicle_agent import VehicleAgent
 from EIdrive.core.basic.rsu import RSU
 from EIdrive.scenario_testing.utils.customized_map import create_customized_world, bcolors
 from EIdrive.core.basic.ml_model import MLModel
-from EIdrive.imagePrinter import save_image
+import EIdrive.imagePrinter as IP
 
 def filter_blueprint_lib(blueprint_library):
     """
@@ -97,15 +97,14 @@ def gamemap_visualize(vehicle):
         The carla vehicle agent.
 
     """
-    count = 0
     if not vehicle.gamemap.activate:
         return
     vehicle.gamemap.render_static_agents()
     vehicle.gamemap.render_dynamic_agents()
     if vehicle.gamemap.visualize:
         cv2.imshow('the bev map of agent %s' % vehicle.gamemap.agent_id, vehicle.gamemap.vis_bev)
-        save_image(vehicle.gamemap.vis_bev, 'bev', count)
-        count += 1
+        IP.save_image(vehicle.gamemap.vis_bev, 'bev', IP.count)
+        IP.count += 1
         cv2.waitKey(1)
 
 
