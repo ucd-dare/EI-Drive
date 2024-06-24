@@ -562,7 +562,8 @@ class Perception:
                     (names[i], self.id), rgb_image)
                 
                 # Save the rgb image
-                save_image(rgb_image, "rgbYolo", self.rgbCount)
+                if self.rgbCount % 10 == 0:
+                    save_image(rgb_image, "rgbYolo", self.rgbCount)
                 self.rgbCount += 1
 
             cv2.waitKey(1)
@@ -578,7 +579,8 @@ class Perception:
                 objects)
             
             # save the lidar image
-            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarYolo/image{self.lidarCount}.jpg", do_render=True)
+            if self.lidarCount % 10 == 0:
+                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarYolo/image{self.lidarCount}.jpg", do_render=True)
             self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
@@ -616,7 +618,6 @@ class Perception:
         # If no camera is created, stop detection.
         if len(self.rgb_camera) == 0:
             return {'vehicles': [], 'traffic_lights': []}
-        print("running ssd detection")
         rgb_images = []
         for rgb_camera in self.rgb_camera:
             while rgb_camera.image is None:
@@ -639,14 +640,13 @@ class Perception:
 
         # Convert to PyTorch tensor and adjust dimensions (batch_size, channels, height, width)
         input_tensor = torch.tensor(processed_images).permute(0, 3, 1, 2).float()
+        input_tensor = input_tensor.to('cuda')
 
         with torch.no_grad():
             detections_batch = self.object_detection_model.object_detector_SSD(input_tensor)
-        print("uwahh")
         results_per_input = self.object_detection_model.utils.decode_results(detections_batch)
         best_results_per_input = [self.object_detection_model.utils.pick_best(results, 0.4) for results in results_per_input]
         classes_to_labels = self.object_detection_model.utils.get_coco_object_dictionary()
-        print("uwahh2")
         # Assuming each detection in best_results_per_input is in the format
         # [class_id, score, x_min, y_min, x_max, y_max]
         rescaled_results = []
@@ -697,7 +697,8 @@ class Perception:
                     (names[i], self.id), rgb_image)
                 
                 # Save the rgb image
-                save_image(rgb_image, "rgbSSD", self.rgbCount)
+                if self.rgbCount % 10 == 0:
+                    save_image(rgb_image, "rgbSSD", self.rgbCount)
                 self.rgbCount += 1
 
             cv2.waitKey(1)
@@ -712,7 +713,8 @@ class Perception:
                 self.lidar.o3d_pointcloud,
                 objects)
             # save the lidar image
-            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarSSD/image{self.lidarCount}.jpg", do_render=True)
+            if self.lidarCount % 10 == 0:
+                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarSSD/image{self.lidarCount}.jpg", do_render=True)
             self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
@@ -735,7 +737,6 @@ class Perception:
          objects: dict
             Updated object dictionary.
         """
-        print("running server detection")
         if self.transmission_latency and self.transmission_latency_in_sec > 0:
             current_objects = self.filter_and_update_vehicles(objects)
             latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
@@ -743,8 +744,6 @@ class Perception:
                 objects = self.server_detected_objects_queue.popleft()
         else:
             objects = self.filter_and_update_vehicles(objects)
-
-        print("attempting to visualize cameras")
 
         self.visualize_camera(objects)
         self.visualize_lidar()
@@ -783,7 +782,6 @@ class Perception:
             for (i, rgb_camera) in enumerate(self.rgb_camera):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
-                print("visualizing rgb")
                 rgb_image = np.array(rgb_camera.image)
                 rgb_image = self.visualize_bbx_front_camera(objects, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
@@ -791,9 +789,8 @@ class Perception:
                 cv2.imshow('%s camera of actor %d' % (names[i], self.id), rgb_image)
                 self.camera_window_pos(names[i])
 
-                # Save the rgb image
-                print(f"printing server image {self.rgbCount}")
-                save_image(rgb_image, "rgbServer", self.rgbCount)
+                if self.rgbCount % 10 == 0:
+                    save_image(rgb_image, "rgbServer", self.rgbCount)
                 self.rgbCount += 1
 
                 cv2.waitKey(1)
@@ -817,12 +814,12 @@ class Perception:
         if self.lidar_visualize:
             while self.lidar.data is None:
                 continue
-            print("visualizing lidar")
             convert_raw_to_o3d_pointcloud(self.lidar.data, self.lidar.o3d_pointcloud)
             visualize_point_cloud(self.o3d_vis, self.count, self.lidar.o3d_pointcloud, self.objects)
 
             # save the lidar image
-            self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarServer/image{self.lidarCount}.jpg", do_render=True)
+            if self.lidarCount % 10 == 0:
+                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarServer/image{self.lidarCount}.jpg", do_render=True)
             self.lidarCount += 1
 
     def filter_vehicle_out_of_range(self, vehicle_list):

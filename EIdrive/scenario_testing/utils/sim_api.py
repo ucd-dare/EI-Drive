@@ -103,7 +103,8 @@ def gamemap_visualize(vehicle):
     vehicle.gamemap.render_dynamic_agents()
     if vehicle.gamemap.visualize:
         cv2.imshow('the bev map of agent %s' % vehicle.gamemap.agent_id, vehicle.gamemap.vis_bev)
-        IP.save_image(vehicle.gamemap.vis_bev, 'bev', IP.count)
+        if IP.count % 10 == 0:
+            IP.save_image(vehicle.gamemap.vis_bev, 'bev', IP.count)
         IP.count += 1
         cv2.waitKey(1)
 

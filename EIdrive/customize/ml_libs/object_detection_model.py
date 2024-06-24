@@ -35,7 +35,7 @@ class ObjectDetectionModel(object):
         # SSD model
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd_processing_utils')
         self.object_detector_SSD = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd', trust_repo=True)
-        # self.object_detector.to('cuda')
+        self.object_detector_SSD.to('cuda')
         self.object_detector_SSD.eval()
 
     def visualize_yolo_bbx(self, yolo_result, original_image, detection_index):

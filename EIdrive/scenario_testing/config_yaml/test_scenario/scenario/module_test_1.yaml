@@ -2,7 +2,7 @@ test_scenario: module_test_1
 
 vehicle_list:
   - name: vehicle_1
-    destination: [[138.0, 48.8, 0.5]]
+    destination: [[150.0, 48.8, 0.5]]
     behavior:
       local_planner:
         debug_trajectory: true
