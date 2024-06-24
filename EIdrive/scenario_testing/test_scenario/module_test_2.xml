@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<scenarios>
+    <scenario name="module_test_2" type="module_test_2" town="Town06">
+        <ego_vehicle x="70" y="48.8" z="0.3" yaw="0" model="vehicle.nissan.patrol" />
+        <other_actor x="100" y="48.8" z="-500" yaw="0" model="vehicle.lincoln.mkz_2017" />
+        <weather cloudiness="0" precipitation="0" precipitation_deposits="0" wind_intensity="0" sun_azimuth_angle="0" sun_altitude_angle="75" />
+    </scenario>
+</scenarios>

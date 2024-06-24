@@ -354,7 +354,7 @@ class Perception:
     """
 
     def __init__(self, vehicle, config_yaml, ml_model,
-                 carla_world=None, infra_id=None):
+                    carla_world=None, infra_id=None):
         self.vehicle = vehicle
         self.carla_world = carla_world if carla_world is not None \
             else self.vehicle.get_world()
@@ -610,13 +610,13 @@ class Perception:
 
         Returns
         -------
-         objects: dict
+        objects: dict
             Updated object dictionary.
         """
         # If no camera is created, stop detection.
         if len(self.rgb_camera) == 0:
             return {'vehicles': [], 'traffic_lights': []}
-
+        print("running ssd detection")
         rgb_images = []
         for rgb_camera in self.rgb_camera:
             while rgb_camera.image is None:
@@ -642,11 +642,11 @@ class Perception:
 
         with torch.no_grad():
             detections_batch = self.object_detection_model.object_detector_SSD(input_tensor)
-
+        print("uwahh")
         results_per_input = self.object_detection_model.utils.decode_results(detections_batch)
         best_results_per_input = [self.object_detection_model.utils.pick_best(results, 0.4) for results in results_per_input]
         classes_to_labels = self.object_detection_model.utils.get_coco_object_dictionary()
-
+        print("uwahh2")
         # Assuming each detection in best_results_per_input is in the format
         # [class_id, score, x_min, y_min, x_max, y_max]
         rescaled_results = []
@@ -735,7 +735,7 @@ class Perception:
          objects: dict
             Updated object dictionary.
         """
-
+        print("running server detection")
         if self.transmission_latency and self.transmission_latency_in_sec > 0:
             current_objects = self.filter_and_update_vehicles(objects)
             latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
@@ -743,6 +743,9 @@ class Perception:
                 objects = self.server_detected_objects_queue.popleft()
         else:
             objects = self.filter_and_update_vehicles(objects)
+
+        print("attempting to visualize cameras")
+
         self.visualize_camera(objects)
         self.visualize_lidar()
         objects = self.get_traffic_lights(objects)
@@ -780,7 +783,7 @@ class Perception:
             for (i, rgb_camera) in enumerate(self.rgb_camera):
                 if i > self.camera_num - 1 or i > self.camera_visualize - 1:
                     break
-
+                print("visualizing rgb")
                 rgb_image = np.array(rgb_camera.image)
                 rgb_image = self.visualize_bbx_front_camera(objects, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
@@ -789,6 +792,7 @@ class Perception:
                 self.camera_window_pos(names[i])
 
                 # Save the rgb image
+                print(f"printing server image {self.rgbCount}")
                 save_image(rgb_image, "rgbServer", self.rgbCount)
                 self.rgbCount += 1
 
@@ -813,7 +817,7 @@ class Perception:
         if self.lidar_visualize:
             while self.lidar.data is None:
                 continue
-
+            print("visualizing lidar")
             convert_raw_to_o3d_pointcloud(self.lidar.data, self.lidar.o3d_pointcloud)
             visualize_point_cloud(self.o3d_vis, self.count, self.lidar.o3d_pointcloud, self.objects)
 
