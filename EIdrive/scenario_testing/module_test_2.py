@@ -1,30 +1,27 @@
 """
-The script runs module_test_2
+The script is used for testing the sensor, perception, and planning modules of EI Drive with an follwing scenario.
 """
 
-import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
-
-import time
-from multiprocessing import Process
-import psutil
-
-from scenario_runner import scenario_runner as sr
+from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
+import sys
 
 
-def exec_scenario_runner(scenario_params):
+player_ids = []
+
+
+def customized_bp(world):
     """
-    Execute the ScenarioRunner process
-
-    Parameters
-    ----------
-    scenario_params: Parameters of ScenarioRunner
-
+    Provide customized vehicle blueprints.
     """
-    scenario_runner = sr.ScenarioRunner(scenario_params.scenario.scenario_runner)
-    scenario_runner.run()
-    scenario_runner.destroy()
+    vehicle_blueprints = []
+    vehicle_model = 'vehicle.lincoln.mkz_2020'
+    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
+    vehicle_blueprint.set_attribute('color', '255, 0, 0')
+    vehicle_blueprints.append(vehicle_blueprint)
+    vehicle_blueprints.append(vehicle_blueprint)
+    return vehicle_blueprints
 
 
 def run_scenario(scenario_params):
@@ -33,77 +30,40 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params,
-                                      scenario_params.common_params.version,
-                                      map_name=scenario_params.scenario.scenario_runner.town)
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town06')
 
-        # Create a background process to init and execute scenario runner
-        sr_process = Process(target=exec_scenario_runner,
-                             args=(scenario_params,))
-        sr_process.start()
+        vehicle_blueprints = customized_bp(gameworld.world)
+        vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)
 
-        key_listener = KeyListener()
-        key_listener.start()
+        spectator = gameworld.world.get_spectator()
 
-        world = gameworld.world
-        ego_vehicle = None
-        num_actors = 0
+        # Keyboard listener
+        t = 0
+        kl = KeyListener()
+        kl.start()
 
-        while ego_vehicle is None or num_actors < scenario_params.scenario.scenario_runner.num_actors:
-            print("Waiting for the actors")
-            time.sleep(2)
-            vehicles = world.get_actors().filter('vehicle.*')
-            walkers = world.get_actors().filter('walker.*')
-            for vehicle in vehicles:
-                if vehicle.attributes['role_name'] == 'hero':
-                    print("Ego vehicle found")
-                    ego_vehicle = vehicle
-            num_actors = len(vehicles) + len(walkers)
-        print(f'Found all {num_actors} actors')
-
-        vehicle_list = gameworld.create_vehicle_agent_from_scenario_runner(
-            vehicle=ego_vehicle,
-        )
-
-
-        # This is the CARLAUE4 BEV
-        spectator = ego_vehicle.get_world().get_spectator()
-
-        # Bird view following
-        spectator_altitude = 100
-        spectator_bird_pitch = -90
+        spec_controller = SpectatorController(spectator)
 
         while True:
-            if key_listener.keys['esc']:
-                sr_process.kill()
-                # Terminate the main process
-                return
-            if key_listener.keys['p']:
-                psutil.Process(sr_process.pid).suspend()
+            # Pause and exit
+            if kl.keys['esc']:
+                exit(0)
+            if kl.keys['p']:
                 continue
-            if not key_listener.keys['p']:
-                psutil.Process(sr_process.pid).resume()
 
             gameworld.tick()
 
             for vehicle_agent in vehicle_list:
                 vehicle_agent.update_info()
-                
-                # This is the simplified popup BEV (cv2)
                 sim_api.gamemap_visualize(vehicle_agent)
                 control = sim_api.calculate_control(vehicle_agent)
                 vehicle_agent.vehicle.apply_control(control)
 
-            ego_v = vehicle_list[0].vehicle
+            spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform())
 
-            # Bird view following
-            view_transform = carla.Transform()
-            view_transform.location = ego_v.get_transform().location
-            view_transform.location.z = view_transform.location.z + spectator_altitude
-            view_transform.rotation.pitch = spectator_bird_pitch
-            spectator.set_transform(view_transform)
-
-            time.sleep(0.01)
+            t = t + 1
+            if 3000 == t:
+                sys.exit(0)
 
     finally:
         if gameworld is not None:
@@ -112,4 +72,3 @@ def run_scenario(scenario_params):
         if scenario_runner is not None:
             scenario_runner.destroy()
         print("Destroyed scenario_runner")
-

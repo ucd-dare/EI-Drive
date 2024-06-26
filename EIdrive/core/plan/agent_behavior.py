@@ -163,7 +163,6 @@ class AgentBehavior(object):
         # For current version, consider vehicles only.
         obstacle_vehicles = detected_objects['vehicles']
         self.obstacle_vehicles = self.white_list_filter(obstacle_vehicles)
-
         if self.ignore_traffic_light:
             self.light_state = "Green"
         else:
@@ -354,7 +353,6 @@ class AgentBehavior(object):
                 if distance_to_vehicle < min_distance:
                     min_distance = distance_to_vehicle
                     colliding_vehicle = vehicle
-
         return is_collision_detected, colliding_vehicle, min_distance
 
     def overtake_management(self, obstacle_vehicle):
@@ -381,6 +379,40 @@ class AgentBehavior(object):
 
         left_adjacent_waypoint = obstacle_waypoint.get_left_lane()
         right_adjacent_waypoint = obstacle_waypoint.get_right_lane()
+
+        # Check for possible right overtaking
+        if (can_turn_right in [carla.LaneChange.Right, carla.LaneChange.Both]) and \
+           right_adjacent_waypoint and \
+           obstacle_waypoint.lane_id * right_adjacent_waypoint.lane_id > 0 and \
+           right_adjacent_waypoint.lane_type == carla.LaneType.Driving:
+
+            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
+                ego_loc=self.vehicle_pos.location,
+                target_wpt=right_adjacent_waypoint,
+                overtake=True)
+
+            hazardous_situation, _, _ = self.check_collision(
+                path_x, path_y, path_yaw,
+                self.map.get_waypoint(self.vehicle_pos.location),
+                check_adjacent_lane=True)
+
+            if not hazardous_situation:
+                print("Performing right overtaking")
+                self.overtake_counter = 100
+                next_waypoints = right_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
+
+                if not next_waypoints:
+                    return True
+
+                target_waypoint = next_waypoints[0]
+                right_adjacent_waypoint = right_adjacent_waypoint.next(5)[0]
+
+                self.set_local_planner(
+                    right_adjacent_waypoint.transform.location,
+                    target_waypoint.transform.location,
+                    clear_waypoints=True,
+                    reset_end=False)
+                return hazardous_situation
 
         # Check for possible left overtaking
         if (can_turn_left in [carla.LaneChange.Left, carla.LaneChange.Both]) and \
@@ -416,39 +448,6 @@ class AgentBehavior(object):
                     reset_end=False)
                 return hazardous_situation
 
-        # Check for possible right overtaking
-        if (can_turn_right in [carla.LaneChange.Right, carla.LaneChange.Both]) and \
-           right_adjacent_waypoint and \
-           obstacle_waypoint.lane_id * right_adjacent_waypoint.lane_id > 0 and \
-           right_adjacent_waypoint.lane_type == carla.LaneType.Driving:
-
-            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
-                ego_loc=self.vehicle_pos.location,
-                target_wpt=right_adjacent_waypoint,
-                overtake=True)
-
-            hazardous_situation, _, _ = self.check_collision(
-                path_x, path_y, path_yaw,
-                self.map.get_waypoint(self.vehicle_pos.location),
-                check_adjacent_lane=True)
-
-            if not hazardous_situation:
-                print("Performing right overtaking")
-                self.overtake_counter = 100
-                next_waypoints = right_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
-
-                if not next_waypoints:
-                    return True
-
-                target_waypoint = next_waypoints[0]
-                right_adjacent_waypoint = right_adjacent_waypoint.next(5)[0]
-
-                self.set_local_planner(
-                    right_adjacent_waypoint.transform.location,
-                    target_waypoint.transform.location,
-                    clear_waypoints=True,
-                    reset_end=False)
-                return hazardous_situation
 
         return True
 
@@ -527,7 +526,6 @@ class AgentBehavior(object):
         # Otherwise, attempt to match the leading vehicle's speed.
         else:
             adjusted_speed = 0 if lead_vehicle_speed == 0 else min(lead_vehicle_speed + 1, desired_speed)
-
         return adjusted_speed
 
     def is_near_intersection(self, objects, waypoint_buffer):

@@ -23,7 +23,7 @@ from EIdrive.core.sensing.perception.dynamic_obstacle import \
 from EIdrive.core.sensing.perception.static_obstacle import TrafficLight
 from EIdrive.core.sensing.perception.open3d_visualize import \
     o3d_visualizer_init, convert_raw_to_o3d_pointcloud, visualize_point_cloud, \
-    camera_lidar_fusion_yolo
+    camera_lidar_fusion_yolo, camera_lidar_fusion_SSD
 from collections import deque
 from PIL import Image
 import torch
@@ -409,6 +409,12 @@ class Perception:
                 self.o3d_vis = o3d_visualizer_init(self.id)
             else:
                 self.o3d_vis = None
+        elif self.lidar_visualize:
+            self.lidar = LidarSensor(vehicle,
+                                     self.carla_world,
+                                     config_yaml['lidar'],
+                                     self.global_position)
+            self.o3d_vis = o3d_visualizer_init(self.id)
         else:
             self.lidar = None
             self.o3d_vis = None
@@ -680,6 +686,12 @@ class Perception:
                     rgb_camera.image))
             rgb_draw_images.append(rgb_image)
 
+            objects = camera_lidar_fusion_SSD(
+                objects,
+                rescaled_results[i],
+                self.lidar.data,
+                projected_lidar,
+                self.lidar.sensor)
         # Calculate the speed. Current we retrieve from the server directly.
         self.get_speed(objects)
 
@@ -734,7 +746,7 @@ class Perception:
 
         Returns
         -------
-         objects: dict
+        objects: dict
             Updated object dictionary.
         """
         if self.transmission_latency and self.transmission_latency_in_sec > 0:

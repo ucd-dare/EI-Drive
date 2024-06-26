@@ -1,40 +1,27 @@
 test_scenario: module_test_2
-
 vehicle_list:
-  - name: vehicle_1
-    destination: [[138.0, 48.8, 0.5]]
+  - id: 0
+    spawn_position: [40, 52.2, 0.3, 0, 0, 0]
+    destination: [[200, 52.2, 0.3]]
     behavior:
       local_planner:
         debug_trajectory: true
         debug: true
-
-# Parameters needed for ScenarioRunner
-scenario_runner:
-  town: town06
-  scenario: module_test_2
-  num_actors: 2
-  configFile: 'EIdrive/scenario_testing/test_scenario/module_test_2.xml'
-  additionalScenario: 'EIdrive/scenario_testing/test_scenario/module_test_2.py'
-  host: localhost
-  port: 2000
-  timeout: 10
-  debug: false
-  sync: false
-  repetitions: 1
-  agent: null
-  openscenario: null
-  route: null
-  reloadWorld: false
-  waitForEgo: false
-  trafficManagerPort: '8000'
-  trafficManagerSeed: '0'
-  record: ''
-  agentConfig: ''
-  file: false
-  json: false
-  junit: false
-  list: false
-  penscenarioparams: null
-  output: false
-  outputDir: ''
-  randomize: false
+      max_speed: 18
+      overtake_allowed: false
+  - id: 1
+    spawn_position: [60, 52.2, 0.3, 0, 0, 0 ]
+    destination: [[200, 52.2, 0.3 ]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+      max_speed: 15
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+    game_map:
+      visualize: false
