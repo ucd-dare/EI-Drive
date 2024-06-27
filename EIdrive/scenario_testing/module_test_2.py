@@ -61,6 +61,13 @@ def run_scenario(scenario_params):
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform())
 
+            for vehicle_agent in vehicle_list:
+                control = sim_api.calculate_control(vehicle_agent)
+                if vehicle_agent == vehicle_list[1] and 115 <= t <= 160:
+                    control.brake = 0.5
+                    control.throttle = 0
+                vehicle_agent.vehicle.apply_control(control)
+
             t = t + 1
             if 3000 == t:
                 sys.exit(0)

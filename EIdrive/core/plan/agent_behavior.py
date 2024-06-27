@@ -705,7 +705,6 @@ class AgentBehavior(object):
 
         if self.light_id_to_ignore != light_id:
             self.light_id_to_ignore = -1
-
         return 0
 
     def rule_based_trajectory_planning(self, desired_speed=None, collision_detection=True, lane_change_allowed=True):

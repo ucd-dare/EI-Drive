@@ -228,7 +228,6 @@ def camera_lidar_fusion_SSD(objects,
         box_corners = np.r_[box_corners, [np.ones(box_corners.shape[1])]]
         world_corners = st.sensor_to_world(box_corners, lidar_sensor.get_transform())
         world_corners = world_corners.transpose()[:, :3]
-        print(f"Object label: {object_label}")
         if is_vehicle_in_cococlass(object_label):
             vehicle_obstacle = DynamicObstacle(world_corners, bounding_box)
             if 'vehicles' in objects:
