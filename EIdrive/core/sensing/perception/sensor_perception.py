@@ -956,7 +956,7 @@ class Perception:
 
         # Get list of all traffic lights from the CARLA world
         traffic_lights = self.carla_world.get_actors().filter('traffic.traffic_light*')
-
+        stop_signs = self.carla_world.get_actors().filter('traffic.stop*')
         nearby_lights = []
 
         for light in traffic_lights:
@@ -964,6 +964,11 @@ class Perception:
                 light_info = TrafficLight(light.get_location(), light.get_state())
                 nearby_lights.append(light_info)
 
+        for stop_sign in stop_signs:
+            if self.dist(stop_sign) < 50:
+                light_info = TrafficLight(stop_sign.get_location(), 'Red')
+                nearby_lights.append(light_info)
+        
         detected_objects['traffic_lights'] = nearby_lights
 
         return detected_objects

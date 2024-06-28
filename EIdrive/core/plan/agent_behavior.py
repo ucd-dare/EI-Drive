@@ -546,8 +546,8 @@ class AgentBehavior(object):
         is_near_intersection : boolean
             Indicates if any upcoming waypoint is near an intersection.
         """
-        traffic_lights = objects['traffic_lights']
 
+        traffic_lights = objects['traffic_lights']
         for traffic_light in traffic_lights:
             for waypoint, _ in waypoint_buffer:
                 distance_to_light = traffic_light.get_location().distance(waypoint.transform.location)
@@ -638,7 +638,6 @@ class AgentBehavior(object):
 
         waypoint_buffer = self.get_local_planner().get_global_route()
         mid_buffer_index = len(waypoint_buffer) // 2
-
         # If at an intersection, select a future waypoint that ensures continued travel on the same lane.
         if is_intersection:
             pushed_destination = waypoint_buffer[mid_buffer_index][0].next(
@@ -677,7 +676,6 @@ class AgentBehavior(object):
         """
 
         light_id = self.vehicle.get_traffic_light().id if self.vehicle.get_traffic_light() else -1
-
         # This condition represents a scenario where the vehicle recently passed a stop sign
         # and won't halt at any subsequent stop sign for the next 4 seconds.
         if 60 <= self.stop_sign_wait_count < 240:
@@ -758,7 +756,6 @@ class AgentBehavior(object):
 
         # 1. Manage behavior at traffic lights
         if self.handle_traffic_signals(ego_waypoint) != 0:
-            print('handle_traffic_signals')
             return 0, None
 
         # 2. Reset to global route if temporary route is finished
