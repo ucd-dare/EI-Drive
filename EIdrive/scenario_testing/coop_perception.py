@@ -43,7 +43,7 @@ def run_scenario(scenario_params):
     scenario_runner = None
     gameworld = None
 
-    ground_truth_bbx = False  # When it is true, show the ground truth bbx
+    ground_truth_bbx = True  # When it is true, show the ground truth bbx
     coop_perception = False  # With the help of RSU
 
     try:

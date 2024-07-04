@@ -324,7 +324,7 @@ class PygameCamera:
         bbox = ClientSideBoundingBoxes.get_bounding_box(vehicle, camera)
         points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
         in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=
-                   pt[1] <= VIEW_HEIGHT for pt in points]
+                pt[1] <= VIEW_HEIGHT for pt in points]
 
         # Check if vehicle is within a reasonable range (let's say 50 meters for now)
         in_range = self.get_distance(vehicle, self.vehicle) <= 50
