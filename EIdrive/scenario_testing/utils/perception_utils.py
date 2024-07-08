@@ -137,31 +137,33 @@ class ClientSideBoundingBoxes(object):
                 corners = np.vstack((corners.T, np.ones(corners.shape[0])))
             else:
                 corners = np.vstack((bbox.T, np.ones(bbox.shape[0])))
+            
             cords_x_y_z = ClientSideBoundingBoxes._world_to_sensor(corners, sensor)
             cords_y_minus_z_x = np.concatenate(
                 [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
             bbox = np.transpose(np.dot(calibration, cords_y_minus_z_x))
             camera_bbox = np.concatenate([bbox[:, 0] / bbox[:, 2], bbox[:, 1] / bbox[:, 2], bbox[:, 2]], axis=1)
-
             points = [(int(camera_bbox[i, 0]), int(camera_bbox[i, 1])) for i in range(8)]
 
-            # Drawing the bounding box
-            width = 3
-            # Base
-            pygame.draw.line(bb_surface, color, points[0], points[1], width)
-            pygame.draw.line(bb_surface, color, points[1], points[7], width)
-            pygame.draw.line(bb_surface, color, points[7], points[2], width)
-            pygame.draw.line(bb_surface, color, points[2], points[0], width)
-            # Top
-            pygame.draw.line(bb_surface, color, points[3], points[5], width)
-            pygame.draw.line(bb_surface, color, points[5], points[4], width)
-            pygame.draw.line(bb_surface, color, points[4], points[6], width)
-            pygame.draw.line(bb_surface, color, points[6], points[3], width)
-            # Base-Top connections
-            pygame.draw.line(bb_surface, color, points[0], points[3], width)
-            pygame.draw.line(bb_surface, color, points[2], points[5], width)
-            pygame.draw.line(bb_surface, color, points[1], points[6], width)
-            pygame.draw.line(bb_surface, color, points[7], points[4], width)
+            in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=pt[1] <= VIEW_HEIGHT for pt in points]
+            if any(in_view):
+                # Drawing the bounding box
+                width = 3
+                # Base
+                pygame.draw.line(bb_surface, color, points[0], points[1], width)
+                pygame.draw.line(bb_surface, color, points[1], points[7], width)
+                pygame.draw.line(bb_surface, color, points[7], points[2], width)
+                pygame.draw.line(bb_surface, color, points[2], points[0], width)
+                # Top
+                pygame.draw.line(bb_surface, color, points[3], points[5], width)
+                pygame.draw.line(bb_surface, color, points[5], points[4], width)
+                pygame.draw.line(bb_surface, color, points[4], points[6], width)
+                pygame.draw.line(bb_surface, color, points[6], points[3], width)
+                # Base-Top connections
+                pygame.draw.line(bb_surface, color, points[0], points[3], width)
+                pygame.draw.line(bb_surface, color, points[2], points[5], width)
+                pygame.draw.line(bb_surface, color, points[1], points[6], width)
+                pygame.draw.line(bb_surface, color, points[7], points[4], width)
 
         display.blit(bb_surface, (0, 0))
 
@@ -264,7 +266,6 @@ class ClientSideBoundingBoxes(object):
         matrix[2, 1] = -c_p * s_r
         matrix[2, 2] = c_p * c_r
         return matrix
-
 
 class PygameCamera:
     def __init__(self, world, vehicle, display):

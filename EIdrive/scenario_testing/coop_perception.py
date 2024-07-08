@@ -44,7 +44,7 @@ def run_scenario(scenario_params):
     gameworld = None
 
     ground_truth_bbx = False  # When it is true, show the ground truth bbx
-    coop_perception = False  # With the help of RSU
+    coop_perception = True  # With the help of RSU
 
     trigger_tick = None
 
@@ -165,6 +165,7 @@ def run_scenario(scenario_params):
                                                             line_between_vehicle=False)
             elif coop_perception:
                 # Visualize data fusion result
+
                 ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
                                                     cam.camera_actor.calibration, cam.camera_actor, rsu_locations)
                 
