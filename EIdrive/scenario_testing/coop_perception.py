@@ -43,8 +43,10 @@ def run_scenario(scenario_params):
     scenario_runner = None
     gameworld = None
 
-    ground_truth_bbx = True  # When it is true, show the ground truth bbx
+    ground_truth_bbx = False  # When it is true, show the ground truth bbx
     coop_perception = False  # With the help of RSU
+
+    trigger_tick = None
 
     try:
         # Create game world
@@ -143,11 +145,11 @@ def run_scenario(scenario_params):
                 ego_base_z = ego_vehicle_bbox[0, 2] - cam.vehicle.bounding_box.extent.z
 
                 in_sight_vehicles = [vehicle for vehicle in vehicles if
-                                     vehicle.id != cam.vehicle.id and cam.is_in_sight(vehicle, cam.camera_actor)]
+                                    vehicle.id != cam.vehicle.id and cam.is_in_sight(vehicle, cam.camera_actor)]
                 bounding_boxes = [(vehicle.id, ClientSideBoundingBoxes.get_bounding_box(vehicle, cam.camera_actor)) for
-                                  vehicle in in_sight_vehicles]
+                                vehicle in in_sight_vehicles]
                 bounding_boxes = [(vehicle_id, bbox) for vehicle_id, bbox in bounding_boxes if
-                                  bbox[4, 2] <= ego_base_z + 50]
+                                bbox[4, 2] <= ego_base_z + 50]
 
                 ego_vehicle_position = (int(ego_vehicle_bbox[0, 0]), int(ego_vehicle_bbox[0, 1]))
 
@@ -159,29 +161,42 @@ def run_scenario(scenario_params):
                     }
 
                 ClientSideBoundingBoxes.draw_ground_truth_bbx(cam.display, bounding_boxes, ego_vehicle_position,
-                                                              vehicle_info, ego_bbox=ego_vehicle_bbox,
-                                                              line_between_vehicle=False)
+                                                            vehicle_info, ego_bbox=ego_vehicle_bbox,
+                                                            line_between_vehicle=False)
             elif coop_perception:
                 # Visualize data fusion result
                 ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
-                                                      cam.camera_actor.calibration, cam.camera_actor, rsu_locations)
+                                                    cam.camera_actor.calibration, cam.camera_actor, rsu_locations)
+                
             else:
                 # Visualize perception result only from ego vehicle
                 ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
-                                                      cam.camera_actor.calibration, cam.camera_actor)
+                                                    cam.camera_actor.calibration, cam.camera_actor)
+                
+            # If a bounding box is in the trigger area, set the current time as the starting point for a brake
+            for bbox in bbx_list:
+                corners = bbox.corners
+                corners = np.vstack((corners.T, np.ones(corners.shape[0])))
+                center_x = np.mean(corners[0, :])
+                center_y = np.mean(corners[1, :])
+                if -77 <= center_x <= -73 and -133 <= center_y <= -125:
+                    trigger_tick = t
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
 
             pygame.display.flip()
 
             # Apply control to vehicles
+            
             for vehicle_agent in vehicle_list:
                 control = sim_api.calculate_control(vehicle_agent)
-                if coop_perception and vehicle_agent == vehicle_list[0] and 115 <= t <= 160:
+                
+                # Brakes when a bounding box is in the trigger area and for 25 ticks after the bounding box leaves the area
+                if trigger_tick is not None and t - trigger_tick < 35 and vehicle_agent == vehicle_list[0]:
                     control.brake = 0.05
                     control.throttle = 0
-                vehicle_agent.vehicle.apply_control(control)
 
+                vehicle_agent.vehicle.apply_control(control)
             t = t + 1
             if 3000 == t:
                 sys.exit(0)

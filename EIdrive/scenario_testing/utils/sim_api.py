@@ -145,7 +145,6 @@ def calculate_control(vehicle):
 
     elif not vehicle.stop_mode:
         target_speed, trajectory_buffer = vehicle.agent_behavior.rule_based_trajectory_planning(target_speed)
-        print(target_speed)
     else:
         # When the stop model is True, stop planning
         target_speed = None

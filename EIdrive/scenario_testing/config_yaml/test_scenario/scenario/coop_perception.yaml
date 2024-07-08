@@ -22,7 +22,7 @@ vehicle_list:
       lidar:
         visualize: false      
     behavior:
-      max_speed: 38 #not stopping in time at max speed 38
+      max_speed: 38
       local_planner:
         debug_trajectory: true
         debug: true
