@@ -31,8 +31,6 @@ import torch
 
 from EIdrive.scenario_testing import demo
 
-from EIdrive.imagePrinter import save_image
-
 class CameraSensor:
     """
     Manage the camera for the vehicle.
@@ -430,9 +428,6 @@ class Perception:
         # Visualize perception result on camera. This will turn to True after time length of latency.
         self.after_latency = False
 
-        self.rgbCount = 0
-        self.lidarCount = 0
-
         
     def update_trans_latency(self, latency):
         self.transmission_latency_in_sec = latency
@@ -566,11 +561,6 @@ class Perception:
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
-                
-                # Save the rgb image
-                if self.rgbCount % 10 == 0:
-                    save_image(rgb_image, "rgbYolo", self.rgbCount)
-                self.rgbCount += 1
 
             cv2.waitKey(1)
 
@@ -707,11 +697,6 @@ class Perception:
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
-                
-                # Save the rgb image
-                if self.rgbCount % 10 == 0:
-                    save_image(rgb_image, "rgbSSD", self.rgbCount)
-                self.rgbCount += 1
 
             cv2.waitKey(1)
 
@@ -800,10 +785,6 @@ class Perception:
 
                 cv2.imshow('%s camera of actor %d' % (names[i], self.id), rgb_image)
                 self.camera_window_pos(names[i])
-
-                if self.rgbCount % 10 == 0:
-                    save_image(rgb_image, "rgbServer", self.rgbCount)
-                self.rgbCount += 1
 
                 cv2.waitKey(1)
 

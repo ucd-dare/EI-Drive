@@ -19,6 +19,51 @@ class ClientSideBoundingBoxes(object):
     This is a module responsible for creating 3D bounding boxes and drawing them
     client-side on pygame surface.
     """
+    def VisializeBBX(ground_truth_bbx, coop_perception, cam, vehicles,  bbx_list, vehicle_list, rsu_locations, t):
+    # Visualize the bbx
+        if ground_truth_bbx:
+            # Get z-coordinate of the base of the ego vehicle's bounding box
+            ego_vehicle_bbox = ClientSideBoundingBoxes.get_bounding_box(cam.vehicle, cam.camera_actor)
+            ego_base_z = ego_vehicle_bbox[0, 2] - cam.vehicle.bounding_box.extent.z
+
+            in_sight_vehicles = [vehicle for vehicle in vehicles if
+                                vehicle.id != cam.vehicle.id and cam.is_in_sight(vehicle, cam.camera_actor)]
+            bounding_boxes = [(vehicle.id, ClientSideBoundingBoxes.get_bounding_box(vehicle, cam.camera_actor)) for
+                            vehicle in in_sight_vehicles]
+            bounding_boxes = [(vehicle_id, bbox) for vehicle_id, bbox in bounding_boxes if
+                            bbox[4, 2] <= ego_base_z + 50]
+
+            ego_vehicle_position = (int(ego_vehicle_bbox[0, 0]), int(ego_vehicle_bbox[0, 1]))
+
+            vehicle_info = {}
+            for vehicle in in_sight_vehicles:
+                vehicle_info[vehicle.id] = {
+                    'location': (vehicle.get_location().x, vehicle.get_location().y),
+                    'speed': 3.6 * vehicle.get_velocity().length()  # convert m/s to km/h
+                }
+
+            ClientSideBoundingBoxes.draw_ground_truth_bbx(cam.display, bounding_boxes, ego_vehicle_position,
+                                                        vehicle_info, ego_bbox=ego_vehicle_bbox,
+                                                        line_between_vehicle=False)
+        elif coop_perception:
+            # Visualize data fusion result
+
+            ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
+                                                cam.camera_actor.calibration, cam.camera_actor, rsu_locations)
+            
+        else:
+            # Visualize perception result only from ego vehicle
+            ClientSideBoundingBoxes.draw_only_bbx(cam.display, bbx_list, vehicle_list[0].vehicle,
+                                                cam.camera_actor.calibration, cam.camera_actor)
+            
+        # If a bounding box is in the trigger area, set the current time as the starting point for a brake
+        for bbox in bbx_list:
+            corners = bbox.corners
+            corners = np.vstack((corners.T, np.ones(corners.shape[0])))
+            center_x = np.mean(corners[0, :])
+            center_y = np.mean(corners[1, :])
+            if -77 <= center_x <= -73 and -133 <= center_y <= -125:
+                return t
 
     @staticmethod
     def get_bounding_boxes(vehicles, camera):
@@ -543,3 +588,11 @@ def rpy_to_rotation_matrix(roll, pitch, yaw):
     R = np.dot(R_z, np.dot(R_y, R_x))
 
     return R
+
+
+def perception_assisted_control(control, t, trigger_tick):
+    # Controls the vehicle based on additional perception information
+    if trigger_tick is not None and t - trigger_tick < 35:
+        control.brake = 0.05
+        control.throttle = 0
+    return control
