@@ -6,6 +6,7 @@ import weakref
 import sys
 import time
 import math
+import random
 
 import torchvision
 from torchvision.transforms import ToTensor
@@ -25,9 +26,9 @@ from EIdrive.core.sensing.perception.open3d_visualize import \
     o3d_visualizer_init, convert_raw_to_o3d_pointcloud, visualize_point_cloud, \
     camera_lidar_fusion_yolo, camera_lidar_fusion_SSD
 from collections import deque
-from PIL import Image
 import torch
 # from yolov5.detectclass import YoloDetector
+from EIdrive.imagePrinter import save_CV
 
 from EIdrive.scenario_testing import demo
 
@@ -366,11 +367,22 @@ class Perception:
         self.global_position = config_yaml['global_position'] \
             if 'global_position' in config_yaml else None
 
+        # If coop_perception is activated in the config file, then set it
+        self.coop_perception = config_yaml['coop_perception'] \
+            if 'coop_perception' in config_yaml else False
+
         # Transmission model
         self.transmission_latency = config_yaml['transmission_latency'] \
             if 'transmission_latency' in config_yaml else None
         self.transmission_latency_in_sec = config_yaml['transmission_latency_in_sec'] \
             if 'transmission_latency_in_sec' in config_yaml else None
+        
+        # Error in transmission
+        self.errors = config_yaml['errors'] \
+            if 'errors' in config_yaml else None
+        self.error_rate = config_yaml['error_rate'] \
+            if 'error_rate' in config_yaml else None
+        self.error_present = False
 
         self.ml_model = weakref.ref(ml_model)()
         object_detection_model = ml_model.object_detection_model
@@ -428,6 +440,8 @@ class Perception:
         # Visualize perception result on camera. This will turn to True after time length of latency.
         self.after_latency = False
 
+        self.img_count = 0
+
         
     def update_trans_latency(self, latency):
         self.transmission_latency_in_sec = latency
@@ -466,7 +480,7 @@ class Perception:
         self.ego_pos = ego_pos
 
         objects = {'vehicles': [],
-                   'traffic_lights': []}
+                    'traffic_lights': []}
 
         if not self.activate:
             objects = self.server_detection(objects)
@@ -476,6 +490,12 @@ class Perception:
                 objects = self.yolo_detection(objects)
             elif self.activate_model == "ssd":
                 objects = self.ssd_detection(objects)
+
+        if self.errors:
+            self.get_error()
+            if self.error_present:
+                objects = {'vehicles': [],
+                    'traffic_lights': []}
 
         self.count += 1
 
@@ -557,10 +577,17 @@ class Perception:
                 rgb_image = self.object_detection_model.visualize_yolo_bbx(
                     yolo_detection, rgb_image, i)
                 rgb_image = cv2.resize(rgb_image, (0, 0), fx=1.2, fy=1.2)
-                # Creates the window for RBG camera
+
+                # Creates the window for RGB camera
                 cv2.imshow(
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
+                
+                if self.id == -1:
+                    save_CV(rgb_image, "rsu", self.img_count)
+                else:
+                    save_CV(rgb_image, "rgb", self.img_count)
+                self.img_count += 1
 
             cv2.waitKey(1)
 
@@ -573,11 +600,6 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
-            
-            # save the lidar image
-            if self.lidarCount % 10 == 0:
-                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarYolo/image{self.lidarCount}.jpg", do_render=True)
-            self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
 
@@ -709,10 +731,6 @@ class Perception:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
-            # save the lidar image
-            if self.lidarCount % 10 == 0:
-                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarSSD/image{self.lidarCount}.jpg", do_render=True)
-            self.lidarCount += 1
         # add traffic light
         objects = self.get_traffic_lights(objects)
         self.objects = objects
@@ -734,16 +752,19 @@ class Perception:
         objects: dict
             Updated object dictionary.
         """
+
+        current_objects = self.filter_and_update_vehicles(objects)
+        self.visualize_camera(current_objects)
+        self.visualize_lidar()        
+
         if self.transmission_latency and self.transmission_latency_in_sec > 0:
-            current_objects = self.filter_and_update_vehicles(objects)
             latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which represents the maximum length of the queue.
             if len(self.server_detected_objects_queue) == latency:
                 objects = self.server_detected_objects_queue.popleft()
         else:
             objects = self.filter_and_update_vehicles(objects)
 
-        self.visualize_camera(objects)
-        self.visualize_lidar()
+
         objects = self.get_traffic_lights(objects)
         self.objects = objects
 
@@ -809,11 +830,6 @@ class Perception:
                 continue
             convert_raw_to_o3d_pointcloud(self.lidar.data, self.lidar.o3d_pointcloud)
             visualize_point_cloud(self.o3d_vis, self.count, self.lidar.o3d_pointcloud, self.objects)
-
-            # save the lidar image
-            if self.lidarCount % 10 == 0:
-                self.o3d_vis.capture_screen_image(f"/home/junshan/imageTest/lidarServer/image{self.lidarCount}.jpg", do_render=True)
-            self.lidarCount += 1
 
     def filter_vehicle_out_of_range(self, vehicle_list):
         """
@@ -952,7 +968,23 @@ class Perception:
         
         detected_objects['traffic_lights'] = nearby_lights
 
-        return detected_objects
+        return detected_objects    
+    
+    def get_error(self):
+        """
+        Returns True based on the given percentage chance.
+
+        Args:
+        percentage (float): The probability (from 0 to 100) of returning True.
+
+        Returns:
+        bool: True if the random number is less than or equal to the percentage, False otherwise.
+        """
+
+        if not 0 <= self.error_rate <= 1:
+            raise ValueError("Percentage must be between 0 and 1.")
+        
+        self.error_present =  random.random() <= self.error_rate
 
     def destroy(self):
         """

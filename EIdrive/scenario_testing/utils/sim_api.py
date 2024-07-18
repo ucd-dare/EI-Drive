@@ -435,6 +435,37 @@ class GameWorld:
             rsu_list.append(rsu_manager)
 
         return rsu_list
+    
+    def create_pedestrian(self):
+        """
+        Create a list of pedestrian.
+
+        Returns
+        -------
+        pedestrian_list : list
+            A list of all pedestrian agents.
+
+        """
+        print('Creating pedestrians.')
+
+        pedestrian_list = []
+
+        for i, pedestrian_config in enumerate(self.scenario_params['scenario']['pedestrian_list']):
+
+            spawn_transform = carla.Transform(
+                carla.Location(
+                    x=pedestrian_config['spawn_position'][0],
+                    y=pedestrian_config['spawn_position'][1],
+                    z=pedestrian_config['spawn_position'][2]),
+                carla.Rotation(
+                    pitch=pedestrian_config['spawn_position'][5],
+                    yaw=pedestrian_config['spawn_position'][4],
+                    roll=pedestrian_config['spawn_position'][3]))
+
+            pedestrian = self.world.spawn_actor(self.world.get_blueprint_library().find('walker.pedestrian.0001'), spawn_transform)
+            pedestrian_list.append(pedestrian)
+
+        return pedestrian_list
 
     def create_vehicles_by_list(self, traffic_manager, traffic_config, background_traffic):
         """

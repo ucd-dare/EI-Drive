@@ -1,5 +1,5 @@
 # This is the customized yaml. Replace the item with pre-design modules to reach diverse settings.
 
 defaults:
-  - test_scenario: module_test_1  # The name of the script
+  - test_scenario: coop_perception_1  # The name of the script
   - world: sunny  # The weather is no working for OpenScenario

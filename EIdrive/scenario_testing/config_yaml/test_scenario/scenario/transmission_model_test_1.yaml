@@ -32,7 +32,7 @@ vehicle_list:
     spawn_position: [ -78.1, -60.7, 0.3, 0, -90, 0 ]
     destination: [ [ -78.0, -153.0, 0.3 ], [ -76.0, -179.5, 0.3 ]]
     perception:
-      transmission_latency: false
+      transmission_latency: true
       transmission_latency_in_sec: 0.5
       camera:
         visualize: 1

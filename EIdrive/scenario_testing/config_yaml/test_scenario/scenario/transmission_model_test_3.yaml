@@ -18,6 +18,8 @@ vehicle_list:
     spawn_position: [-78.0, -102.7, 0.3, 0, -90, 0 ]
     destination: [[-72.0, -191.3, 0.3]]
     perception:
+      lidar:
+          visualize: false
       camera:
         visualize: 0
         num: 0
@@ -30,6 +32,8 @@ vehicle_list:
     spawn_position: [-70.0, -133.9, 0.3, 0, -90, 0 ]
     destination: [[ -9.6, 254.8, 0.3 ]]
     perception:
+      lidar:
+        visualize: false
       camera:
         visualize: 0
         num: 0
