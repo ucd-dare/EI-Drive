@@ -1,0 +1,64 @@
+test_scenario: coop_perception_2
+vehicle_list:
+  - id: 0
+    spawn_position: [-84.5, 107, 1, 0, 90, 0]
+    destination: [[-83, 168, 0.3]]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: true
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50
+    behavior:
+      max_speed: 33
+      local_planner:
+        debug_trajectory: true
+        debug: true
+    controller:
+      args:
+        lat:
+          Kp: 0.5
+          Ki: 0.6
+          Kd: 0.02
+  - id: 1
+    spawn_position: [-50, 132, 0.5, 0 , 180 , 0]
+    destination: [[-140.4, 123.4, 0.3]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false      
+    behavior:
+      max_speed: 55
+      local_planner:
+        debug_trajectory: true
+        debug: true
+  - id: 2 # Spectator vehicle
+    spawn_position: [-79, 147, 0.5, 0, 270, 0 ]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: true
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50
+  - id: 3 # Firetruck
+    spawn_position: [-78, 124, 0.5, 0 ,0 ,0]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
