@@ -1,0 +1,27 @@
+test_scenario: coop_perception_4
+vehicle_list:
+  - id: 0
+    spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
+    destination: [[323.7, -172.3, 0.5]]
+    perception:
+      coop_perception: false
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50
+  
+rsu_list:
+  - id: -1
+    spawn_position: [-113.3, 77.9, 3, 0, 30, 0 ]
+    perception:
+      coop_perception: false
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 100
