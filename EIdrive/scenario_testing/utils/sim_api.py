@@ -449,6 +449,8 @@ class GameWorld:
         print('Creating pedestrians.')
 
         pedestrian_list = []
+        if 'pedestrian_list' not in self.scenario_params['scenario']:
+            return pedestrian_list
 
         for i, pedestrian_config in enumerate(self.scenario_params['scenario']['pedestrian_list']):
 

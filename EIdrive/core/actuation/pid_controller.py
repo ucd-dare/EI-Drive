@@ -45,7 +45,7 @@ class Controller:
 
     def __init__(self, args):
 
-        # Longitudinal control settings
+        # Longitudinal (speed) control settings
         self.max_brake = args['max_brake']
         self.max_throttle = args['max_throttle']
 
@@ -55,7 +55,7 @@ class Controller:
 
         self.lon_error_buffer = deque(maxlen=10)
 
-        # Lateral control settings
+        # Lateral (steering) control settings
         self.max_steering = args['max_steering']
         self.max_steering_rate = args['max_steering_rate']
 

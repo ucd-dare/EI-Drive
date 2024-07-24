@@ -80,9 +80,9 @@ def run_scenario(scenario_params):
         spectator = gameworld.world.get_spectator()
         spec_controller = SpectatorController(spectator)
 
-        vehicles = gameworld.world.get_actors().filter('vehicle.*')
+        pedestrians = gameworld.world.get_actors().filter('walker.*')
         perception_box = [[-77, -74],[-135,-130.5]]
-        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, vehicles, rsu_locations, perception_box)
+        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, pedestrians, rsu_locations, perception_box)
 
         while True:
 
@@ -116,7 +116,8 @@ def run_scenario(scenario_params):
 
             
             # Visualize the bounding box
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, bbx_list, t)
+            vehicles = gameworld.world.get_actors().filter('vehicle.*')
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 

@@ -1,62 +1,41 @@
 test_scenario: coop_perception_3
 vehicle_list:
   - id: 0
-    spawn_position: [230, -249.6, 0.5, 0, 180, 0]
-    destination: [[199.8, -230, 0.5]]
+    spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
+    destination: [[323.7, -172.3, 0.5]]
     perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
       lidar:
         visualize: false
         range: 50
-    behavior:
-      max_speed: 30
-      local_planner:
-        debug_trajectory: true
-        debug: true
-    controller:
-      args:
-        lat:
-          k_p: 0.9
-          k_i: 0.2
-          k_d: 0.02
   
   #Spectator Vehicle
   - id: 1
-    spawn_position: [203.7, -210, 0.5, 0, -90, 0 ]
+    spawn_position: [-107.1, 88.1, 0.5, 0, 180, 0 ]
     destination: [[ -9.6, 254.8, 0.3 ]]
     perception:
+      coop_perception: false
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
       lidar:
         visualize: false
         range: 50
 
-  #Blocking vehicles
-  #- id: 2
-  #  spawn_position: [200.5, -271.3, 0.5, 0 ,90 ,0]
-  #  destination: [[ -9.6, 254.8, 0.5 ]]
-  #  perception:
-  #    camera:
-  #      visualize: 0
-  #      num: 0
-  #    lidar:
-  #      visualize: false
-  #- id: 3
-  #  spawn_position: [182, -248, 0.5, 0 , 170 ,0]
-  #  destination: [[ -9.6, 254.8, 0.5 ]]
-  #  perception:
-  #    camera:
-  #      visualize: 0
-  #      num: 0
-  #    lidar:
-  #      visualize: false
-  #- id: 4
-  #  spawn_position: [176.1, -248, 0.5, 0 , 165 ,0]
-  #  destination: [[ -9.6, 254.8, 0.5 ]]
-  #  perception:
-  #    camera:
-  #      visualize: 0
-  #      num: 0
-  #    lidar:
-  #      visualize: false
-
-pedestrian_list:
-  - id: 1
-    spawn_position: [194.5, -254.8, 1, 0 ,-90 ,0]
+  - id: 2
+    spawn_position: [-123.9, 108.1, 0.5, 0, -90, 0 ]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50

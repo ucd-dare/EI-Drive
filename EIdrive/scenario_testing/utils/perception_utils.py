@@ -22,7 +22,7 @@ class ClientSideBoundingBoxes(object):
     client-side on pygame surface.
     """
 
-    def __init__(self, vehicle_list, vehicles, rsu_locations, perception_box):
+    def __init__(self, vehicle_list, pedestrians, rsu_locations, perception_box=None):
 
         # Initialize queues for latency filter
         self.bbx_queue = deque(maxlen=1000)
@@ -33,16 +33,17 @@ class ClientSideBoundingBoxes(object):
 
         # Initialize fixed variables
         self.ego_vehicle = vehicle_list[0]
-        self.vehicles = vehicles
+        self.pedestrains = pedestrians
         self.rsu_locations = rsu_locations
         self.perception_box = perception_box
-        if perception_box[1][1] < 0:
-            self.perception_box[1][1] += 1.5
-        if perception_box[1][0] > 0:
-            self.perception_box[1][0] -= 1.5
+        if perception_box is not None:
+            if perception_box[1][1] < 0:
+                self.perception_box[1][1] += 1.5
+            if perception_box[1][0] > 0:
+                self.perception_box[1][0] -= 1.5
 
 
-    def VisualizeBBX(self, cam, bbx_list, t):
+    def VisualizeBBX(self, cam, vehicles, bbx_list, t):
         '''
         Visualize the bbx
         Returns the control tick if a bounding box is in the trigger area
@@ -53,8 +54,13 @@ class ClientSideBoundingBoxes(object):
             current_ego_vehicle_bbox = self.get_bounding_box(cam.vehicle, cam.camera_actor)
             ego_base_z = current_ego_vehicle_bbox[0, 2] - cam.vehicle.bounding_box.extent.z
 
-            in_sight_vehicles = [vehicle for vehicle in self.vehicles if
+            in_sight_vehicles = [vehicle for vehicle in vehicles if
                                 vehicle.id != cam.vehicle.id and cam.is_in_sight(vehicle, cam.camera_actor, self.ego_vehicle)]
+            
+            in_sight_pedestrians = [pedestrian for pedestrian in self.pedestrains if
+                                    cam.is_in_sight(pedestrian, cam.camera_actor, self.ego_vehicle)]
+            
+            in_sight_vehicles.extend(in_sight_pedestrians)
             
             # Remove vehicles that are behind other vehicles so that we can not see them if cooperative perception is not enabled
             if not self.ego_vehicle.perception.coop_perception:
@@ -64,8 +70,9 @@ class ClientSideBoundingBoxes(object):
 
             current_display_bbx = [(vehicle.id, self.get_bounding_box(vehicle, cam.camera_actor)) for
                             vehicle in in_sight_vehicles]
+            
             current_display_bbx = [(vehicle_id, bbox) for vehicle_id, bbox in current_display_bbx if
-                            bbox[4, 2] <= ego_base_z + 50]
+                            bbox[4, 2] <= ego_base_z + 150]
             
             current_ego_vehicle_position = (int(current_ego_vehicle_bbox[0, 0]), int(current_ego_vehicle_bbox[0, 1]))
 
@@ -115,22 +122,24 @@ class ClientSideBoundingBoxes(object):
                                                 cam.camera_actor.calibration, cam.camera_actor)
             
         # If a bounding box is in the trigger area, set the current time as the starting point for a brake
-        if self.ego_vehicle.perception.activate:
-            for bbox in bbx_list:
-                corners = bbox.corners
-                corners = np.vstack((corners.T, np.ones(corners.shape[0])))
-                center_x = np.mean(corners[0, :])
-                center_y = np.mean(corners[1, :])
 
-                if self.perception_box[0][0] <= center_x <= self.perception_box[0][1] and self.perception_box[1][0] <= center_y <= self.perception_box[1][1]:
-                    return t
-        else:
-            for bbx in collision_check:
-                center_x = np.mean(bbx[0, :])
-                center_y = np.mean(bbx[1, :])
+        if self.perception_box is not None:
+            if self.ego_vehicle.perception.activate:
+                for bbox in bbx_list:
+                    corners = bbox.corners
+                    corners = np.vstack((corners.T, np.ones(corners.shape[0])))
+                    center_x = np.mean(corners[0, :])
+                    center_y = np.mean(corners[1, :])
 
-                if self.perception_box[0][0] <= center_x <= self.perception_box[0][1] and self.perception_box[1][0] <= center_y <= (self.perception_box[1][1]):
-                    return t
+                    if self.perception_box[0][0] <= center_x <= self.perception_box[0][1] and self.perception_box[1][0] <= center_y <= self.perception_box[1][1]:
+                        return t
+            else:
+                for bbx in collision_check:
+                    center_x = np.mean(bbx[0, :])
+                    center_y = np.mean(bbx[1, :])
+
+                    if self.perception_box[0][0] <= center_x <= self.perception_box[0][1] and self.perception_box[1][0] <= center_y <= (self.perception_box[1][1]):
+                        return t
         
 
     @staticmethod
@@ -162,48 +171,46 @@ class ClientSideBoundingBoxes(object):
         bb_surface.blit(text_surface, text_position)
 
         for vehicle_id, bbox in bounding_boxes:
-            # Filter out bounding boxes behind the sensor
-            if np.all(bbox[:, 2] > 0):
-                points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
+            points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
 
-                # Displaying real-time location
-                x, y = vehicle_info[vehicle_id]['location']
-                location_text_surface = pygame.font.SysFont('Roboto', 50).render(f"({x:.1f}, {y:.1f})", True, color)
-                location_text_position = (points[0][0], points[0][1] - 10)
-                bb_surface.blit(location_text_surface, location_text_position)
+            # Displaying real-time location
+            x, y = vehicle_info[vehicle_id]['location']
+            location_text_surface = pygame.font.SysFont('Roboto', 50).render(f"({x:.1f}, {y:.1f})", True, color)
+            location_text_position = (points[0][0], points[0][1] - 10)
+            bb_surface.blit(location_text_surface, location_text_position)
 
-                # Displaying speed
-                speed = vehicle_info[vehicle_id]['speed']
-                speed_text_surface = pygame.font.SysFont('Roboto', 50).render(f"{speed:.1f} km/h", True, color)
-                speed_text_position = (points[0][0], points[0][1] - 60)
-                bb_surface.blit(speed_text_surface, speed_text_position)
+            # Displaying speed
+            speed = vehicle_info[vehicle_id]['speed']
+            speed_text_surface = pygame.font.SysFont('Roboto', 50).render(f"{speed:.1f} km/h", True, color)
+            speed_text_position = (points[0][0], points[0][1] - 60)
+            bb_surface.blit(speed_text_surface, speed_text_position)
 
-                # Drawing the link between the vehicles
-                if line_between_vehicle:
-                    pygame.draw.aalines(bb_surface, color, False, [points[0], ego_vehicle_position], 1)
-                
-                # Draw lines
-                line_width = 4
-                # Base
-                pygame.draw.line(bb_surface, color, points[0], points[1], width=line_width)
-                pygame.draw.line(bb_surface, color, points[1], points[2], width=line_width)
-                pygame.draw.line(bb_surface, color, points[2], points[3], width=line_width)
-                pygame.draw.line(bb_surface, color, points[3], points[0], width=line_width)
-                # Top
-                pygame.draw.line(bb_surface, color, points[4], points[5], width=line_width)
-                pygame.draw.line(bb_surface, color, points[5], points[6], width=line_width)
-                pygame.draw.line(bb_surface, color, points[6], points[7], width=line_width)
-                pygame.draw.line(bb_surface, color, points[7], points[4], width=line_width)
-                # Base-top connections
-                pygame.draw.line(bb_surface, color, points[0], points[4], width=line_width)
-                pygame.draw.line(bb_surface, color, points[1], points[5], width=line_width)
-                pygame.draw.line(bb_surface, color, points[2], points[6], width=line_width)
-                pygame.draw.line(bb_surface, color, points[3], points[7], width=line_width)
+            # Drawing the link between the vehicles
+            if line_between_vehicle:
+                pygame.draw.aalines(bb_surface, color, False, [points[0], ego_vehicle_position], 1)
+            
+            # Draw lines
+            line_width = 4
+            # Base
+            pygame.draw.line(bb_surface, color, points[0], points[1], width=line_width)
+            pygame.draw.line(bb_surface, color, points[1], points[2], width=line_width)
+            pygame.draw.line(bb_surface, color, points[2], points[3], width=line_width)
+            pygame.draw.line(bb_surface, color, points[3], points[0], width=line_width)
+            # Top
+            pygame.draw.line(bb_surface, color, points[4], points[5], width=line_width)
+            pygame.draw.line(bb_surface, color, points[5], points[6], width=line_width)
+            pygame.draw.line(bb_surface, color, points[6], points[7], width=line_width)
+            pygame.draw.line(bb_surface, color, points[7], points[4], width=line_width)
+            # Base-top connections
+            pygame.draw.line(bb_surface, color, points[0], points[4], width=line_width)
+            pygame.draw.line(bb_surface, color, points[1], points[5], width=line_width)
+            pygame.draw.line(bb_surface, color, points[2], points[6], width=line_width)
+            pygame.draw.line(bb_surface, color, points[3], points[7], width=line_width)
 
-                font = pygame.font.SysFont('Roboto', 60)
-                text_surface = font.render('Other vehicle', True, color)
-                text_position = (points[0][0], points[0][1] - 110)
-                bb_surface.blit(text_surface, text_position)
+            font = pygame.font.SysFont('Roboto', 60)
+            text_surface = font.render('Other vehicle', True, color)
+            text_position = (points[0][0], points[0][1] - 110)
+            bb_surface.blit(text_surface, text_position)
 
         display.blit(bb_surface, (0, 0))
 
@@ -250,34 +257,31 @@ class ClientSideBoundingBoxes(object):
                 corners = np.vstack((bbox.T, np.ones(bbox.shape[0])))
 
             cords_x_y_z = ClientSideBoundingBoxes._world_to_sensor(corners, sensor)
-            
-            # Filter out bounding boxes behind the sensor
-            if not np.all(cords_x_y_z[2, :] > 0):
-                cords_y_minus_z_x = np.concatenate(
-                    [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
-                bbox = np.transpose(np.dot(calibration, cords_y_minus_z_x))
-                camera_bbox = np.concatenate([bbox[:, 0] / bbox[:, 2], bbox[:, 1] / bbox[:, 2], bbox[:, 2]], axis=1)
-                points = [(int(camera_bbox[i, 0]), int(camera_bbox[i, 1])) for i in range(8)]
+            cords_y_minus_z_x = np.concatenate(
+                [cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
+            bbox = np.transpose(np.dot(calibration, cords_y_minus_z_x))
+            camera_bbox = np.concatenate([bbox[:, 0] / bbox[:, 2], bbox[:, 1] / bbox[:, 2], bbox[:, 2]], axis=1)
+            points = [(int(camera_bbox[i, 0]), int(camera_bbox[i, 1])) for i in range(8)]
 
-                in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=pt[1] <= VIEW_HEIGHT for pt in points]
-                if any(in_view):
-                    # Drawing the bounding box
-                    width = 3
-                    # Base
-                    pygame.draw.line(bb_surface, color, points[0], points[1], width)
-                    pygame.draw.line(bb_surface, color, points[1], points[7], width)
-                    pygame.draw.line(bb_surface, color, points[7], points[2], width)
-                    pygame.draw.line(bb_surface, color, points[2], points[0], width)
-                    # Top
-                    pygame.draw.line(bb_surface, color, points[3], points[5], width)
-                    pygame.draw.line(bb_surface, color, points[5], points[4], width)
-                    pygame.draw.line(bb_surface, color, points[4], points[6], width)
-                    pygame.draw.line(bb_surface, color, points[6], points[3], width)
-                    # Base-Top connections
-                    pygame.draw.line(bb_surface, color, points[0], points[3], width)
-                    pygame.draw.line(bb_surface, color, points[2], points[5], width)
-                    pygame.draw.line(bb_surface, color, points[1], points[6], width)
-                    pygame.draw.line(bb_surface, color, points[7], points[4], width)
+            in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=pt[1] <= VIEW_HEIGHT for pt in points]
+            if any(in_view):
+                # Drawing the bounding box
+                width = 3
+                # Base
+                pygame.draw.line(bb_surface, color, points[0], points[1], width)
+                pygame.draw.line(bb_surface, color, points[1], points[7], width)
+                pygame.draw.line(bb_surface, color, points[7], points[2], width)
+                pygame.draw.line(bb_surface, color, points[2], points[0], width)
+                # Top
+                pygame.draw.line(bb_surface, color, points[3], points[5], width)
+                pygame.draw.line(bb_surface, color, points[5], points[4], width)
+                pygame.draw.line(bb_surface, color, points[4], points[6], width)
+                pygame.draw.line(bb_surface, color, points[6], points[3], width)
+                # Base-Top connections
+                pygame.draw.line(bb_surface, color, points[0], points[3], width)
+                pygame.draw.line(bb_surface, color, points[2], points[5], width)
+                pygame.draw.line(bb_surface, color, points[1], points[6], width)
+                pygame.draw.line(bb_surface, color, points[7], points[4], width)
 
         display.blit(bb_surface, (0, 0))
 
@@ -386,30 +390,29 @@ class ClientSideBoundingBoxes(object):
         matrix[2, 1] = -c_p * s_r
         matrix[2, 2] = c_p * c_r
         return matrix
-
+    
+    
     def check_overlap(self, in_sight_vehicles, cam):
         to_remove = set()  # Use a set to avoid duplicates
-            
+
         for i in in_sight_vehicles:
             for j in in_sight_vehicles:
-                if i.id != j.id and i.id not in to_remove and j.id not in to_remove:
-
+                if i.id != j.id and i.id not in to_remove and j.id not in to_remove and i.id != cam.vehicle.id and j.id != cam.vehicle.id:
                     # Check if the bounding box of i completely overlaps the bounding box of j
                     bbox_i = self.get_bounding_box(i, cam.camera_actor)
                     bbox_j = self.get_bounding_box(j, cam.camera_actor)
 
-                    min_x_i = np.min(bbox_i[:, 0])
-                    max_x_i = np.max(bbox_i[:, 0])
-                    min_y_i = np.min(bbox_i[:, 1])
-                    max_y_i = np.max(bbox_i[:, 1])
+                    if bbox_i is None or bbox_j is None:
+                        continue
 
-                    min_x_j = np.min(bbox_j[:, 0])
-                    max_x_j = np.max(bbox_j[:, 0])
-                    min_y_j = np.min(bbox_j[:, 1])
-                    max_y_j = np.max(bbox_j[:, 1])
+                    min_x_i, max_x_i = np.min(bbox_i[:, 0]), np.max(bbox_i[:, 0])
+                    min_y_i, max_y_i = np.min(bbox_i[:, 1]), np.max(bbox_i[:, 1])
 
-                    if (min_x_i <= min_x_j and max_x_i >= max_x_j and min_y_i <= min_y_j and max_y_i >= max_y_j):
-                        
+                    min_x_j, max_x_j = np.min(bbox_j[:, 0]), np.max(bbox_j[:, 0])
+                    min_y_j, max_y_j = np.min(bbox_j[:, 1]), np.max(bbox_j[:, 1])
+
+                    if ((min_x_i-20) <= min_x_j and (max_x_i+20) >= max_x_j and
+                            (min_y_i-20) <= min_y_j and (max_y_i+20) >= max_y_j):
                         # Remove the further vehicle
                         locego = self.ego_vehicle.vehicle.get_location()
                         loci = i.get_location()
@@ -478,14 +481,15 @@ class PygameCamera:
     def is_in_sight(self, vehicle, camera, ego_vehicle):
         # Check within camera's view
         bbox = ClientSideBoundingBoxes.get_bounding_box(vehicle, camera)
+        in_front = np.all(bbox[:, 2] > 0)
         points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
         in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=
                 pt[1] <= VIEW_HEIGHT for pt in points]
 
         # Check if vehicle is within a reasonable range (let's say 50 meters for now)
-        in_range = self.get_distance(vehicle, self.vehicle) <= 50
+        in_range = self.get_distance(vehicle, self.vehicle) <= 100
 
-        return any(in_view) and in_range and not ego_vehicle.perception.error_present
+        return any(in_view) and in_range and in_front and not ego_vehicle.perception.error_present
     
     def get_distance(self, vehicle1, vehicle2):
         loc1 = vehicle1.get_location()
@@ -715,24 +719,23 @@ def manage_bbx_list(vehicle_list, rsu_list):
     # Add detection result to the list if the vehicle agent or rsu has cooperative perception enabled
     # Will not activate if server detection is enabled because server detection uses a different merge method
 
-    if vehicle_list[0].perception.coop_perception and vehicle_list[0].perception.activate:
-        
-        true_extent = []
-        true_transform = []
+    if vehicle_list[0].perception.activate:
 
-        for vehicle_agent in vehicle_list:
-            if vehicle_agent.perception.coop_perception and vehicle_agent.detected_objects['vehicles']:
-                bbx = vehicle_agent.detected_objects['vehicles'][0].bounding_box
-                bbx_list.append(bbx)
-        
-        for rsu in rsu_list:
-            if rsu.perception.coop_perception and rsu.detected_objects['vehicles']:
-                bbx = rsu.detected_objects['vehicles'][0].bounding_box
-                bbx_list.append(bbx)
+        if vehicle_list[0].perception.coop_perception:
 
-        for v in vehicle_list:
-            true_extent.append(v.vehicle.bounding_box.extent)
-            true_transform.append(v.vehicle.get_transform())
+            for vehicle_agent in vehicle_list:
+                if vehicle_agent.perception.coop_perception and vehicle_agent.detected_objects['vehicles']:
+                    bbx = vehicle_agent.detected_objects['vehicles'][0].bounding_box
+                    bbx_list.append(bbx)
+            
+            for rsu in rsu_list:
+                if rsu.perception.coop_perception and rsu.detected_objects['vehicles']:
+                    bbx = rsu.detected_objects['vehicles'][0].bounding_box
+                    bbx_list.append(bbx)
+        
+        else:
+            if vehicle_list[0].detected_objects['vehicles']:
+                bbx_list.append(vehicle_list[0].detected_objects['vehicles'][0].bounding_box)
 
         # Data fusion result
         return merge_bbx_list(bbx_list)

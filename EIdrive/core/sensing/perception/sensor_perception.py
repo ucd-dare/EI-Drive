@@ -583,10 +583,7 @@ class Perception:
                     '%s camera of actor %d, perception activated' %
                     (names[i], self.id), rgb_image)
                 
-                if self.id == -1:
-                    save_CV(rgb_image, "rsu", self.img_count)
-                else:
-                    save_CV(rgb_image, "rgb", self.img_count)
+                save_CV(rgb_image, "cams", self.img_count, abs(self.id))
                 self.img_count += 1
 
             cv2.waitKey(1)
@@ -777,16 +774,20 @@ class Perception:
         """Retrieve and filter vehicles, then update the object dictionary."""
         world = self.carla_world
         vehicle_list = world.get_actors().filter("*vehicle*")
+        pedestrian_list = world.get_actors().filter("*walker*")
         thresh = 50
         vehicle_list = [v for v in vehicle_list if self.dist(v) < thresh and v.id != self.id]
-
+        pedestrian_list = [p for p in pedestrian_list if self.dist(p) < thresh]
         if self.lidar:
             vehicle_list = [DynamicObstacle(None, None, v, self.lidar.sensor) for v in
                             vehicle_list]
+            pedestrian_list = [DynamicObstacle(None, None, p, None) for p in
+                            pedestrian_list]
         else:
             vehicle_list = [DynamicObstacle(None, None, v, None) for v in vehicle_list]
+            pedestrian_list = [DynamicObstacle(None, None, p, None) for p in pedestrian_list]
 
-        objects.update({'vehicles': vehicle_list})
+        objects.update({'vehicles': (vehicle_list+pedestrian_list)})
         return objects
 
     def visualize_camera(self, objects):
@@ -806,6 +807,9 @@ class Perception:
 
                 cv2.imshow('%s camera of actor %d' % (names[i], self.id), rgb_image)
                 self.camera_window_pos(names[i])
+
+                save_CV(rgb_image, "cams", self.img_count, abs(self.id))
+                self.img_count += 1
 
                 cv2.waitKey(1)
 

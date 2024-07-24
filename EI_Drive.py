@@ -4,14 +4,11 @@ Script to run different test_scenario.
 
 import argparse
 import importlib
-import sys
 import hydra
-import time
 from omegaconf import DictConfig, OmegaConf
 from omegaconf import OmegaConf
 
 from EIdrive.version import __version__
-import os
 
 
 def arg_parse():

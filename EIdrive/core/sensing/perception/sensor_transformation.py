@@ -375,8 +375,8 @@ def convert_lidar_to_camera(lidar, camera, point_cloud, rgb_image):
     z_coord = np.dot(K[2, :], point_in_camera_coords)
 
     # Normalize x, y, z
-    normalized_x = x_coord / z_coord
-    normalized_y = y_coord / z_coord
+    normalized_x = x_coord / (z_coord+0.0001)
+    normalized_y = y_coord / (z_coord+0.0001)
 
     points_2d = np.array([normalized_x, normalized_y, z_coord])
 

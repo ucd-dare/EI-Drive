@@ -9,7 +9,6 @@ from EIdrive.core.sensing.localization.rsu_localizer import RsuLocalizer
 class RSU(object):
     """
     Road Side Unit for edge computing. It has its own perception, localization, and communication module.
-    TODO: add V2X module to it to enable sharing sensing information online.
 
     Parameters
     ----------

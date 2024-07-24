@@ -87,12 +87,6 @@ class VehicleAgent(object):
         if 'is_manually' in behavior_config:
             self.is_manually = behavior_config['is_manually']
 
-        # self.transmission_latency = perception_config['transmission_latency'] \
-        #     if 'transmission_latency' in perception_config else None
-        # self.transmission_latency_in_sec = perception_config['transmission_latency_in_sec'] \
-        #     if 'transmission_latency_in_sec' in perception_config else None
-        # self.transmission_data_deque = deque()
-
     def set_local_planner(self, origin, destination, clean=False, end_reset=True):
         """
         Set local planner for the AgentBehavior.
