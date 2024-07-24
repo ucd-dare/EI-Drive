@@ -4,7 +4,7 @@ vehicle_list:
     spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
     destination: [[323.7, -172.3, 0.5]]
     perception:
-      coop_perception: false
+      coop_perception: true
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false
@@ -15,9 +15,20 @@ vehicle_list:
   
 rsu_list:
   - id: -1
-    spawn_position: [-113.3, 77.9, 3, 0, 30, 0 ]
+    spawn_position: [-113.3, 77.9, 3, 0, 35, 0 ]
     perception:
-      coop_perception: false
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 100
+  - id: -2
+    spawn_position: [-138.8, 99, 3, 0, -35, 0 ]
+    perception:
+      coop_perception: true
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false

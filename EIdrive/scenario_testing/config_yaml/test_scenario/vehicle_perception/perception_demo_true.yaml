@@ -10,7 +10,7 @@ perception: &base_perception
     channels: 32
     range: 50
     points_per_second: 100000
-    rotation_frequency: 20 # the simulation is 20 fps
+    rotation_frequency: 40
     upper_fov: 10.0
     lower_fov: -30.0
     dropoff_general_rate: 0.0

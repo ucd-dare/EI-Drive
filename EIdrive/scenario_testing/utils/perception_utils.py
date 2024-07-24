@@ -487,7 +487,7 @@ class PygameCamera:
                 pt[1] <= VIEW_HEIGHT for pt in points]
 
         # Check if vehicle is within a reasonable range (let's say 50 meters for now)
-        in_range = self.get_distance(vehicle, self.vehicle) <= 100
+        in_range = self.get_distance(vehicle, self.vehicle) <= 70
 
         return any(in_view) and in_range and in_front and not ego_vehicle.perception.error_present
     
