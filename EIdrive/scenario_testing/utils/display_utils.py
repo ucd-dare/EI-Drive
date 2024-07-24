@@ -5,6 +5,25 @@ import carla
 def display_latency(vehicle_list, rsu_list, gameDisplay, view_width, font_size=80, text_color = (0, 255, 0), right_margin=600, top_margin=50):
     """
     Prints the latency of the vehicles and RSUs on the pygame display
+
+    Parameters
+    ----------
+    vehicle_list : list
+        List of all vehicles in the simulation
+    rsu_list : list
+        List of all RSUs in the simulation
+    gameDisplay : pygame.display
+        The pygame display
+    view_width : int
+        Width of the display
+    font_size : int, optional
+        Font size of the text, by default 80
+    text_color : tuple, optional
+        Color of the text, by default green
+    right_margin : int, optional
+        Right margin of the text, by default 600
+    top_margin : int, optional
+        Top margin of the text, by default 50
     """
 
     font = pygame.font.SysFont(None, font_size)
@@ -40,6 +59,18 @@ def display_latency(vehicle_list, rsu_list, gameDisplay, view_width, font_size=8
 
 
 def display_rsu(rsu_list, vehicle_list, gameworld):
+    """
+    Display the RSUs on the pygame display
+    
+    Parameters
+    ----------
+    rsu_list : list
+        List of all RSUs in the simulation
+    vehicle_list : list
+        List of all vehicles in the simulation
+    gameworld : GameWorld
+        The GameWorld object
+    """
     rsu_locations = []
     for rsu in rsu_list:
         location = carla.Location(*rsu.perception.global_position[:3])

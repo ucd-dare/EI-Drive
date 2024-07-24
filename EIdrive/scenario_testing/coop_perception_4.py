@@ -1,5 +1,7 @@
 """
 The script is used for the fouth cooperative perception test.
+
+The Ego vehicle is at a busy intersection. 2 RSUs provide additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -23,15 +25,6 @@ def customized_bp(world):
     vehicle_model = 'vehicle.lincoln.mkz_2020'
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '0, 0, 0') #Ego
-    vehicle_blueprints.append(vehicle_blueprint) 
-
-    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
-    vehicle_blueprint.set_attribute('color', '0, 0, 255') # Coop 1
-    vehicle_blueprints.append(vehicle_blueprint)
-
-    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
-    vehicle_blueprint.set_attribute('color', '255, 0, 0') # Coop 2
-    vehicle_blueprints.append(vehicle_blueprint)
 
     return vehicle_blueprints
                     
@@ -51,9 +44,6 @@ def run_scenario(scenario_params):
             (VIEW_WIDTH, VIEW_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame.display.set_caption('CARLA Visualization')
         pygame_clock = pygame.time.Clock()
-
-        # if scenario_params.common_params.record:
-        #     gameworld.client.start_recorder("coop_perception.log", True)
 
         vehicle_blueprints = customized_bp(gameworld.world)
         vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)

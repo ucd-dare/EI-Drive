@@ -479,6 +479,9 @@ class PygameCamera:
             display.blit(surface, (0, 0))
 
     def is_in_sight(self, vehicle, camera, ego_vehicle):
+        """
+        Check if the vehicle is within the camera's view.
+        """
         # Check within camera's view
         bbox = ClientSideBoundingBoxes.get_bounding_box(vehicle, camera)
         in_front = np.all(bbox[:, 2] > 0)
@@ -705,6 +708,25 @@ def rpy_to_rotation_matrix(roll, pitch, yaw):
 
 
 def perception_assisted_control(control, t, trigger_tick):
+    """
+    Performs additional control on vehicle based on perception information.
+
+    Parameters
+    ----------
+    control : VehicleControl
+        Current vehicle control.
+    t : float
+        Current tick.
+    trigger_tick : float
+        Tick when the perception trigger occurred.
+    
+    Returns
+    -------
+    control : VehicleControl
+        Updated vehicle control.
+    """
+
+
     # Controls the vehicle based on additional perception information
     if trigger_tick is not None and t - trigger_tick < 35:
         control.brake = 0.25
@@ -713,6 +735,21 @@ def perception_assisted_control(control, t, trigger_tick):
     return control
 
 def manage_bbx_list(vehicle_list, rsu_list):
+    """
+    Merges the bounding box list from the vehicle agents and the RSUs if cooperative perception is on.
+
+    Parameters
+    ----------
+    vehicle_list : List
+        List of vehicle agents.
+    rsu_list : List
+        List of RSUs.
+
+    Returns
+    -------
+    bbx_list : List
+        List of merged bounding boxes
+    """
 
     bbx_list = []
     

@@ -1,5 +1,7 @@
 """
 The script is used for the second cooperative perception test.
+
+The ego vehicle is approachign an intersection. A firetruck blocks its sight of an incoming vehicle. An additional vehicle provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -51,9 +53,6 @@ def run_scenario(scenario_params):
             (VIEW_WIDTH, VIEW_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame.display.set_caption('CARLA Visualization')
         pygame_clock = pygame.time.Clock()
-
-        # if scenario_params.common_params.record:
-        #     gameworld.client.start_recorder("coop_perception.log", True)
 
         vehicle_blueprints = customized_bp(gameworld.world)
         vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)

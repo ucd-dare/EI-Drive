@@ -30,7 +30,7 @@
 #  Modules
 #  ----------
 #  behavior_default: The planner will do planning for the vehicles.
-#  behavior_default_manual: The trajectories will be provided manually from files.
+#  behavior_demo_manual: The trajectories will be provided manually from files.
 #  behavior_scenario: For OpenScenario.
 #
 #
@@ -52,8 +52,8 @@
 #  Modules
 #  ----------
 #  demo: The demo to show the function of edge.
-#  demo_loop: The scenario of multi-destinations.
-#  openscenario_X: The customized scenario for algorithm testing with ScenarioRunner.
+#  demoloop: The demo to show the basic function
+#  EIscenario_X: The customized scenario for algorithm testing with ScenarioRunner.
 
 
 defaults:

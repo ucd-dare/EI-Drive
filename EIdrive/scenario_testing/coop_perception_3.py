@@ -1,5 +1,7 @@
 """
 The script is used for the third cooperative perception test.
+
+The Ego vehicle is at a busy intersection. 2 other vehicles provide additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -52,8 +54,6 @@ def run_scenario(scenario_params):
         pygame.display.set_caption('CARLA Visualization')
         pygame_clock = pygame.time.Clock()
 
-        # if scenario_params.common_params.record:
-        #     gameworld.client.start_recorder("coop_perception.log", True)
 
         vehicle_blueprints = customized_bp(gameworld.world)
         vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)

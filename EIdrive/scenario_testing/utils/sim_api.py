@@ -402,7 +402,6 @@ class GameWorld:
         vehicle_agent.update_info()
         vehicle_agent.set_local_planner(
             vehicle_agent.vehicle.get_location(),
-            # TODO: enable multiple destinations in EI-Drive Planner
             destinations[-1],
             clean=True)
 

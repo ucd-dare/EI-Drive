@@ -12,8 +12,8 @@ scenario_runner:
   town: town05
   scenario: Scenario_11
   num_actors: 2
-  configFile: 'EIdrive/scenario_testing/test_scenario/scenario_11.xml'
-  additionalScenario: 'EIdrive/scenario_testing/test_scenario/scenario_11.py'
+  configFile: 'EIdrive/scenario_testing/EIscenario_config/scenario_11.xml'
+  additionalScenario: 'EIdrive/scenario_testing/EIscenario_config/scenario_11.py'
   host: localhost
   port: 2000
   timeout: 10

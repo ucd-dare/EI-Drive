@@ -1,0 +1,9 @@
+test_scenario: basic_movement
+vehicle_list:
+  - id: 0
+    spawn_position: [-68.8, 48.9, 0.3, 0, 0, 0]
+    destination: [[330, 48.8, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
