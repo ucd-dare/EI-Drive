@@ -1,7 +1,7 @@
 defaults:
   - common_params: common_param
-  - vehicle_perception: perception_demo_true
-  - vehicle_localization: localization_demo_false
+  - vehicle_perception: perception_true
+  - vehicle_localization: localization_false
   - game_map: map_deactivated
   - behavior: behavior_coop_perception
   - controller: pid_controller

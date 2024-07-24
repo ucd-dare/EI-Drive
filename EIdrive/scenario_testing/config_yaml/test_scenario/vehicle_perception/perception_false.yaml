@@ -1,5 +1,5 @@
 perception: &base_perception
-  activate: false # when not activated, perception_demo_true.yaml
+  activate: false # when not activated, perception_true.yaml
   apply_ml: false
   model: yolo
   camera:

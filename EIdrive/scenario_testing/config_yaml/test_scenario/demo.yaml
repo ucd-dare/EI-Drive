@@ -8,15 +8,15 @@
 #  2. vehicle_perception: This module is responsible for how the vehicle perceives its environment.
 #  Modules
 #  ----------
-#  perception_demo_false: Objects positions will be retrieved from server directly.
-#  perception_demo_true: Objects positions will be retrieved by perception.
+#  perception_false: Objects positions will be retrieved from server directly.
+#  perception_true: Objects positions will be retrieved by perception.
 #
 #
 #  3. vehicle_localization: This module is responsible for determining the precise location of the vehicle within its environment.
 #  Modules
 #  ----------
-#  localization_demo_false: Ego position will be retrieved from server directly.
-#  localization_demo_true: Ego position will be retrieved by localization.
+#  localization_false: Ego position will be retrieved from server directly.
+#  localization_true: Ego position will be retrieved by localization.
 #
 #
 #  4. game_map: This module is responsible for managing the traffic map.
@@ -29,8 +29,8 @@
 #  5. behavior: This module is responsible for the behavior of the vehicle. It includes planner and maximum speed.
 #  Modules
 #  ----------
-#  behavior_demo: The planner will do planning for the vehicles.
-#  behavior_demo_manual: The trajectories will be provided manually from files.
+#  behavior_default: The planner will do planning for the vehicles.
+#  behavior_default_manual: The trajectories will be provided manually from files.
 #  behavior_scenario: For OpenScenario.
 #
 #
@@ -58,10 +58,10 @@
 
 defaults:
   - common_params: common_param
-  - vehicle_perception: perception_demo_true
-  - vehicle_localization: localization_demo_false
+  - vehicle_perception: perception_true
+  - vehicle_localization: localization_false
   - game_map: map_deactivated
-  - behavior: behavior_demo_manual
+  - behavior: behavior_default_manual
   - controller: pid_controller
   - traffic_manager: lane_change_false
   - scenario: demo
