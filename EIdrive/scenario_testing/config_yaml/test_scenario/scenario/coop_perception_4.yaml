@@ -34,6 +34,9 @@ rsu_list:
       transmission_latency_in_sec: 0.3
       errors: false
       error_rate: 0.3
+      camera:
+        visualize: 0
+        num: 0
       lidar:
         visualize: false
         range: 50

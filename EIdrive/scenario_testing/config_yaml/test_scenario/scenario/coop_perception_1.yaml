@@ -1,5 +1,4 @@
 test_scenario: coop_perception_1
-coop_perception: true
 vehicle_list:
   - id: 0
     spawn_position: [-45.0, -139.5, 0.3, 0, 180, 0]
