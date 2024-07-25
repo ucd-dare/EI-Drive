@@ -23,6 +23,23 @@ class ClientSideBoundingBoxes(object):
     """
 
     def __init__(self, vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box=None):
+        """
+        Initiates the bounding box module.
+
+        Parameters
+        ----------
+        vehicle_list : list
+            List of all vehicle agents
+        rsu_list : list
+            List of all RSUs
+        pedestrians : list
+            List of all pedestrians
+        rsu_locations : list
+            List of all RSU locations
+        perception_box : list, optional
+            The perception box for additional control, by default None
+        
+        """
 
         # Initialize queues for latency filter
         self.bbx_queue = deque(maxlen=1000)
@@ -49,14 +66,33 @@ class ClientSideBoundingBoxes(object):
 #to get distance use  self.get_distance(vehicle, self.vehicle) 
     def VisualizeBBX(self, cam, vehicles, bbx_list, t, text_viz=True):
         '''
-        Visualize the bbx
-        Returns the control tick if a bounding box is in the trigger area
+        Processes and visualizes the bounding boxes of the vehicles and pedestrians in the simulation.
+        Also controls additional ego vehicle behavior.
+        
+        Parameters
+        ----------
+        cam : PygameCamera
+            The camera object
+        vehicles : list
+            List of all vehicles in the simulation
+        bbx_list : list
+            List of bounding boxes of the vehicles
+        t : int
+            The current time step
+        text_viz : bool, optional
+            Whether to display the real-time location and speed of the vehicles, by default True
+
+        Returns
+        -------
+        t : int
+            The current time step if a vehicle is detected in the perception box, otherwise None
         '''
 
         if not self.ego_vehicle.perception.activate:
 
             # Get z-coordinate of the base of the ego vehicle's bounding box
             current_ego_vehicle_bbox = self.get_bounding_box(cam.vehicle, cam.camera_actor)
+            current_ego_vehicle_position = (int(current_ego_vehicle_bbox[0, 0]), int(current_ego_vehicle_bbox[0, 1]))
 
             # Get vehicles that are within 50 meters
             local_vehicles = [vehicle for vehicle in vehicles if
@@ -90,10 +126,9 @@ class ClientSideBoundingBoxes(object):
                 to_remove = self.check_overlap(in_sight_vehicles, cam)
                 in_sight_vehicles = [vehicle for vehicle in in_sight_vehicles if vehicle.id not in to_remove]
                         
+            # Get the bounding boxes of vehicles in sight
             current_display_bbx = [(vehicle.id, self.get_bounding_box(vehicle, cam.camera_actor)) for
-                            vehicle in in_sight_vehicles]
-            
-            current_ego_vehicle_position = (int(current_ego_vehicle_bbox[0, 0]), int(current_ego_vehicle_bbox[0, 1]))
+                            vehicle in in_sight_vehicles]            
 
             current_vehicle_info = {}
             for vehicle in in_sight_vehicles:
@@ -102,6 +137,7 @@ class ClientSideBoundingBoxes(object):
                     'speed': 3.6 * vehicle.get_velocity().length()  # convert m/s to km/h
                 }
 
+            # Get the world coordinates of the vehicles in sight to check with the perception box
             current_collision_check = [(self.get_world_cords(vehicle)) for vehicle in in_sight_vehicles]
 
             display_bbx = current_display_bbx
@@ -125,6 +161,7 @@ class ClientSideBoundingBoxes(object):
                 self.vehicle_info_queue.append(current_vehicle_info)
                 self.latency_queue.append(current_collision_check)
                 
+            # Visualize the bounding boxes
             self.draw_ground_truth_bbx(cam.display, display_bbx, ego_vehicle_position,
                                                         vehicle_info, text_viz, ego_bbox=ego_vehicle_bbox,
                                                         line_between_vehicle=False)                            
@@ -140,8 +177,8 @@ class ClientSideBoundingBoxes(object):
             self.draw_only_bbx(cam.display, bbx_list, self.ego_vehicle.vehicle,
                                                 cam.camera_actor.calibration, cam.camera_actor)
             
-        # If a bounding box is in the trigger area, set the current time as the starting point for a brake
 
+        # If a bounding box is in the perception box, set the current time as the starting point for a brake
         if self.perception_box is not None:
             if self.ego_vehicle.perception.activate:
                 for bbox in bbx_list:
@@ -768,6 +805,7 @@ def perception_assisted_control(control, t, trigger_tick):
 def manage_bbx_list(vehicle_list, rsu_list):
     """
     Merges the bounding box list from the vehicle agents and the RSUs if cooperative perception is on.
+    Otherwise returns the boudning box list from the ego vehicle.
 
     Parameters
     ----------

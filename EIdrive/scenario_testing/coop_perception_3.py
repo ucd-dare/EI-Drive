@@ -1,7 +1,7 @@
 """
 The script is used for the third cooperative perception test.
 
-The Ego vehicle is at a busy intersection. 1 other vehicles provide additional info to the ego vehicle.
+The Ego vehicle is at a busy intersection. 1 other vehicle provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api

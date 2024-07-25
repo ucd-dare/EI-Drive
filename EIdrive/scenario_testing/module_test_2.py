@@ -1,5 +1,5 @@
 """
-The script is used for testing the sensor, perception, and planning modules of EI Drive with an follwing scenario.
+The script is used for testing the sensor, perception, and planning modules of EI Drive with a follwing scenario.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api

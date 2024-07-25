@@ -1,5 +1,5 @@
 """
-The script is used for multiple destination test.
+The script is used for a basic movement scenario. The vehicle follows a curved road.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
