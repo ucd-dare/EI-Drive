@@ -4,7 +4,7 @@ vehicle_list:
     spawn_position: [-84.5, 107, 1, 0, 90, 0]
     destination: [[-83, 168, 0.3]]
     perception:
-      coop_perception: false
+      coop_perception: true
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false
@@ -41,7 +41,7 @@ vehicle_list:
     spawn_position: [-79, 147, 0.5, 0, 270, 0 ]
     destination: [[ -9.6, 254.8, 0.3 ]]
     perception:
-      coop_perception: false
+      coop_perception: true
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false

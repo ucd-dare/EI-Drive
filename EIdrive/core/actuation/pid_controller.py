@@ -1,7 +1,6 @@
 """
 PID Control Class
 """
-import logging
 # Copyright (c) # Copyright (c) 2018-2020 CVC.
 #
 # This work is licensed under the terms of the MIT license.
@@ -9,7 +8,6 @@ import logging
 
 
 from collections import deque
-import logging
 import math
 import numpy as np
 

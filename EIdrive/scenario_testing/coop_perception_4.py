@@ -25,6 +25,7 @@ def customized_bp(world):
     vehicle_model = 'vehicle.lincoln.mkz_2020'
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '0, 0, 0') #Ego
+    vehicle_blueprints.append(vehicle_blueprint)
 
     return vehicle_blueprints
                     
@@ -38,6 +39,9 @@ def run_scenario(scenario_params):
     try:
         # Create game world
         gameworld = sim_api.GameWorld(scenario_params, map_name='town05')
+
+        text_viz = scenario_params['scenario']['text_viz'] \
+            if 'text_viz' in scenario_params['scenario'] else True
 
         pygame.init()
         gameDisplay = pygame.display.set_mode(
@@ -74,7 +78,7 @@ def run_scenario(scenario_params):
         spec_controller = SpectatorController(spectator)
                 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, pedestrians, rsu_locations)
+        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations)
 
         while True:
 
@@ -109,7 +113,7 @@ def run_scenario(scenario_params):
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t)
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 

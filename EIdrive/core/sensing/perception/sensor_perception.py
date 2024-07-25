@@ -4,12 +4,8 @@ Perception module with all sensors.
 
 import weakref
 import sys
-import time
 import math
 import random
-
-import torchvision
-from torchvision.transforms import ToTensor
 
 import carla
 import cv2
@@ -27,7 +23,6 @@ from EIdrive.core.sensing.perception.open3d_visualize import \
     camera_lidar_fusion_yolo, camera_lidar_fusion_SSD
 from collections import deque
 import torch
-# from yolov5.detectclass import YoloDetector
 from EIdrive.imagePrinter import save_CV
 
 from EIdrive.scenario_testing import demo
@@ -601,7 +596,6 @@ class Perception:
         objects = self.get_traffic_lights(objects)
 
         if self.transmission_latency and self.transmission_latency_in_sec > 0:
-            # TODO: the dt is still hard code.
             latency = math.ceil(self.transmission_latency_in_sec / 0.05)  # The latency in ticks, which is the maximum length of the queue.
             if len(self.yolo_detected_objects_queue) == latency:
                 final_objects = self.yolo_detected_objects_queue.popleft()

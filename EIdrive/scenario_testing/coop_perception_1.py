@@ -48,6 +48,9 @@ def run_scenario(scenario_params):
         # Create game world
         gameworld = sim_api.GameWorld(scenario_params, map_name='town03')
 
+        text_viz = scenario_params['scenario']['text_viz'] \
+            if 'text_viz' in scenario_params['scenario'] else True
+
         pygame.init()
         gameDisplay = pygame.display.set_mode(
             (VIEW_WIDTH, VIEW_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -81,7 +84,7 @@ def run_scenario(scenario_params):
 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
         perception_box = [[-77, -74],[-135,-130.5]]
-        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, pedestrians, rsu_locations, perception_box)
+        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box)
 
         while True:
 
@@ -116,7 +119,7 @@ def run_scenario(scenario_params):
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t)
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 

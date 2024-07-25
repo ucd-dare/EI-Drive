@@ -72,8 +72,6 @@ from carla import ColorConverter as cc
 
 import argparse
 import datetime
-import math
-import random
 import re
 import weakref
 
@@ -81,11 +79,7 @@ try:
     import pygame
     from pygame.locals import KMOD_CTRL
     from pygame.locals import KMOD_SHIFT
-    from pygame.locals import K_0
-    from pygame.locals import K_9
     from pygame.locals import K_BACKQUOTE
-    from pygame.locals import K_BACKSPACE
-    from pygame.locals import K_COMMA
     from pygame.locals import K_DOWN
     from pygame.locals import K_ESCAPE
     from pygame.locals import K_F1
@@ -93,7 +87,6 @@ try:
     from pygame.locals import K_RIGHT
     from pygame.locals import K_SLASH
     from pygame.locals import K_SPACE
-    from pygame.locals import K_TAB
     from pygame.locals import K_UP
     from pygame.locals import K_a
     from pygame.locals import K_b
@@ -113,8 +106,6 @@ try:
     from pygame.locals import K_w
     from pygame.locals import K_MINUS
     from pygame.locals import K_EQUALS
-    from pygame.locals import MOUSEBUTTONUP
-    from pygame.locals import MOUSEBUTTONDOWN
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
@@ -385,34 +376,6 @@ class KeyboardControl(object):
         elif keys[K_q]:
             self.world.zoom_in()
 
-
-        # if keys[K_UP] or keys[K_w]:
-        #     self._control.throttle = min(self._control.throttle + 0.01, 1.00)
-        # else:
-        #     self._control.throttle = 0.0
-
-        # if keys[K_DOWN] or keys[K_s]:
-        #     self._control.brake = min(self._control.brake + 0.2, 1)
-        # else:
-        #     self._control.brake = 0
-        #
-        # steer_increment = 5e-4 * milliseconds
-        # if keys[K_LEFT] or keys[K_a]:
-        #     if self._steer_cache > 0:
-        #         self._steer_cache = 0
-        #     else:
-        #         self._steer_cache -= steer_increment
-        # elif keys[K_RIGHT] or keys[K_d]:
-        #     if self._steer_cache < 0:
-        #         self._steer_cache = 0
-        #     else:
-        #         self._steer_cache += steer_increment
-        # else:
-        #     self._steer_cache = 0.0
-        # self._steer_cache = min(0.7, max(-0.7, self._steer_cache))
-        # self._control.steer = round(self._steer_cache, 1)
-        # self._control.hand_brake = keys[K_SPACE]
-
     def _parse_walker_keys(self, keys, milliseconds, world):
         self._control.speed = 0.0
         if keys[K_DOWN] or keys[K_s]:
@@ -467,13 +430,9 @@ class HUD(object):
         self._notifications.tick(world, clock)
         if not self._show_info:
             return
-        # t = world.player.get_transform()
         x_spec = world.player.get_transform().location.x
         y_spec = world.player.get_transform().location.y
         h_spec = world.player.get_transform().location.z
-        # t = np.copy(pygame.mouse.get_pos())
-        # t[0] = (t[0] - 1920) / 1920 * height + world.player.get_transform().location.x
-        # t[1] = (t[1] - 1080) / 1080 * height + world.player.get_transform().location.y
         world.world.debug.draw_point(carla.Location(x=x_spec * 1.0, y=y_spec * 1.0, z=0.5), size=0.1,
                                      color=carla.Color(255, 0, 0), life_time=0.05)
         self._info_text = [

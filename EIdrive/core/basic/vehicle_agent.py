@@ -3,7 +3,6 @@ Class for vehicle and its modules.
 """
 
 import uuid
-import math
 from EIdrive.core.sensing.localization.localizer import Localizer
 from EIdrive.core.sensing.perception.sensor_perception import Perception
 from EIdrive.core.plan.agent_behavior import AgentBehavior

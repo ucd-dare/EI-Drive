@@ -4,8 +4,6 @@ Since vehicle typically use the same ML model, the class has vehicles share the 
 
 import cv2
 import torch
-import numpy as np
-from collections import deque
 
 
 class ObjectDetectionModel(object):
@@ -25,8 +23,6 @@ class ObjectDetectionModel(object):
     """
 
     def __init__(self):
-        # device = torch.device('cuda')
-        # print('Device:', device)
 
         # YOLOv5 model
         self.object_detector_yolo = torch.hub.load('ultralytics/yolov5', 'yolov5s')

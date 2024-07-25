@@ -9,7 +9,7 @@ from scipy import spatial
 import carla
 import numpy as np
 
-from EIdrive.core.basic.auxiliary import distance_angle_to_target, visualize_trajectory
+from EIdrive.core.basic.auxiliary import distance_angle_to_target
 from EIdrive.core.plan.cubic_spline import Spline2D
 
 

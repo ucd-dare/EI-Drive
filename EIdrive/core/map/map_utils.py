@@ -4,7 +4,6 @@ Minimap convert utilities.
 
 import carla
 import numpy as np
-from enum import IntEnum
 
 
 def lateral_shift(transform, shift):

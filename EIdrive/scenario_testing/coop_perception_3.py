@@ -1,7 +1,7 @@
 """
 The script is used for the third cooperative perception test.
 
-The Ego vehicle is at a busy intersection. 2 other vehicles provide additional info to the ego vehicle.
+The Ego vehicle is at a busy intersection. 1 other vehicles provide additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -31,10 +31,6 @@ def customized_bp(world):
     vehicle_blueprint.set_attribute('color', '0, 0, 255') # Coop 1
     vehicle_blueprints.append(vehicle_blueprint)
 
-    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
-    vehicle_blueprint.set_attribute('color', '255, 0, 0') # Coop 2
-    vehicle_blueprints.append(vehicle_blueprint)
-
     return vehicle_blueprints
                     
 
@@ -47,6 +43,9 @@ def run_scenario(scenario_params):
     try:
         # Create game world
         gameworld = sim_api.GameWorld(scenario_params, map_name='town05')
+
+        text_viz = scenario_params['scenario']['text_viz'] \
+            if 'text_viz' in scenario_params['scenario'] else True
 
         pygame.init()
         gameDisplay = pygame.display.set_mode(
@@ -71,7 +70,7 @@ def run_scenario(scenario_params):
         traffic_manager, flow_list = gameworld.create_traffic_flow()
 
         # Set vehicle stop mode
-        stopped_vehicles = [0, 1, 2]
+        stopped_vehicles = [0, 1]
         for i in stopped_vehicles:
             vehicle_list[i].stop_mode = True
 
@@ -84,7 +83,7 @@ def run_scenario(scenario_params):
         spec_controller = SpectatorController(spectator)
         
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, pedestrians, rsu_locations)
+        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations)
 
         while True:
 
@@ -119,7 +118,7 @@ def run_scenario(scenario_params):
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t)
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 

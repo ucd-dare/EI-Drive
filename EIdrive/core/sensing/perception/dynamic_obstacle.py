@@ -2,8 +2,6 @@
 Class for object detection and save the obstacle.
 """
 
-import sys
-
 import carla
 import numpy as np
 import open3d as o3d

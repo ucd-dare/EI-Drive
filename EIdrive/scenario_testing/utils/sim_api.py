@@ -18,7 +18,6 @@ from EIdrive.core.basic.vehicle_agent import VehicleAgent
 from EIdrive.core.basic.rsu import RSU
 from EIdrive.scenario_testing.utils.customized_map import create_customized_world, bcolors
 from EIdrive.core.basic.ml_model import MLModel
-import EIdrive.imagePrinter as IP
 
 def filter_blueprint_lib(blueprint_library):
     """

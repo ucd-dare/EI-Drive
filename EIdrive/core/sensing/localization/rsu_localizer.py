@@ -114,6 +114,10 @@ class RsuLocalizer(object):
                            z=config_yaml['global_position'][2]))
         self.speed = 0
 
+        self.position = carla.Location(x=config_yaml['global_position'][0],
+                                        y=config_yaml['global_position'][1],
+                                        z=config_yaml['global_position'][2])
+
     def localize(self):
         """
         Determines the RSU's position.

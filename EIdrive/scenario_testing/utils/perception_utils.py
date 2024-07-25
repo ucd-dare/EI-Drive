@@ -22,7 +22,7 @@ class ClientSideBoundingBoxes(object):
     client-side on pygame surface.
     """
 
-    def __init__(self, vehicle_list, pedestrians, rsu_locations, perception_box=None):
+    def __init__(self, vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box=None):
 
         # Initialize queues for latency filter
         self.bbx_queue = deque(maxlen=1000)
@@ -32,7 +32,9 @@ class ClientSideBoundingBoxes(object):
         self.latency_queue = deque(maxlen=1000)
 
         # Initialize fixed variables
+        self.vehicle_list = vehicle_list
         self.ego_vehicle = vehicle_list[0]
+        self.rsu_list = rsu_list
         self.pedestrains = pedestrians
         self.rsu_locations = rsu_locations
         self.perception_box = perception_box
@@ -43,36 +45,53 @@ class ClientSideBoundingBoxes(object):
                 self.perception_box[1][0] -= 1.5
 
 
-    def VisualizeBBX(self, cam, vehicles, bbx_list, t):
+
+#to get distance use  self.get_distance(vehicle, self.vehicle) 
+    def VisualizeBBX(self, cam, vehicles, bbx_list, t, text_viz=True):
         '''
         Visualize the bbx
         Returns the control tick if a bounding box is in the trigger area
         '''
 
         if not self.ego_vehicle.perception.activate:
+
             # Get z-coordinate of the base of the ego vehicle's bounding box
             current_ego_vehicle_bbox = self.get_bounding_box(cam.vehicle, cam.camera_actor)
-            ego_base_z = current_ego_vehicle_bbox[0, 2] - cam.vehicle.bounding_box.extent.z
 
-            in_sight_vehicles = [vehicle for vehicle in vehicles if
-                                vehicle.id != cam.vehicle.id and cam.is_in_sight(vehicle, cam.camera_actor, self.ego_vehicle)]
+            # Get vehicles that are within 50 meters
+            local_vehicles = [vehicle for vehicle in vehicles if
+                                vehicle.id != cam.vehicle.id and distance(vehicle.get_location(), cam.vehicle.get_location()) < 50]
             
-            in_sight_pedestrians = [pedestrian for pedestrian in self.pedestrains if
-                                    cam.is_in_sight(pedestrian, cam.camera_actor, self.ego_vehicle)]
+            # If cooperative perception is enabled, add vehicles within sight and range of other cooperative perception enabled agents
+            if self.ego_vehicle.perception.coop_perception:
+                for vehicle in self.vehicle_list[1:]:
+                    if vehicle.perception.coop_perception:
+                        vehicle_loc = vehicle.vehicle.get_location()
+                        local_vehicles.extend([v for v in vehicles if
+                                                v.id != vehicle.vehicle.id and v.id != cam.vehicle.id \
+                                                and distance(v.get_location(), vehicle_loc) < 50])
+                for rsu in self.rsu_list:
+                    if rsu.perception.coop_perception:
+                        local_vehicles.extend([v for v in vehicles if
+                                                v.id != cam.vehicle.id and distance(v.get_location(), rsu.localizer.position) < 50])
+                # Remove duplicates
+                local_vehicles = self.remove_duplicates(local_vehicles)
             
-            in_sight_vehicles.extend(in_sight_pedestrians)
-            
+            # Check if in sight of camera
+            in_sight_vehicles = [vehicle for vehicle in local_vehicles if
+                                cam.is_in_sight(vehicle, cam.camera_actor, self.ego_vehicle)]
+            local_pedestrians = [pedestrian for pedestrian in self.pedestrains if
+                                    cam.is_in_sight(pedestrian, cam.camera_actor, self.ego_vehicle) \
+                                    and distance(pedestrian.get_location(), cam.vehicle.get_location()) < 50]
+            in_sight_vehicles.extend(local_pedestrians)
+
             # Remove vehicles that are behind other vehicles so that we can not see them if cooperative perception is not enabled
             if not self.ego_vehicle.perception.coop_perception:
                 to_remove = self.check_overlap(in_sight_vehicles, cam)
-                # Now remove the vehicles
                 in_sight_vehicles = [vehicle for vehicle in in_sight_vehicles if vehicle.id not in to_remove]
-
+                        
             current_display_bbx = [(vehicle.id, self.get_bounding_box(vehicle, cam.camera_actor)) for
                             vehicle in in_sight_vehicles]
-            
-            current_display_bbx = [(vehicle_id, bbox) for vehicle_id, bbox in current_display_bbx if
-                            bbox[4, 2] <= ego_base_z + 150]
             
             current_ego_vehicle_position = (int(current_ego_vehicle_bbox[0, 0]), int(current_ego_vehicle_bbox[0, 1]))
 
@@ -107,7 +126,7 @@ class ClientSideBoundingBoxes(object):
                 self.latency_queue.append(current_collision_check)
                 
             self.draw_ground_truth_bbx(cam.display, display_bbx, ego_vehicle_position,
-                                                        vehicle_info, ego_bbox=ego_vehicle_bbox,
+                                                        vehicle_info, text_viz, ego_bbox=ego_vehicle_bbox,
                                                         line_between_vehicle=False)                            
 
         # If cooperative perception is enabled in the ego vehicle visualize data fusion result
@@ -155,7 +174,7 @@ class ClientSideBoundingBoxes(object):
         return bounding_boxes
 
     @staticmethod
-    def draw_ground_truth_bbx(display, bounding_boxes, ego_vehicle_position, vehicle_info, ego_bbox=None, line_between_vehicle=True):
+    def draw_ground_truth_bbx(display, bounding_boxes, ego_vehicle_position, vehicle_info, text_viz, ego_bbox=None, line_between_vehicle=True):
         """
         Draws bounding boxes on pygame display.
         """
@@ -173,17 +192,23 @@ class ClientSideBoundingBoxes(object):
         for vehicle_id, bbox in bounding_boxes:
             points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
 
-            # Displaying real-time location
-            x, y = vehicle_info[vehicle_id]['location']
-            location_text_surface = pygame.font.SysFont('Roboto', 50).render(f"({x:.1f}, {y:.1f})", True, color)
-            location_text_position = (points[0][0], points[0][1] - 10)
-            bb_surface.blit(location_text_surface, location_text_position)
+            if text_viz:
+                # Displaying real-time location
+                x, y = vehicle_info[vehicle_id]['location']
+                location_text_surface = pygame.font.SysFont('Roboto', 50).render(f"({x:.1f}, {y:.1f})", True, color)
+                location_text_position = (points[0][0], points[0][1] - 10)
+                bb_surface.blit(location_text_surface, location_text_position)
 
-            # Displaying speed
-            speed = vehicle_info[vehicle_id]['speed']
-            speed_text_surface = pygame.font.SysFont('Roboto', 50).render(f"{speed:.1f} km/h", True, color)
-            speed_text_position = (points[0][0], points[0][1] - 60)
-            bb_surface.blit(speed_text_surface, speed_text_position)
+                # Displaying speed
+                speed = vehicle_info[vehicle_id]['speed']
+                speed_text_surface = pygame.font.SysFont('Roboto', 50).render(f"{speed:.1f} km/h", True, color)
+                speed_text_position = (points[0][0], points[0][1] - 60)
+                bb_surface.blit(speed_text_surface, speed_text_position)
+
+                font = pygame.font.SysFont('Roboto', 60)
+                text_surface = font.render('Other vehicle', True, color)
+                text_position = (points[0][0], points[0][1] - 110)
+                bb_surface.blit(text_surface, text_position)
 
             # Drawing the link between the vehicles
             if line_between_vehicle:
@@ -206,12 +231,7 @@ class ClientSideBoundingBoxes(object):
             pygame.draw.line(bb_surface, color, points[1], points[5], width=line_width)
             pygame.draw.line(bb_surface, color, points[2], points[6], width=line_width)
             pygame.draw.line(bb_surface, color, points[3], points[7], width=line_width)
-
-            font = pygame.font.SysFont('Roboto', 60)
-            text_surface = font.render('Other vehicle', True, color)
-            text_position = (points[0][0], points[0][1] - 110)
-            bb_surface.blit(text_surface, text_position)
-
+        
         display.blit(bb_surface, (0, 0))
 
 
@@ -424,6 +444,20 @@ class ClientSideBoundingBoxes(object):
                             to_remove.add(j.id)
 
         return to_remove
+    
+    def remove_duplicates(self, local_vehicles):
+        seen_ids = set()   # Track seen vehicle IDs
+
+        for i in local_vehicles:
+            if i.id in seen_ids:
+                # If we've already seen this ID, mark it for removal
+                local_vehicles.remove(i)
+            else:
+                # Otherwise, add this ID to the seen set
+                seen_ids.add(i.id)
+
+        return local_vehicles
+
 
 class PygameCamera:
     def __init__(self, world, vehicle, display):
@@ -489,10 +523,7 @@ class PygameCamera:
         in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=
                 pt[1] <= VIEW_HEIGHT for pt in points]
 
-        # Check if vehicle is within a reasonable range (let's say 50 meters for now)
-        in_range = self.get_distance(vehicle, self.vehicle) <= 70
-
-        return any(in_view) and in_range and in_front and not ego_vehicle.perception.error_present
+        return any(in_view) and in_front and not ego_vehicle.perception.error_present
     
     def get_distance(self, vehicle1, vehicle2):
         loc1 = vehicle1.get_location()
