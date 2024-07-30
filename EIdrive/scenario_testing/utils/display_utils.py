@@ -1,3 +1,7 @@
+"""
+Methods to display the latency and RSUs on the pygame display
+"""
+
 import pygame
 import carla
 

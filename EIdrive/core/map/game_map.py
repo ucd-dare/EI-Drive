@@ -147,18 +147,6 @@ class GameMap(object):
         """
         self.center = ego_pose
 
-    def rasterize_bev_map(self):
-        """
-        Rasterize and Visualize the bev map.
-        """
-        if not self.activate:
-            return
-        self.render_static_agents()
-        self.render_dynamic_agents()
-        if self.visualize:
-            cv2.imshow('the bev map of agent %s' % self.agent_id, self.vis_bev)
-            cv2.waitKey(1)
-
     @staticmethod
     def compute_lane_bounds(left_boundary, right_boundary):
         """

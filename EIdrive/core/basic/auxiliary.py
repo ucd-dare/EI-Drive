@@ -6,31 +6,9 @@ import math
 import numpy as np
 import carla
 
-
-def draw_waypoints(world, waypoints, z=0.5):
-    """
-    Draw a list of waypoints at a certain height given in z.
-
-    Parameters
-    ----------
-    world : carla.world
-        The simulation world.
-
-    waypoints : list
-        List or iterable container with the waypoints to draw.
-
-    z: float
-        Height in meters.
-    """
-    for wpt in waypoints:
-        wpt_t = wpt.transform
-        begin = wpt_t.location + carla.Location(z=z)
-        world.debug.draw_point(begin, size=0.1, life_time=1.0)
-
-
 def visualize_trajectory(world, waypoints,
-                         color=carla.Color(255, 0, 0),
-                         life_time=5, size=0.1):
+                        color=carla.Color(255, 0, 0),
+                        life_time=5, size=0.1):
     """
     Visualize a trajectory using a list of waypoints.
 
@@ -65,30 +43,6 @@ def visualize_trajectory(world, waypoints,
             color=color,
             life_time=life_time)
 
-
-def get_acceleration(vehicle, meters=False):
-    """
-    Get acceleration of a vehicle in m/s^2 or km/h^2.
-
-    Parameters
-    ----------
-    meters : bool
-        Choose the unit in m/s^2 (True) or km/h^2 (False).
-
-    vehicle : carla.vehicle
-        The vehicle.
-
-    Returns
-    -------
-    acceleration : float
-        The vehicle speed.
-    """
-    a = vehicle.get_acceleration()
-    a_by_meters = math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2)
-
-    return a_by_meters if meters else 3.6 * a_by_meters
-
-
 def calculate_vector(location_1, location_2):
     """
     Returns the unit vector from location_1 to location_2.
@@ -107,7 +61,6 @@ def calculate_vector(location_1, location_2):
     norm = np.linalg.norm([x, y, z]) + np.finfo(float).eps
 
     return [x / norm, y / norm, z / norm]
-
 
 def distance_angle_to_target(target_location, current_location, orientation):
     """
@@ -147,7 +100,6 @@ def distance_angle_to_target(target_location, current_location, orientation):
                     forward_vector, delta_vector) / distance, -1., 1.)))
 
     return distance, angle
-
 
 def distance_to_vehicle(waypoint, vehicle_transform):
     """

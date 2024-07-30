@@ -5,7 +5,6 @@ Behavior planning module by rule-base method.
 import sys
 import numpy as np
 import carla
-import importlib
 
 from collections import deque
 from EIdrive.core.basic.auxiliary import get_speed, positive, distance_angle_to_target
@@ -820,7 +819,7 @@ class AgentBehavior(object):
 
             desired_speed = self.manage_car_following(blocking_vehicle, gap, desired_speed)
             planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
-                                                                                         desired_speed=desired_speed)
+                                                                                        desired_speed=desired_speed)
             trajectory_buffer = self.local_planner.get_trajectory()
 
             # Split trajectory into speed buffer and location buffer
@@ -832,7 +831,7 @@ class AgentBehavior(object):
 
         # 8. Standard navigation behavior
         planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
-                                                                                     desired_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
+                                                                                    desired_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
         trajectory_buffer = self.local_planner.get_trajectory()
         location_buffer = deque()
         for traj in trajectory_buffer:

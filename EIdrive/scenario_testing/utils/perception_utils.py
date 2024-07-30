@@ -1,5 +1,7 @@
 """
-Function for cooperative perception and split learning.
+Functions to visualize bounding boxes and other perception data on the pygame display.
+Handles the end result of cooperative perception when perception is on, and all cooperative perception
+functions when perception is off.
 """
 
 import numpy as np
