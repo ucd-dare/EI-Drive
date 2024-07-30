@@ -99,7 +99,7 @@ class VehicleAgent(object):
             The destination for planning.
 
         clean : bool
-             Whether clean the waypoint queue.
+            Whether clean the waypoint queue.
 
         end_reset : bool
             Whether reset the end location.
@@ -107,15 +107,9 @@ class VehicleAgent(object):
 
         self.agent_behavior.set_local_planner(origin, destination, clean, end_reset)
 
-    def update_info(self, dynamic_latency=None):
+    def update_info(self):
         """
         Implement localizer and perception. Also, update information for game map and behavior planner.
-
-        Parameters
-        ----------
-        dynamic_latency: float
-            The dynamic transmission latency that influence the perception module.
-
         """
         # Implement Localization
         self.localizer.localize()
@@ -124,8 +118,6 @@ class VehicleAgent(object):
         speed = self.localizer.get_ego_speed()
 
         # Implement individual object detection
-        if dynamic_latency is not None:
-            self.perception.update_trans_latency(dynamic_latency)
         self.detected_objects = self.perception.object_detect(position)
 
         # Update the vehicle info for gamemap

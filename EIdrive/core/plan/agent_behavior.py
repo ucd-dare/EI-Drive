@@ -12,6 +12,7 @@ from EIdrive.core.basic.auxiliary import get_speed, positive, distance_angle_to_
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
+from EIdrive.core.actuation.vehicle_control import Controller
 
 
 class AgentBehavior(object):
@@ -118,8 +119,7 @@ class AgentBehavior(object):
 
         # Initialize controller
         controller_type = control_config['type']
-        controller = getattr(importlib.import_module("EIdrive.core.actuation.%s" % controller_type), 'Controller')
-        self.controller = controller(control_config['args'])
+        self.controller = Controller(control_config['args'], controller_type)
 
         # Behavior indicator related
         self.car_following_flag = False

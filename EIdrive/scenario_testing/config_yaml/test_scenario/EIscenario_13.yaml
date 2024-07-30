@@ -6,4 +6,4 @@ defaults:
   - behavior: behavior_scenario
   - controller: pid_controller
   - traffic_manager: lane_change_false
-  - scenario: EIscenario_14
+  - scenario: EIscenario_13

@@ -1,6 +1,5 @@
 perception: &base_perception
   activate: true # when not activated, objects positions will be retrieved from server directly
-  apply_ml: true
   model: yolo
   camera:
     visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera

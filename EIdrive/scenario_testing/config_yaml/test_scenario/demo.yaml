@@ -38,7 +38,6 @@
 #  Modules
 #  ----------
 #  pid_controller: Use PID controller for vehicle control.
-#  mpc_controller: Use MPC controller for vehicle control.
 #
 #
 #  7. traffic_manager: This module is responsible for managing how the vehicle interacts with traffic. It might include rules for lane changing and traffic-light-related behaviors.

@@ -5,7 +5,7 @@ vehicle_list:
     spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
     destination: [[323.7, -172.3, 0.5]]
     perception:
-      coop_perception: false
+      coop_perception: true
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false
@@ -34,9 +34,6 @@ rsu_list:
       transmission_latency_in_sec: 0.3
       errors: false
       error_rate: 0.3
-      camera:
-        visualize: 0
-        num: 0
       lidar:
         visualize: false
         range: 50

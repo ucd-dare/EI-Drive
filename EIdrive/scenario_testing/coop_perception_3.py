@@ -12,7 +12,6 @@ from EIdrive.scenario_testing.utils.display_utils import display_latency, displa
 import sys
 import pygame
 import carla
-from EIdrive.imagePrinter import save_pygame
 
 player_ids = []
 
@@ -124,7 +123,6 @@ def run_scenario(scenario_params):
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
 
-            save_pygame(gameDisplay, t)
             pygame.display.flip()
 
             # Apply control to vehicles

@@ -7,7 +7,6 @@ Objective is to safely maintain distance from the vehicles in front.
 
 import carla
 import EIdrive.scenario_testing.utils.sim_api as sim_api
-from EIdrive.core.basic.ml_model import MLModel
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
 
 import time

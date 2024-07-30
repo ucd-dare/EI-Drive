@@ -253,12 +253,8 @@ class GameWorld:
                 k: v / sum(self.bp_class_sample_prob.values()) for k, v in
                 self.bp_class_sample_prob.items()}
 
-        try:
-            apply_ml = scenario_params.vehicle_perception.perception.apply_ml is True
-        except AttributeError:
-            apply_ml = False
-
-        self.ml_model = MLModel(apply_ml=apply_ml)
+        perception_activate = scenario_params['vehicle_perception']['perception']['activate']
+        self.ml_model = MLModel(perception_activate)
         self.carla_map = self.world.get_map()
         self.edge = edge
 

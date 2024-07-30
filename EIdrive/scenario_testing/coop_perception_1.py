@@ -12,7 +12,6 @@ from EIdrive.scenario_testing.utils.perception_utils import manage_bbx_list, Cli
 from EIdrive.scenario_testing.utils.display_utils import display_latency, display_rsu
 import sys
 import pygame
-from EIdrive.imagePrinter import save_pygame
 
 player_ids = []
 
@@ -124,8 +123,7 @@ def run_scenario(scenario_params):
                 control_tick = control_tick_temp
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
-
-            save_pygame(gameDisplay, t)
+            
             pygame.display.flip()
 
             # Apply control to vehicles

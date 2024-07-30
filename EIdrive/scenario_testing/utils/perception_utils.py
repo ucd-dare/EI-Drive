@@ -1,5 +1,5 @@
 """
-Function for cooperative perception and split learning..
+Function for cooperative perception and split learning.
 """
 
 import numpy as np
@@ -100,18 +100,7 @@ class ClientSideBoundingBoxes(object):
             
             # If cooperative perception is enabled, add vehicles within sight and range of other cooperative perception enabled agents
             if self.ego_vehicle.perception.coop_perception:
-                for vehicle in self.vehicle_list[1:]:
-                    if vehicle.perception.coop_perception:
-                        vehicle_loc = vehicle.vehicle.get_location()
-                        local_vehicles.extend([v for v in vehicles if
-                                                v.id != vehicle.vehicle.id and v.id != cam.vehicle.id \
-                                                and distance(v.get_location(), vehicle_loc) < 50])
-                for rsu in self.rsu_list:
-                    if rsu.perception.coop_perception:
-                        local_vehicles.extend([v for v in vehicles if
-                                                v.id != cam.vehicle.id and distance(v.get_location(), rsu.localizer.position) < 50])
-                # Remove duplicates
-                local_vehicles = self.remove_duplicates(local_vehicles)
+                local_vehicles = self.coop_vehicles_in_sight(vehicles, local_vehicles, cam)             
             
             # Check if in sight of camera
             in_sight_vehicles = [vehicle for vehicle in local_vehicles if
@@ -196,8 +185,8 @@ class ClientSideBoundingBoxes(object):
 
                     if self.perception_box[0][0] <= center_x <= self.perception_box[0][1] and self.perception_box[1][0] <= center_y <= (self.perception_box[1][1]):
                         return t
-        
-
+                    
+    
     @staticmethod
     def get_bounding_boxes(vehicles, camera):
         """
@@ -448,7 +437,21 @@ class ClientSideBoundingBoxes(object):
         matrix[2, 2] = c_p * c_r
         return matrix
     
-    
+    def coop_vehicles_in_sight(self, vehicles, local_vehicles, cam):
+        # Adds vehicles within sight and range of other cooperative perception enabled agents
+        for vehicle in self.vehicle_list[1:]:
+            if vehicle.perception.coop_perception:
+                vehicle_loc = vehicle.vehicle.get_location()
+                local_vehicles.extend([v for v in vehicles if
+                                        v.id != vehicle.vehicle.id and v.id != cam.vehicle.id \
+                                        and distance(v.get_location(), vehicle_loc) < 50])
+        for rsu in self.rsu_list:
+            if rsu.perception.coop_perception:
+                local_vehicles.extend([v for v in vehicles if
+                                        v.id != cam.vehicle.id and distance(v.get_location(), rsu.localizer.position) < 50])
+        # Remove duplicates
+        return self.remove_duplicates(local_vehicles)
+
     def check_overlap(self, in_sight_vehicles, cam):
         to_remove = set()  # Use a set to avoid duplicates
 
@@ -600,42 +603,6 @@ def average_bbx(bbx1, bbx2):
 
     # Create and return the merged bounding box
     return BoundingBox(avg_corners)
-
-
-def merge_bbx_list(bbx_list):
-    """
-    Merge the bounding box of the same object according to distance.
-
-    Parameters
-    ----------
-    bbx_list : List
-        List of bbx.
-
-    Returns
-    -------
-    new_bbx_list : List
-        List of merge bbx.
-    """
-    new_bbx_list = []
-    processed = set()
-    threshold_distance = 4
-
-    for i, bbx1 in enumerate(bbx_list):
-        if i in processed:
-            continue
-        merged = False
-        for j, bbx2 in enumerate(bbx_list[i + 1:]):
-            if distance(bbx1.location, bbx2.location) < threshold_distance:
-                merged_bbx = average_bbx(bbx1, bbx2)
-                new_bbx_list.append(merged_bbx)
-                processed.add(i)
-                processed.add(i + 1 + j)
-                merged = True
-                break
-        if not merged:
-            new_bbx_list.append(bbx1)
-    return new_bbx_list
-
 
 def visualize_bbx_by_open3d(bbx_list, vis, true_extent=None, true_transform=None):
     """
@@ -844,6 +811,25 @@ def manage_bbx_list(vehicle_list, rsu_list):
                 bbx_list.append(vehicle_list[0].detected_objects['vehicles'][0].bounding_box)
 
         # Data fusion result
-        return merge_bbx_list(bbx_list)
+        merged_bbx_list = []
+        processed = set()
+        threshold_distance = 4
+
+        for i, bbx1 in enumerate(bbx_list):
+            if i in processed:
+                continue
+            merged = False
+            for j, bbx2 in enumerate(bbx_list[i + 1:]):
+                if distance(bbx1.location, bbx2.location) < threshold_distance:
+                    merged_bbx = average_bbx(bbx1, bbx2)
+                    merged_bbx_list.append(merged_bbx)
+                    processed.add(i)
+                    processed.add(i + 1 + j)
+                    merged = True
+                    break
+            if not merged:
+                merged_bbx_list.append(bbx1)
+        return merged_bbx_list
+    
     else:
         return bbx_list
