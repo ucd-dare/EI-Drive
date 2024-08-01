@@ -6,7 +6,6 @@ The Ego vehicle is at a busy intersection. 3 RSUs provide additional info to the
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
-from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
 from EIdrive.scenario_testing.utils.perception_utils import ClientSideBoundingBoxes, PygameCamera, perception_assisted_control, VIEW_WIDTH, VIEW_HEIGHT, manage_bbx_list
 from EIdrive.scenario_testing.utils.display_utils import display_latency, display_rsu
 import sys
@@ -74,7 +73,8 @@ def run_scenario(scenario_params):
         kl.start()
 
         spectator = gameworld.world.get_spectator()
-        spec_controller = SpectatorController(spectator)
+
+        spec_camera = PygameCamera(gameworld.world, spectator, gameDisplay)
                 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
         bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations)
@@ -94,9 +94,9 @@ def run_scenario(scenario_params):
 
             # Tick and update info
             gameworld.tick()
-            cam.capture = True
+            spec_camera.capture = True
             pygame_clock.tick_busy_loop(60)
-            cam.render(cam.display)
+            spec_camera.render(cam.display)
 
             display_latency(vehicle_list, rsu_list, gameDisplay, VIEW_WIDTH)
 
@@ -112,14 +112,23 @@ def run_scenario(scenario_params):
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz, spec_camera)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 
-            spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
+            ego_vehicle_transform = vehicle_list[0].vehicle.get_transform()
+            bird_view_ego_transform = carla.Transform()
+            bird_view_ego_transform.location = ego_vehicle_transform.location
+            bird_view_ego_transform.location.z = bird_view_ego_transform.location.z + 62
+            bird_view_ego_transform.location.x = bird_view_ego_transform.location.x + 5
+            bird_view_ego_transform.rotation.pitch = -67
+            bird_view_ego_transform.rotation.yaw = 0
+            spectator.set_transform(bird_view_ego_transform)
+
+            filepath = f"/home/junshan/EIDriveRawImg/pygame"
+            pygame.image.save(gameDisplay, f"{filepath}/image{t}.jpg")
 
             pygame.display.flip()
-
             # Apply control to vehicles
             
             for vehicle_agent in vehicle_list:

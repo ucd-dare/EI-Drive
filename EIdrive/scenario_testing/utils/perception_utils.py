@@ -66,7 +66,7 @@ class ClientSideBoundingBoxes(object):
 
 
 #to get distance use  self.get_distance(vehicle, self.vehicle) 
-    def VisualizeBBX(self, cam, vehicles, bbx_list, t, text_viz=True):
+    def VisualizeBBX(self, cam, vehicles, bbx_list, t, text_viz=True, POV_camera=None):
         '''
         Processes and visualizes the bounding boxes of the vehicles and pedestrians in the simulation.
         Also controls additional ego vehicle behavior.
@@ -83,6 +83,8 @@ class ClientSideBoundingBoxes(object):
             The current time step
         text_viz : bool, optional
             Whether to display the real-time location and speed of the vehicles, by default True
+        POV_camera : PygameCamera, optional
+            The camera object for the bird's eye view, by default None
 
         Returns
         -------
@@ -90,10 +92,13 @@ class ClientSideBoundingBoxes(object):
             The current time step if a vehicle is detected in the perception box, otherwise None
         '''
 
+        if POV_camera is None:
+            POV_camera = cam
+
         if not self.ego_vehicle.perception.activate:
 
             # Get z-coordinate of the base of the ego vehicle's bounding box
-            current_ego_vehicle_bbox = self.get_bounding_box(cam.vehicle, cam.camera_actor)
+            current_ego_vehicle_bbox = self.get_bounding_box(cam.vehicle, POV_camera.camera_actor)
             current_ego_vehicle_position = (int(current_ego_vehicle_bbox[0, 0]), int(current_ego_vehicle_bbox[0, 1]))
 
             # Get vehicles that are within 50 meters
@@ -102,7 +107,8 @@ class ClientSideBoundingBoxes(object):
             
             # If cooperative perception is enabled, add vehicles within sight and range of other cooperative perception enabled agents
             if self.ego_vehicle.perception.coop_perception:
-                local_vehicles = self.coop_vehicles_in_sight(vehicles, local_vehicles, cam)             
+                local_vehicles = self.coop_vehicles_in_sight(vehicles, local_vehicles, cam)
+                local_vehicles = self.remove_duplicates(local_vehicles)             
             
             # Check if in sight of camera
             in_sight_vehicles = [vehicle for vehicle in local_vehicles if
@@ -118,7 +124,7 @@ class ClientSideBoundingBoxes(object):
                 in_sight_vehicles = [vehicle for vehicle in in_sight_vehicles if vehicle.id not in to_remove]
                         
             # Get the bounding boxes of vehicles in sight
-            current_display_bbx = [(vehicle.id, self.get_bounding_box(vehicle, cam.camera_actor)) for
+            current_display_bbx = [(vehicle.id, self.get_bounding_box(vehicle, POV_camera.camera_actor)) for
                             vehicle in in_sight_vehicles]            
 
             current_vehicle_info = {}
@@ -153,20 +159,19 @@ class ClientSideBoundingBoxes(object):
                 self.latency_queue.append(current_collision_check)
                 
             # Visualize the bounding boxes
-            self.draw_ground_truth_bbx(cam.display, display_bbx, ego_vehicle_position,
+            self.draw_ground_truth_bbx(POV_camera.display, display_bbx, ego_vehicle_position,
                                                         vehicle_info, text_viz, ego_bbox=ego_vehicle_bbox,
                                                         line_between_vehicle=False)                            
 
         # If cooperative perception is enabled in the ego vehicle visualize data fusion result
         elif self.ego_vehicle.perception.coop_perception:
-
-            self.draw_only_bbx(cam.display, bbx_list, self.ego_vehicle.vehicle,
-                                                cam.camera_actor.calibration, cam.camera_actor, self.rsu_locations)
+            self.draw_only_bbx(POV_camera.display, bbx_list, self.ego_vehicle.vehicle,
+                                                POV_camera.camera_actor.calibration, POV_camera.camera_actor, self.rsu_locations)
             
+        # Visualize perception result only from ego vehicle
         else:
-            # Visualize perception result only from ego vehicle
-            self.draw_only_bbx(cam.display, bbx_list, self.ego_vehicle.vehicle,
-                                                cam.camera_actor.calibration, cam.camera_actor)
+            self.draw_only_bbx(POV_camera.display, bbx_list, self.ego_vehicle.vehicle,
+                                                POV_camera.camera_actor.calibration, POV_camera.camera_actor)
             
 
         # If a bounding box is in the perception box, set the current time as the starting point for a brake
@@ -211,11 +216,12 @@ class ClientSideBoundingBoxes(object):
         color = (0, 0, 255)
 
         # For ego vehicle:
-        points = [(int(ego_bbox[i, 0]), int(ego_bbox[i, 1])) for i in range(8)]
-        font = pygame.font.SysFont('Roboto', 60)
-        text_surface = font.render("Ego", True, color)
-        text_position = (points[0][0], points[0][1] - 110)
-        bb_surface.blit(text_surface, text_position)
+        if text_viz:
+            points = [(int(ego_bbox[i, 0]), int(ego_bbox[i, 1])) for i in range(8)]
+            font = pygame.font.SysFont('Roboto', 60)
+            text_surface = font.render("Ego", True, color)
+            text_position = (points[0][0], points[0][1] - 110)
+            bb_surface.blit(text_surface, text_position)
 
         for vehicle_id, bbox in bounding_boxes:
             points = [(int(bbox[i, 0]), int(bbox[i, 1])) for i in range(8)]
@@ -452,7 +458,7 @@ class ClientSideBoundingBoxes(object):
                 local_vehicles.extend([v for v in vehicles if
                                         v.id != cam.vehicle.id and distance(v.get_location(), rsu.localizer.position) < 50])
         # Remove duplicates
-        return self.remove_duplicates(local_vehicles)
+        return local_vehicles
 
     def check_overlap(self, in_sight_vehicles, cam):
         to_remove = set()  # Use a set to avoid duplicates
@@ -487,18 +493,17 @@ class ClientSideBoundingBoxes(object):
 
         return to_remove
     
-    def remove_duplicates(self, local_vehicles):
+    def remove_duplicates(self, vehicles):
         seen_ids = set()   # Track seen vehicle IDs
+        return_list = []   # List to store vehicles that are not duplicates
 
-        for i in local_vehicles:
-            if i.id in seen_ids:
-                # If we've already seen this ID, mark it for removal
-                local_vehicles.remove(i)
-            else:
+        for i in vehicles:
+            if i.id not in seen_ids:
                 # Otherwise, add this ID to the seen set
                 seen_ids.add(i.id)
+                return_list.append(i)
 
-        return local_vehicles
+        return return_list
 
 
 class PygameCamera:
@@ -800,17 +805,18 @@ def manage_bbx_list(vehicle_list, rsu_list):
 
             for vehicle_agent in vehicle_list:
                 if vehicle_agent.perception.coop_perception and vehicle_agent.detected_objects['vehicles']:
-                    bbx = vehicle_agent.detected_objects['vehicles'][0].bounding_box
-                    bbx_list.append(bbx)
+                    for bbx in vehicle_agent.detected_objects['vehicles']:
+                        bbx_list.append(bbx.bounding_box)
             
             for rsu in rsu_list:
                 if rsu.perception.coop_perception and rsu.detected_objects['vehicles']:
-                    bbx = rsu.detected_objects['vehicles'][0].bounding_box
-                    bbx_list.append(bbx)
+                    for bbx in rsu.detected_objects['vehicles']:
+                        bbx_list.append(bbx.bounding_box)
         
         else:
             if vehicle_list[0].detected_objects['vehicles']:
-                bbx_list.append(vehicle_list[0].detected_objects['vehicles'][0].bounding_box)
+                for bbx in vehicle_list[0].detected_objects['vehicles']:
+                        bbx_list.append(bbx.bounding_box)
 
         # Data fusion result
         merged_bbx_list = []

@@ -8,7 +8,6 @@ Add additonal perception methods in the PerceptionMethods class.
 import cv2
 import numpy as np
 import math
-import sys
 import torch
 from collections import deque
 import EIdrive.core.sensing.perception.sensor_transformation as st

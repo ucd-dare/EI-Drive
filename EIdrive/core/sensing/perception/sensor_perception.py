@@ -130,15 +130,15 @@ class Perception:
         """
         Destroy all sensors.
         """
-        if self.rgb_camera:
-            for rgb_camera in self.rgb_camera:
+        if self.PerceptionMethods.rgb_camera:
+            for rgb_camera in self.PerceptionMethods.rgb_camera:
                 rgb_camera.sensor.destroy()
 
-        if self.lidar:
-            self.lidar.sensor.destroy()
+        if self.PerceptionMethods.lidar:
+            self.PerceptionMethods.lidar.sensor.destroy()
 
         if self.camera_visualize:
             cv2.destroyAllWindows()
 
         if self.lidar_visualize:
-            self.o3d_vis.destroy_window()
+            self.PerceptionMethods.o3d_vis.destroy_window()

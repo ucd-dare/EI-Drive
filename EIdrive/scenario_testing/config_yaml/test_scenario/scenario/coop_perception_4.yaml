@@ -13,10 +13,12 @@ vehicle_list:
       lidar:
         visualize: false
         range: 50
+        points_per_second: 100000
+        rotation_frequency: 30
   
 rsu_list:
   - id: -1
-    spawn_position: [-113.3, 77.9, 3, 0, 35, 0 ]
+    spawn_position: [-138.8, 99, 7, 0, -35, 0 ]
     perception:
       coop_perception: true
       transmission_latency: false
@@ -26,8 +28,9 @@ rsu_list:
       lidar:
         visualize: false
         range: 50
+        lower_fov: -40.0
   - id: -2
-    spawn_position: [-138.8, 99, 3, 0, -35, 0 ]
+    spawn_position: [-112.1, 100.9, 7, 0, -35, 0 ]
     perception:
       coop_perception: true
       transmission_latency: false
@@ -37,8 +40,9 @@ rsu_list:
       lidar:
         visualize: false
         range: 50
+        lower_fov: -40.0
   - id: -3
-    spawn_position: [-112.1, 100.9, 3, 0, -35, 0 ]
+    spawn_position: [-61.6, 79.0, 7, 0, 135, 0 ]
     perception:
       coop_perception: true
       transmission_latency: false
@@ -48,3 +52,4 @@ rsu_list:
       lidar:
         visualize: false
         range: 50
+        lower_fov: -40.0

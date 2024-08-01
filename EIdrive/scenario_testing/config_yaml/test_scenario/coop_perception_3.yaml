@@ -4,6 +4,6 @@ defaults:
   - vehicle_localization: localization_false
   - game_map: map_deactivated
   - behavior: behavior_coop_perception
-  - controller: pid_controller_controller
+  - controller: pid_controller
   - traffic_manager: traffic_flow
   - scenario: coop_perception_3
