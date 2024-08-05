@@ -34,11 +34,9 @@ def customized_bp(world):
     vehicle_blueprint.set_attribute('color', '0, 0, 255')
     vehicle_blueprints.append(vehicle_blueprint)
 
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
     vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
-    vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
     vehicle_blueprints.append(vehicle_blueprint)
     
     return vehicle_blueprints
@@ -52,7 +50,7 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params, map_name='town03')
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town06')
 
         text_viz = scenario_params['scenario']['text_viz'] \
             if 'text_viz' in scenario_params['scenario'] else True
@@ -78,7 +76,7 @@ def run_scenario(scenario_params):
         traffic_manager, flow_list = gameworld.create_traffic_flow()
 
         # Set vehicle stop mode
-        stopped_vehicles = [1]
+        stopped_vehicles = [1, 3,4]
         for i in stopped_vehicles:
             vehicle_list[i].stop_mode = True
 
@@ -91,7 +89,7 @@ def run_scenario(scenario_params):
         spec_controller = SpectatorController(spectator)
 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        perception_box = [[-52.5, -50.5 ], [-94, -89]]
+        perception_box = [[-11.3, -8.1 ], [49, 54]]
         bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box)
 
         while True:

@@ -670,6 +670,7 @@ class GameWorld:
         if isinstance(traffic_config['vehicle_list'], list):
             background_traffic = self.create_vehicles_by_list(traffic_manager, traffic_config, background_traffic)
         else:
+            print('Creating vehicles by range.')
             background_traffic = self.create_vehicle_by_range(traffic_manager, traffic_config, background_traffic)
 
         print('CARLA traffic flow has been created.')
