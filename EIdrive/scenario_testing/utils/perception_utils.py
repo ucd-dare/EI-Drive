@@ -64,7 +64,6 @@ class ClientSideBoundingBoxes(object):
                 self.perception_box[1][0] -= 1.5
 
 
-
 #to get distance use  self.get_distance(vehicle, self.vehicle) 
     def VisualizeBBX(self, cam, vehicles, bbx_list, t, text_viz=True, POV_camera=None):
         '''
@@ -318,7 +317,7 @@ class ClientSideBoundingBoxes(object):
             points = [(int(camera_bbox[i, 0]), int(camera_bbox[i, 1])) for i in range(8)]
 
             in_view = [0 <= pt[0] <= VIEW_WIDTH and 0 <=pt[1] <= VIEW_HEIGHT for pt in points]
-            if any(in_view):
+            if any(in_view) and np.all(bbox[:, 2] > 0):
                 # Drawing the bounding box
                 width = 3
                 # Base

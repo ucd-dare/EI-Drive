@@ -5,7 +5,7 @@ vehicle_list:
     spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
     destination: [[323.7, -172.3, 0.5]]
     perception:
-      coop_perception: true
+      coop_perception: false
       transmission_latency: false
       transmission_latency_in_sec: 0.3
       errors: false

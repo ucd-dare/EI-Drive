@@ -660,6 +660,8 @@ class GameWorld:
 
         traffic_manager.set_global_distance_to_leading_vehicle(traffic_config['global_distance'])
         traffic_manager.set_synchronous_mode(traffic_config['sync_mode'])
+        if traffic_config['deterministic_mode']:
+            traffic_manager.set_random_device_seed(traffic_config['deterministic_seed'])
         traffic_manager.set_osm_mode(traffic_config['set_osm_mode'])
         traffic_manager.global_percentage_speed_difference(traffic_config['global_speed_perc'])
 

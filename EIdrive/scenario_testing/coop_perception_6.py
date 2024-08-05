@@ -1,16 +1,17 @@
 """
-The script is used for the fouth cooperative perception test.
+The script is used for the second cooperative perception test.
 
-The Ego vehicle is at a busy intersection. 3 RSUs provide additional info to the Ego vehicle.
+The ego vehicle is approachign an intersection. A firetruck blocks its sight of an incoming vehicle. An additional vehicle provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
 from EIdrive.scenario_testing.utils.keyboard_listener import KeyListener
-from EIdrive.scenario_testing.utils.perception_utils import ClientSideBoundingBoxes, PygameCamera, perception_assisted_control, VIEW_WIDTH, VIEW_HEIGHT, manage_bbx_list
+from EIdrive.scenario_testing.utils.spectator_api import SpectatorController
+from EIdrive.scenario_testing.utils.perception_utils import manage_bbx_list, ClientSideBoundingBoxes, \
+    PygameCamera, perception_assisted_control, VIEW_WIDTH, VIEW_HEIGHT
 from EIdrive.scenario_testing.utils.display_utils import display_latency, display_rsu
 import sys
 import pygame
-import carla
 
 player_ids = []
 
@@ -22,11 +23,26 @@ def customized_bp(world):
     vehicle_blueprints = []
     vehicle_model = 'vehicle.lincoln.mkz_2020'
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
-    vehicle_blueprint.set_attribute('color', '0, 0, 0') #Ego
+    vehicle_blueprint.set_attribute('color', '0, 0, 0')
     vehicle_blueprints.append(vehicle_blueprint)
 
+    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
+    vehicle_blueprint.set_attribute('color', '255, 0, 0')
+    vehicle_blueprints.append(vehicle_blueprint)
+
+    vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
+    vehicle_blueprint.set_attribute('color', '0, 0, 255')
+    vehicle_blueprints.append(vehicle_blueprint)
+
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprints.append(vehicle_blueprint)
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprints.append(vehicle_blueprint)
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprints.append(vehicle_blueprint)
+    
     return vehicle_blueprints
-                    
+
 
 def run_scenario(scenario_params):
     scenario_runner = None
@@ -36,7 +52,7 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params, map_name='town05')
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town03')
 
         text_viz = scenario_params['scenario']['text_viz'] \
             if 'text_viz' in scenario_params['scenario'] else True
@@ -49,7 +65,6 @@ def run_scenario(scenario_params):
 
         vehicle_blueprints = customized_bp(gameworld.world)
         vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)
-        pedestrian_list = gameworld.create_pedestrian()
         rsu_list = gameworld.create_rsu()
 
         # Spawn pygame camera
@@ -63,7 +78,7 @@ def run_scenario(scenario_params):
         traffic_manager, flow_list = gameworld.create_traffic_flow()
 
         # Set vehicle stop mode
-        stopped_vehicles = [0]
+        stopped_vehicles = [1]
         for i in stopped_vehicles:
             vehicle_list[i].stop_mode = True
 
@@ -73,10 +88,11 @@ def run_scenario(scenario_params):
         kl.start()
 
         spectator = gameworld.world.get_spectator()
-        spec_camera = PygameCamera(gameworld.world, spectator, gameDisplay)
-                
+        spec_controller = SpectatorController(spectator)
+
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations)
+        perception_box = [[-52.5, -50.5 ], [-94, -89]]
+        bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box)
 
         while True:
 
@@ -93,9 +109,9 @@ def run_scenario(scenario_params):
 
             # Tick and update info
             gameworld.tick()
-            spec_camera.capture = True
+            cam.capture = True
             pygame_clock.tick_busy_loop(60)
-            spec_camera.render(cam.display)
+            cam.render(cam.display)
 
             display_latency(vehicle_list, rsu_list, gameDisplay, VIEW_WIDTH)
 
@@ -111,20 +127,14 @@ def run_scenario(scenario_params):
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
-            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz, spec_camera)
+            control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
             if control_tick_temp is not None:
                 control_tick = control_tick_temp
 
-            ego_vehicle_transform = vehicle_list[0].vehicle.get_transform()
-            bird_view_ego_transform = carla.Transform()
-            bird_view_ego_transform.location = ego_vehicle_transform.location
-            bird_view_ego_transform.location.z = bird_view_ego_transform.location.z + 62
-            bird_view_ego_transform.location.x = bird_view_ego_transform.location.x + 5
-            bird_view_ego_transform.rotation.pitch = -67
-            bird_view_ego_transform.rotation.yaw = 0
-            spectator.set_transform(bird_view_ego_transform)
+            spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
 
             pygame.display.flip()
+
             # Apply control to vehicles
             
             for vehicle_agent in vehicle_list:
@@ -135,11 +145,6 @@ def run_scenario(scenario_params):
                     control = perception_assisted_control(control, t, control_tick)
                 
                 vehicle_agent.vehicle.apply_control(control)
-
-            for pedestrian in pedestrian_list:
-                control = carla.WalkerControl()
-                control.speed = 1.3
-                pedestrian.apply_control(control)
 
             t = t + 1
             if 3000 == t:
