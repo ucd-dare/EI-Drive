@@ -5,5 +5,5 @@ defaults:
   - game_map: map_deactivated
   - behavior: behavior_coop_perception
   - controller: pid_controller
-  - traffic_manager: traffic_flow_coop
+  - traffic_manager: traffic_flow_coop3n4
   - scenario: coop_perception_4

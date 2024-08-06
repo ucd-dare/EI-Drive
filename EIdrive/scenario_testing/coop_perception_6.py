@@ -1,5 +1,5 @@
 """
-The script is used for the second cooperative perception test.
+The script is used for the sixth cooperative perception test.
 
 The ego vehicle is approachign an intersection. Travel buses partially block its view of an incoming vehicle.
 A spectator vehicle and two RSUs provides additional info to the ego vehicle.
@@ -71,7 +71,7 @@ def run_scenario(scenario_params):
         cam.set_synchronous_mode(True)
 
         # Draw the position of RSU
-        rsu_locations = display_rsu(rsu_list, vehicle_list, gameworld)        
+        rsu_locations = display_rsu(rsu_list, gameworld)        
 
         # Create background traffic
         traffic_manager, flow_list = gameworld.create_traffic_flow()

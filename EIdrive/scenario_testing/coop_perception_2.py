@@ -67,7 +67,7 @@ def run_scenario(scenario_params):
         cam.set_synchronous_mode(True)
 
         # Draw the position of RSU
-        rsu_locations = display_rsu(rsu_list, vehicle_list, gameworld)        
+        rsu_locations = display_rsu(rsu_list, gameworld)        
 
         # Set vehicle stop mode
         stopped_vehicles = [2, 3]

@@ -1,5 +1,5 @@
 """
-The script is used for the fouth cooperative perception test.
+The script is used for the third cooperative perception test.
 
 The Ego vehicle is at a busy intersection. A spectator vehicle provides additional info to the Ego vehicle.
 """
@@ -61,7 +61,7 @@ def run_scenario(scenario_params):
         cam.set_synchronous_mode(True)
 
         # Draw the position of RSU
-        rsu_locations = display_rsu(rsu_list, vehicle_list, gameworld)        
+        rsu_locations = display_rsu(rsu_list, gameworld)        
 
         # Create background traffic
         traffic_manager, flow_list = gameworld.create_traffic_flow()
@@ -128,9 +128,6 @@ def run_scenario(scenario_params):
             bird_view_ego_transform.rotation.pitch = -67
             bird_view_ego_transform.rotation.yaw = 0
             spectator.set_transform(bird_view_ego_transform)
-
-            filepath = f"/home/junshan/EIDriveRawImg/pygame"
-            pygame.image.save(gameDisplay, f"{filepath}/image{t}.jpg")
 
             pygame.display.flip()
             # Apply control to vehicles

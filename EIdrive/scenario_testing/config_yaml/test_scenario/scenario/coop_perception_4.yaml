@@ -7,7 +7,7 @@ vehicle_list:
     perception:
       coop_perception: true
       transmission_latency: false
-      transmission_latency_in_sec: 0.3
+      transmission_latency_in_sec: 1
       errors: false
       error_rate: 0.3
       lidar:
@@ -22,7 +22,7 @@ rsu_list:
     perception:
       coop_perception: true
       transmission_latency: false
-      transmission_latency_in_sec: 0.3
+      transmission_latency_in_sec: 1
       errors: false
       error_rate: 0.3
       lidar:
@@ -34,7 +34,7 @@ rsu_list:
     perception:
       coop_perception: true
       transmission_latency: false
-      transmission_latency_in_sec: 0.3
+      transmission_latency_in_sec: 1
       errors: false
       error_rate: 0.3
       lidar:
@@ -46,7 +46,7 @@ rsu_list:
     perception:
       coop_perception: true
       transmission_latency: false
-      transmission_latency_in_sec: 0.3
+      transmission_latency_in_sec: 1
       errors: false
       error_rate: 0.3
       lidar:
