@@ -62,7 +62,7 @@ def display_latency(vehicle_list, rsu_list, gameDisplay, view_width, font_size=8
         gameDisplay.blit(text, position)
 
 
-def display_rsu(rsu_list, vehicle_list, gameworld):
+def display_rsu(rsu_list, gameworld):
     """
     Display the RSUs on the pygame display
     
@@ -79,7 +79,7 @@ def display_rsu(rsu_list, vehicle_list, gameworld):
     for rsu in rsu_list:
         location = carla.Location(*rsu.perception.global_position[:3])
         rsu_locations.append(location)
-        if vehicle_list[0].perception.coop_perception:
+        if rsu.perception.coop_perception:
             color = carla.Color(0, 255, 0)
         else:
             color = carla.Color(255, 0, 0)
