@@ -1,7 +1,7 @@
 """
 The script is used for the fouth cooperative perception test.
 
-The Ego vehicle is at a busy intersection. 3 RSUs provide additional info to the Ego vehicle.
+The Ego vehicle is at a busy intersection. A spectator vehicle provides additional info to the Ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api

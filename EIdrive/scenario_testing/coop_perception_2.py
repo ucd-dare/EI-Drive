@@ -1,7 +1,8 @@
 """
 The script is used for the second cooperative perception test.
 
-The ego vehicle is approachign an intersection. A firetruck blocks its sight of an incoming vehicle. An additional vehicle provides additional info to the ego vehicle.
+The ego vehicle is approachign an intersection. A firetruck blocks its sight of an incoming vehicle. 
+A spectator vehicle provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
