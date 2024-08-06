@@ -1,0 +1,29 @@
+test_scenario: coop_perception_3
+text_viz: false
+vehicle_list:
+  - id: 0
+    spawn_position: [-143, 91.5, 0.5, 0, 0, 0]
+    destination: [[323.7, -172.3, 0.5]]
+    perception:
+      coop_perception: false
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50
+  
+  #Spectator Vehicle
+  - id: 1
+    spawn_position: [-107.1, 88.1, 0.5, 0, 180, 0 ]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      lidar:
+        visualize: false
+        range: 50

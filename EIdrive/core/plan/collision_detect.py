@@ -9,7 +9,7 @@ from scipy import spatial
 import carla
 import numpy as np
 
-from EIdrive.core.basic.auxiliary import distance_angle_to_target, visualize_trajectory
+from EIdrive.core.basic.auxiliary import distance_angle_to_target
 from EIdrive.core.plan.cubic_spline import Spline2D
 
 
@@ -35,68 +35,6 @@ class CollisionDetector:
                                 1.0] \
             if circle_offsets is None else circle_offsets
         self._circle_radius = circle_radius
-
-    def is_within_range(
-            self,
-            ego_pos,
-            target_vehicle,
-            candidate_vehicle,
-            carla_map):
-        """
-        Evaluates whether an obstacle vehicle exists between the ego vehicle and the target vehicle during back joining.
-
-        Parameters:
-            carla_map : carla.map
-                The map of the current simulation world in Carla.
-
-            ego_pos : carla.transform
-                Position of the ego vehicle.
-
-            target_vehicle : carla.vehicle
-                The vehicle that the ego vehicle is trying to reach.
-
-            candidate_vehicle : carla.vehicle
-                Potential obstacle vehicle that may be blocking the path between the ego vehicle and target vehicle.
-
-        Returns:
-            boolean : detection result
-            A flag indicating whether the candidate vehicle is within the range of the ego and target vehicles.
-        """
-
-        # Obtain the locations for ego, target, and candidate
-        location_ego = ego_pos.location
-        location_target = target_vehicle.get_location()
-        location_candidate = candidate_vehicle.get_location()
-
-        # Define the coordinates for the checking area
-        min_coordinate_x, max_coordinate_x = min(location_ego.x, location_target.x), max(location_ego.x,
-                                                                                         location_target.x)
-        min_coordinate_y, max_coordinate_y = min(location_ego.y, location_target.y), max(location_ego.y,
-                                                                                         location_target.y)
-
-        # Check if candidate is within a 2 meter buffer zone around the defined area
-        if (location_candidate.x < min_coordinate_x - 2 or location_candidate.x > max_coordinate_x + 2) or \
-                (location_candidate.y < min_coordinate_y - 2 or location_candidate.y > max_coordinate_y + 2):
-            return False
-
-        # Get waypoints for candidate and target
-        waypoint_candidate = carla_map.get_waypoint(location_candidate)
-        waypoint_target = carla_map.get_waypoint(location_target)
-
-        # Verify if candidate vehicle is directly behind target vehicle, hence blocking it
-        if waypoint_target.lane_id == waypoint_candidate.lane_id:
-            return True
-
-        # In case they are in same lane but different sections, resulting in different ids
-        if waypoint_target.section_id == waypoint_candidate.section_id:
-            return False
-
-        # Compute the angle
-        dist, angle = distance_angle_to_target(
-            waypoint_target.transform.location, waypoint_candidate.transform.location,
-            waypoint_candidate.transform.rotation.yaw)
-
-        return angle <= 3
 
     def check_adjacent_lane_collision(
             self, ego_loc, target_wpt, overtake):

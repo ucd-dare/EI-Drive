@@ -2,8 +2,6 @@
 Class for static obstacle.
 """
 
-import sys
-
 import numpy as np
 import carla
 

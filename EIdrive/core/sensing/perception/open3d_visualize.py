@@ -188,7 +188,11 @@ def camera_lidar_fusion_SSD(objects,
     for i in range(bounding_boxes.shape[0]):
         single_detection = bounding_boxes[i]
         x1, y1, x2, y2 = map(int, single_detection[:4])
-        object_label = int(single_detection[4])
+        sub_array = single_detection[4]
+        if isinstance(sub_array, np.ndarray):
+            object_label = int(sub_array[-1])
+        else:
+            object_label = int(sub_array)  # In case it is not an array, handle it directly
 
         points_within_box = \
             (lidar_in_camera_space[:, 0] > x1) & (lidar_in_camera_space[:, 0] < x2) & \
@@ -224,7 +228,6 @@ def camera_lidar_fusion_SSD(objects,
         box_corners = np.r_[box_corners, [np.ones(box_corners.shape[1])]]
         world_corners = st.sensor_to_world(box_corners, lidar_sensor.get_transform())
         world_corners = world_corners.transpose()[:, :3]
-
         if is_vehicle_in_cococlass(object_label):
             vehicle_obstacle = DynamicObstacle(world_corners, bounding_box)
             if 'vehicles' in objects:

@@ -3,7 +3,6 @@ Class for vehicle and its modules.
 """
 
 import uuid
-import math
 from EIdrive.core.sensing.localization.localizer import Localizer
 from EIdrive.core.sensing.perception.sensor_perception import Perception
 from EIdrive.core.plan.agent_behavior import AgentBehavior
@@ -87,12 +86,6 @@ class VehicleAgent(object):
         if 'is_manually' in behavior_config:
             self.is_manually = behavior_config['is_manually']
 
-        # self.transmission_latency = perception_config['transmission_latency'] \
-        #     if 'transmission_latency' in perception_config else None
-        # self.transmission_latency_in_sec = perception_config['transmission_latency_in_sec'] \
-        #     if 'transmission_latency_in_sec' in perception_config else None
-        # self.transmission_data_deque = deque()
-
     def set_local_planner(self, origin, destination, clean=False, end_reset=True):
         """
         Set local planner for the AgentBehavior.
@@ -106,7 +99,7 @@ class VehicleAgent(object):
             The destination for planning.
 
         clean : bool
-             Whether clean the waypoint queue.
+            Whether clean the waypoint queue.
 
         end_reset : bool
             Whether reset the end location.
@@ -114,15 +107,9 @@ class VehicleAgent(object):
 
         self.agent_behavior.set_local_planner(origin, destination, clean, end_reset)
 
-    def update_info(self, dynamic_latency=None):
+    def update_info(self):
         """
         Implement localizer and perception. Also, update information for game map and behavior planner.
-
-        Parameters
-        ----------
-        dynamic_latency: float
-            The dynamic transmission latency that influence the perception module.
-
         """
         # Implement Localization
         self.localizer.localize()
@@ -131,8 +118,6 @@ class VehicleAgent(object):
         speed = self.localizer.get_ego_speed()
 
         # Implement individual object detection
-        if dynamic_latency is not None:
-            self.perception.update_trans_latency(dynamic_latency)
         self.detected_objects = self.perception.object_detect(position)
 
         # Update the vehicle info for gamemap

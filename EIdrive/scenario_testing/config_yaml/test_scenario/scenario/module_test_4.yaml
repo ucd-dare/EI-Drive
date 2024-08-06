@@ -1,0 +1,12 @@
+test_scenario: module_test_4
+vehicle_list:
+  - id: 0
+    spawn_position: [115, 1.5, 0.3, 0, 0, 0]
+    destination: [[150, -50, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+      max_speed: 20
+      collision_time_ahead: 0
+      overtake_allowed: false

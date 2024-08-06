@@ -1,5 +1,5 @@
 controller:
-  type: pid_controller # this has to be exactly the same name as the controller py file
+  type: PID
   args:
     lat:
       k_p: 0.9

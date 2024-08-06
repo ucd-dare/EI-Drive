@@ -5,13 +5,13 @@ Behavior planning module by rule-base method.
 import sys
 import numpy as np
 import carla
-import importlib
 
 from collections import deque
 from EIdrive.core.basic.auxiliary import get_speed, positive, distance_angle_to_target
 from EIdrive.core.plan.collision_detect import CollisionDetector
 from EIdrive.core.plan.local_trajectory_planner import LocalPlanner
 from EIdrive.core.plan.global_route_planner import GlobalRoutePlanner
+from EIdrive.core.actuation.vehicle_control import Controller
 
 
 class AgentBehavior(object):
@@ -118,8 +118,7 @@ class AgentBehavior(object):
 
         # Initialize controller
         controller_type = control_config['type']
-        controller = getattr(importlib.import_module("EIdrive.core.actuation.%s" % controller_type), 'Controller')
-        self.controller = controller(control_config['args'])
+        self.controller = Controller(control_config['args'], controller_type)
 
         # Behavior indicator related
         self.car_following_flag = False
@@ -163,7 +162,6 @@ class AgentBehavior(object):
         # For current version, consider vehicles only.
         obstacle_vehicles = detected_objects['vehicles']
         self.obstacle_vehicles = self.white_list_filter(obstacle_vehicles)
-
         if self.ignore_traffic_light:
             self.light_state = "Green"
         else:
@@ -354,7 +352,6 @@ class AgentBehavior(object):
                 if distance_to_vehicle < min_distance:
                     min_distance = distance_to_vehicle
                     colliding_vehicle = vehicle
-
         return is_collision_detected, colliding_vehicle, min_distance
 
     def overtake_management(self, obstacle_vehicle):
@@ -381,6 +378,40 @@ class AgentBehavior(object):
 
         left_adjacent_waypoint = obstacle_waypoint.get_left_lane()
         right_adjacent_waypoint = obstacle_waypoint.get_right_lane()
+
+        # Check for possible right overtaking
+        if (can_turn_right in [carla.LaneChange.Right, carla.LaneChange.Both]) and \
+           right_adjacent_waypoint and \
+           obstacle_waypoint.lane_id * right_adjacent_waypoint.lane_id > 0 and \
+           right_adjacent_waypoint.lane_type == carla.LaneType.Driving:
+
+            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
+                ego_loc=self.vehicle_pos.location,
+                target_wpt=right_adjacent_waypoint,
+                overtake=True)
+
+            hazardous_situation, _, _ = self.check_collision(
+                path_x, path_y, path_yaw,
+                self.map.get_waypoint(self.vehicle_pos.location),
+                check_adjacent_lane=True)
+
+            if not hazardous_situation:
+                print("Performing right overtaking")
+                self.overtake_counter = 100
+                next_waypoints = right_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
+
+                if not next_waypoints:
+                    return True
+
+                target_waypoint = next_waypoints[0]
+                right_adjacent_waypoint = right_adjacent_waypoint.next(5)[0]
+
+                self.set_local_planner(
+                    right_adjacent_waypoint.transform.location,
+                    target_waypoint.transform.location,
+                    clear_waypoints=True,
+                    reset_end=False)
+                return hazardous_situation
 
         # Check for possible left overtaking
         if (can_turn_left in [carla.LaneChange.Left, carla.LaneChange.Both]) and \
@@ -416,39 +447,6 @@ class AgentBehavior(object):
                     reset_end=False)
                 return hazardous_situation
 
-        # Check for possible right overtaking
-        if (can_turn_right in [carla.LaneChange.Right, carla.LaneChange.Both]) and \
-           right_adjacent_waypoint and \
-           obstacle_waypoint.lane_id * right_adjacent_waypoint.lane_id > 0 and \
-           right_adjacent_waypoint.lane_type == carla.LaneType.Driving:
-
-            path_x, path_y, path_yaw = self._collision_detector.check_adjacent_lane_collision(
-                ego_loc=self.vehicle_pos.location,
-                target_wpt=right_adjacent_waypoint,
-                overtake=True)
-
-            hazardous_situation, _, _ = self.check_collision(
-                path_x, path_y, path_yaw,
-                self.map.get_waypoint(self.vehicle_pos.location),
-                check_adjacent_lane=True)
-
-            if not hazardous_situation:
-                print("Performing right overtaking")
-                self.overtake_counter = 100
-                next_waypoints = right_adjacent_waypoint.next(self.vehicle_speed / 3.6 * 6)
-
-                if not next_waypoints:
-                    return True
-
-                target_waypoint = next_waypoints[0]
-                right_adjacent_waypoint = right_adjacent_waypoint.next(5)[0]
-
-                self.set_local_planner(
-                    right_adjacent_waypoint.transform.location,
-                    target_waypoint.transform.location,
-                    clear_waypoints=True,
-                    reset_end=False)
-                return hazardous_situation
 
         return True
 
@@ -527,7 +525,6 @@ class AgentBehavior(object):
         # Otherwise, attempt to match the leading vehicle's speed.
         else:
             adjusted_speed = 0 if lead_vehicle_speed == 0 else min(lead_vehicle_speed + 1, desired_speed)
-
         return adjusted_speed
 
     def is_near_intersection(self, objects, waypoint_buffer):
@@ -548,8 +545,8 @@ class AgentBehavior(object):
         is_near_intersection : boolean
             Indicates if any upcoming waypoint is near an intersection.
         """
-        traffic_lights = objects['traffic_lights']
 
+        traffic_lights = objects['traffic_lights']
         for traffic_light in traffic_lights:
             for waypoint, _ in waypoint_buffer:
                 distance_to_light = traffic_light.get_location().distance(waypoint.transform.location)
@@ -640,7 +637,6 @@ class AgentBehavior(object):
 
         waypoint_buffer = self.get_local_planner().get_global_route()
         mid_buffer_index = len(waypoint_buffer) // 2
-
         # If at an intersection, select a future waypoint that ensures continued travel on the same lane.
         if is_intersection:
             pushed_destination = waypoint_buffer[mid_buffer_index][0].next(
@@ -679,7 +675,6 @@ class AgentBehavior(object):
         """
 
         light_id = self.vehicle.get_traffic_light().id if self.vehicle.get_traffic_light() else -1
-
         # This condition represents a scenario where the vehicle recently passed a stop sign
         # and won't halt at any subsequent stop sign for the next 4 seconds.
         if 60 <= self.stop_sign_wait_count < 240:
@@ -707,7 +702,6 @@ class AgentBehavior(object):
 
         if self.light_id_to_ignore != light_id:
             self.light_id_to_ignore = -1
-
         return 0
 
     def rule_based_trajectory_planning(self, desired_speed=None, collision_detection=True, lane_change_allowed=True):
@@ -761,7 +755,6 @@ class AgentBehavior(object):
 
         # 1. Manage behavior at traffic lights
         if self.handle_traffic_signals(ego_waypoint) != 0:
-            print('handle_traffic_signals')
             return 0, None
 
         # 2. Reset to global route if temporary route is finished
@@ -826,7 +819,7 @@ class AgentBehavior(object):
 
             desired_speed = self.manage_car_following(blocking_vehicle, gap, desired_speed)
             planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
-                                                                                         desired_speed=desired_speed)
+                                                                                        desired_speed=desired_speed)
             trajectory_buffer = self.local_planner.get_trajectory()
 
             # Split trajectory into speed buffer and location buffer
@@ -838,7 +831,7 @@ class AgentBehavior(object):
 
         # 8. Standard navigation behavior
         planned_speed, planned_location = self.local_planner.run_trajectory_planning(path_x, path_y, path_k,
-                                                                                     desired_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
+                                                                                    desired_speed=self.max_speed - self.max_speed_margin if not desired_speed else desired_speed)
         trajectory_buffer = self.local_planner.get_trajectory()
         location_buffer = deque()
         for traj in trajectory_buffer:

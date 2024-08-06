@@ -1,5 +1,7 @@
 carla_traffic_manager:
   sync_mode: true # has to be same as the world setting
+  deterministic_mode: false
+  deterministic_seed: 0
   global_distance: 5 # the minimum distance in meters that vehicles have to keep with the rest, default=5
   # Sets the difference the vehicle's intended speed and its current speed limit.
   #  Carla default speed is 30 km/h, so -100 represents 60 km/h,

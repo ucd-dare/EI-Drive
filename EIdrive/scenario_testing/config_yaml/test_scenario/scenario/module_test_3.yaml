@@ -1,0 +1,9 @@
+test_scenario: module_test_3
+vehicle_list:
+  - id: 0
+    spawn_position: [243, 130, 1, 0, 270, 0]
+    destination: [[245, -30, 0.5]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true

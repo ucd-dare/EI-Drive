@@ -1,0 +1,28 @@
+test_scenario: module_test_2
+vehicle_list:
+  - id: 0
+    spawn_position: [45, 52.2, 0.3, 0, 0, 0]
+    destination: [[130, 52.2, 0.3]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+      max_speed: 17
+      overtake_allowed: false
+      collision_time_ahead: 5
+  - id: 1
+    spawn_position: [65, 52.2, 0.3, 0, 0, 0 ]
+    destination: [[130, 52.2, 0.3 ]]
+    behavior:
+      local_planner:
+        debug_trajectory: true
+        debug: true
+      max_speed: 15
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+    game_map:
+      visualize: false

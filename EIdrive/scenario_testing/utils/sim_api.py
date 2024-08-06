@@ -19,7 +19,6 @@ from EIdrive.core.basic.rsu import RSU
 from EIdrive.scenario_testing.utils.customized_map import create_customized_world, bcolors
 from EIdrive.core.basic.ml_model import MLModel
 
-
 def filter_blueprint_lib(blueprint_library):
     """
     Remove the non-standard vehicles from the CARLA blueprint collection.
@@ -254,12 +253,8 @@ class GameWorld:
                 k: v / sum(self.bp_class_sample_prob.values()) for k, v in
                 self.bp_class_sample_prob.items()}
 
-        try:
-            apply_ml = scenario_params.vehicle_perception.perception.apply_ml is True
-        except AttributeError:
-            apply_ml = False
-
-        self.ml_model = MLModel(apply_ml=apply_ml)
+        perception_activate = scenario_params['vehicle_perception']['perception']['activate']
+        self.ml_model = MLModel(perception_activate)
         self.carla_map = self.world.get_map()
         self.edge = edge
 
@@ -402,7 +397,6 @@ class GameWorld:
         vehicle_agent.update_info()
         vehicle_agent.set_local_planner(
             vehicle_agent.vehicle.get_location(),
-            # TODO: enable multiple destinations in EI-Drive Planner
             destinations[-1],
             clean=True)
 
@@ -435,6 +429,39 @@ class GameWorld:
             rsu_list.append(rsu_manager)
 
         return rsu_list
+    
+    def create_pedestrian(self):
+        """
+        Create a list of pedestrian.
+
+        Returns
+        -------
+        pedestrian_list : list
+            A list of all pedestrian agents.
+
+        """
+        print('Creating pedestrians.')
+
+        pedestrian_list = []
+        if 'pedestrian_list' not in self.scenario_params['scenario']:
+            return pedestrian_list
+
+        for i, pedestrian_config in enumerate(self.scenario_params['scenario']['pedestrian_list']):
+
+            spawn_transform = carla.Transform(
+                carla.Location(
+                    x=pedestrian_config['spawn_position'][0],
+                    y=pedestrian_config['spawn_position'][1],
+                    z=pedestrian_config['spawn_position'][2]),
+                carla.Rotation(
+                    pitch=pedestrian_config['spawn_position'][5],
+                    yaw=pedestrian_config['spawn_position'][4],
+                    roll=pedestrian_config['spawn_position'][3]))
+
+            pedestrian = self.world.spawn_actor(self.world.get_blueprint_library().find('walker.pedestrian.0001'), spawn_transform)
+            pedestrian_list.append(pedestrian)
+
+        return pedestrian_list
 
     def create_vehicles_by_list(self, traffic_manager, traffic_config, background_traffic):
         """
@@ -633,6 +660,8 @@ class GameWorld:
 
         traffic_manager.set_global_distance_to_leading_vehicle(traffic_config['global_distance'])
         traffic_manager.set_synchronous_mode(traffic_config['sync_mode'])
+        if traffic_config['deterministic_mode']:
+            traffic_manager.set_random_device_seed(traffic_config['deterministic_seed'])
         traffic_manager.set_osm_mode(traffic_config['set_osm_mode'])
         traffic_manager.global_percentage_speed_difference(traffic_config['global_speed_perc'])
 
@@ -641,6 +670,7 @@ class GameWorld:
         if isinstance(traffic_config['vehicle_list'], list):
             background_traffic = self.create_vehicles_by_list(traffic_manager, traffic_config, background_traffic)
         else:
+            print('Creating vehicles by range.')
             background_traffic = self.create_vehicle_by_range(traffic_manager, traffic_config, background_traffic)
 
         print('CARLA traffic flow has been created.')

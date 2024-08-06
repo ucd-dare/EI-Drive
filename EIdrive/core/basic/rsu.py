@@ -9,7 +9,6 @@ from EIdrive.core.sensing.localization.rsu_localizer import RsuLocalizer
 class RSU(object):
     """
     Road Side Unit for edge computing. It has its own perception, localization, and communication module.
-    TODO: add V2X module to it to enable sharing sensing information online.
 
     Parameters
     ----------
@@ -61,16 +60,16 @@ class RSU(object):
 
         # Localizer
         self.localizer = RsuLocalizer(carla_world,
-                                      localization_config,
-                                      self.carla_map)
+                                        localization_config,
+                                        self.carla_map)
         # Perception
         self.perception = Perception(vehicle=None,
-                                     config_yaml=perception_config,
-                                     ml_model=ml_model,
-                                     carla_world=carla_world,
-                                     infra_id=self.rsu_id)
+                                        config_yaml=perception_config,
+                                        ml_model=ml_model,
+                                        carla_world=carla_world,
+                                        infra_id=self.rsu_id)
 
-    def update_info(self, dynamic_latency=None):
+    def update_info(self):
         """
         Retrieve relative info for localization and perception.
         """
@@ -80,8 +79,6 @@ class RSU(object):
         ego_pos = self.localizer.get_ego_pos()
 
         # object detection
-        if dynamic_latency is not None:
-            self.perception.update_trans_latency(dynamic_latency)
         self.detected_objects = self.perception.object_detect(ego_pos)
 
     def destroy(self):
