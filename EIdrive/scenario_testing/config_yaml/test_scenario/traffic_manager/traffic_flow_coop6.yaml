@@ -1,6 +1,6 @@
 carla_traffic_manager:
   sync_mode: true # has to be same as the world setting
-  deterministic_mode: true
+  deterministic_mode: false
   deterministic_seed: 1
   global_distance: 2 # the minimum distance in meters that vehicles have to keep with the rest, default=5
   # Sets the difference the vehicle's intended speed and its current speed limit.

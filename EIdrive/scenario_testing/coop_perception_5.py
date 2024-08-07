@@ -144,7 +144,7 @@ def run_scenario(scenario_params):
                 # Applies additional control on the ego vehicle
                 if vehicle_agent == vehicle_list[0]:
                     control = perception_assisted_control(control, t, control_tick)
-                
+                    
                 vehicle_agent.vehicle.apply_control(control)
 
             t = t + 1
