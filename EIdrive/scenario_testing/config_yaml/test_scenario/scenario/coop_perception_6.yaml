@@ -22,7 +22,6 @@ vehicle_list:
         lat:
           k_p: 0.4
           k_i: 1.2
-    #       k_d: 0.02
       
   - id: 1    # Spectator vehicle
     spawn_position: [19.5, 45.4, 0.5, 0 , 180, 0]
