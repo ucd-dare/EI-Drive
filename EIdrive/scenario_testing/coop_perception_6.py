@@ -1,8 +1,8 @@
 """
 The script is used for the sixth cooperative perception test.
 
-The ego vehicle is approachign an intersection. Travel buses partially block its view of an incoming vehicle.
-A spectator vehicle and two RSUs provides additional info to the ego vehicle.
+The ego vehicle is approachign an intersection. Ambulances partially block its view of an incoming vehicle.
+A spectator vehicle and a RSU provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -35,9 +35,11 @@ def customized_bp(world):
     vehicle_blueprint.set_attribute('color', '0, 0, 255')
     vehicle_blueprints.append(vehicle_blueprint)
 
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
     vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
+    vehicle_blueprints.append(vehicle_blueprint)
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.ford.ambulance')
     vehicle_blueprints.append(vehicle_blueprint)
     
     return vehicle_blueprints
@@ -51,7 +53,7 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params, map_name='town06')
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town05')
 
         text_viz = scenario_params['scenario']['text_viz'] \
             if 'text_viz' in scenario_params['scenario'] else True
@@ -77,7 +79,7 @@ def run_scenario(scenario_params):
         traffic_manager, flow_list = gameworld.create_traffic_flow()
 
         # Set vehicle stop mode
-        stopped_vehicles = [1, 3,4]
+        stopped_vehicles = [1,3,4,5]
         for i in stopped_vehicles:
             vehicle_list[i].stop_mode = True
 
@@ -90,11 +92,10 @@ def run_scenario(scenario_params):
         spec_controller = SpectatorController(spectator)
 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        perception_box = [[-11.3, -8.1 ], [49, 54]]
+        perception_box = [[-52.5, -50.5 ], [-94, -89]]
         bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box)
 
         while True:
-
             # Pause and exit
             if kl.keys['esc']:
                 exit(0)
@@ -122,7 +123,6 @@ def run_scenario(scenario_params):
                 rsu.update_info()
 
             bbx_list = manage_bbx_list(vehicle_list, rsu_list)
-
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
@@ -142,7 +142,7 @@ def run_scenario(scenario_params):
                 # Applies additional control on the ego vehicle
                 if vehicle_agent == vehicle_list[0]:
                     control = perception_assisted_control(control, t, control_tick)
-                
+                    
                 vehicle_agent.vehicle.apply_control(control)
 
             t = t + 1

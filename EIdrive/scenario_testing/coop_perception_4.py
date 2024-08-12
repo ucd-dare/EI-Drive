@@ -107,7 +107,6 @@ def run_scenario(scenario_params):
                 rsu.update_info()
 
             bbx_list = manage_bbx_list(vehicle_list, rsu_list)
-
             
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')

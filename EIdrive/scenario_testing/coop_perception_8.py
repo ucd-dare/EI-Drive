@@ -1,8 +1,8 @@
 """
-The script is used for the first cooperative perception test.
+The script is used for the eighth cooperative perception test.
 
-The ego vehicle is approachign an intersection. A firetruck blocks its sight of an incoming vehicle. 
-A RSU provides additional info to the ego vehicle.
+The ego vehicle is approachign an intersection. Travel buses partially block its view of an incoming vehicle.
+A spectator vehicle and two RSUs provides additional info to the ego vehicle.
 """
 
 import EIdrive.scenario_testing.utils.sim_api as sim_api
@@ -21,20 +21,25 @@ def customized_bp(world):
     """
     Provide customized vehicle blueprints.
     """
-    # Vehicle_0 on bottom, 1 on left, 2 is firetruck, 3 on top.
     vehicle_blueprints = []
     vehicle_model = 'vehicle.lincoln.mkz_2020'
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '0, 0, 0')
     vehicle_blueprints.append(vehicle_blueprint)
+
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '255, 0, 0')
     vehicle_blueprints.append(vehicle_blueprint)
-    vehicle_blueprint = world.get_blueprint_library().find('vehicle.carlamotors.firetruck')
-    vehicle_blueprints.append(vehicle_blueprint)
+
     vehicle_blueprint = world.get_blueprint_library().find(vehicle_model)
     vehicle_blueprint.set_attribute('color', '0, 0, 255')
     vehicle_blueprints.append(vehicle_blueprint)
+
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
+    vehicle_blueprints.append(vehicle_blueprint)
+    vehicle_blueprint = world.get_blueprint_library().find('vehicle.mitsubishi.fusorosa')
+    vehicle_blueprints.append(vehicle_blueprint)
+    
     return vehicle_blueprints
 
 
@@ -46,7 +51,7 @@ def run_scenario(scenario_params):
 
     try:
         # Create game world
-        gameworld = sim_api.GameWorld(scenario_params, map_name='town03')
+        gameworld = sim_api.GameWorld(scenario_params, map_name='town06')
 
         text_viz = scenario_params['scenario']['text_viz'] \
             if 'text_viz' in scenario_params['scenario'] else True
@@ -59,7 +64,6 @@ def run_scenario(scenario_params):
 
         vehicle_blueprints = customized_bp(gameworld.world)
         vehicle_list = gameworld.create_vehicle_agent(vehicle_blueprints)
-
         rsu_list = gameworld.create_rsu()
 
         # Spawn pygame camera
@@ -69,8 +73,11 @@ def run_scenario(scenario_params):
         # Draw the position of RSU
         rsu_locations = display_rsu(rsu_list, gameworld)        
 
+        # Create background traffic
+        traffic_manager, flow_list = gameworld.create_traffic_flow()
+
         # Set vehicle stop mode
-        stopped_vehicles = [2]
+        stopped_vehicles = [1, 3,4]
         for i in stopped_vehicles:
             vehicle_list[i].stop_mode = True
 
@@ -83,7 +90,7 @@ def run_scenario(scenario_params):
         spec_controller = SpectatorController(spectator)
 
         pedestrians = gameworld.world.get_actors().filter('walker.*')
-        perception_box = [[-77, -74],[-135,-130.5]]
+        perception_box = [[-11.3, -8.1 ], [49, 54]]
         bbx_visualizer = ClientSideBoundingBoxes(vehicle_list, rsu_list, pedestrians, rsu_locations, perception_box)
 
         while True:
@@ -115,7 +122,7 @@ def run_scenario(scenario_params):
                 rsu.update_info()
 
             bbx_list = manage_bbx_list(vehicle_list, rsu_list)
-            
+
             # Visualize the bounding box
             vehicles = gameworld.world.get_actors().filter('vehicle.*')
             control_tick_temp = bbx_visualizer.VisualizeBBX(cam, vehicles, bbx_list, t, text_viz)
@@ -123,7 +130,7 @@ def run_scenario(scenario_params):
                 control_tick = control_tick_temp
 
             spec_controller.bird_view_following(vehicle_list[0].vehicle.get_transform(), altitude=50)
-            
+
             pygame.display.flip()
 
             # Apply control to vehicles
@@ -150,6 +157,8 @@ def run_scenario(scenario_params):
             v.destroy()
         for rsu in rsu_list:
             rsu.destroy()
+        for v in flow_list:
+            v.destroy()
 
         cam.destroy()
         pygame.quit()

@@ -14,4 +14,4 @@ carla_traffic_manager:
   vehicle_list: 20  # a number or a list
   # Used only when vehicle_list is a number.
   # x_min, x_max, y_min, y_max, x_step, y_step
-  range: [[ 0.9, 10.7, 63.8, 100.3, 4, 6, 30]]
+  range: [[ 0.9, 10.7, 50.8, 100.3, 4, 5, 30]]
