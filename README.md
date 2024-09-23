@@ -35,19 +35,21 @@ A streamlined implementation with a full-stack pipeline and built-in scenarios. 
 
 Clear visualization makes the results highly visible and easy to interpret.
 
-## 🚗 Open-Source Edge-Intelligence Autonomous Driving Platform
+## 1️⃣ Open-Source Edge-Intelligence Autonomous Driving Platform
 
 An open-source platform provides solution for joint simulation of edge communication and cooperative perception, aimed at safe and efficient cooperative driving automation.
 
-- 🏙️ **Full-stack AV**: A full pipeline encompassing environment, sensing, perception, planning, and control.
-- 🔧 **Cooperative perception**: Flexible cooperative perception with customizable agents, methods, tasks, and visualization.
-- 🌍 **Transmission model**: Simulate the key characteristics of data transmission between the edge agents, interacting seamlessly with the perception module.
+- 🌞 **AV pipeline**: A full-stack pipeline encompassing environment, sensing, perception, planning, and control.
+- 📸 **Cooperative perception**: Flexible cooperative perception with customizable agents, methods, tasks, and visualization.
+- 📡 **Transmission model**: Simulate the key characteristics of data transmission between the edge agents, interacting seamlessly with the perception module.
 
 **Documentation:** [EI-Drive API Documents]().
 
 **Looking for more techincal details? Check our report here! [Paper link]()**
 
-## Prerequisites
+## 2️⃣ Experiment Demo
+
+## 3️⃣ Prerequisites
 
 Clone the repository:
 
@@ -76,3 +78,7 @@ conda env create -f environment.yml
 conda activate EI-Drive
 python setup.py develop
 ```
+
+## 4️⃣ Quick Start
+
+## 🌟 Citation
