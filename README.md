@@ -58,8 +58,8 @@ The perception results have significant influences on the ego vehicle's behavior
 <div style="display: flex; gap: 10px; align-items: center;">
 
   <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_CarPOV.gif" style="width: auto; height: 90px;" alt="Gif 1">
-    <figcaption><b>Ego vehicle</b></figcaption>
+    <img src=".assets/6_coop2_coop_CarPOV.gif" style="width: auto; height: 40px;" alt="Gif 1">
+    <figcaption><b>1</b></figcaption>
 
   </figure>
 
@@ -67,16 +67,16 @@ The perception results have significant influences on the ego vehicle's behavior
    <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">+</span>
 
   <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_CameraPOVgif.gif" style="width: auto; height: 90px;" alt="Gif 2">
-    <figcaption><b>Spectator vehicle</b></figcaption>
+    <img src=".assets/6_coop2_coop_CameraPOVgif.gif" style="width: auto; height: 40px;" alt="Gif 2">
+    <figcaption><b>1</b></figcaption>
   </figure>
 
   <!-- More inline text between GIFs -->
    <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">⇒</span>
 
   <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_POV.gif" style="width: auto; height: 90px;" alt="Gif 3">
-    <figcaption><b>Cooperative perception</b></figcaption>
+    <img src=".assets/6_coop2_coop_POV.gif" style="width: auto; height: 40px;" alt="Gif 3">
+    <figcaption><b>1</b></figcaption>
   </figure>
 
 </div>
