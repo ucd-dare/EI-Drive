@@ -1,6 +1,6 @@
 test_scenario: coop_perception_1
 vehicle_list:
-  - id: 0
+  - id: 0 # The ego vehicle
     spawn_position: [-45.0, -139.5, 0.3, 0, 180, 0]
     destination: [[-113.5, -137, 0.3]]
     perception:
