@@ -62,12 +62,12 @@ The perception results have significant influences on the ego vehicle's behavior
       <img src=".assets/6_coop2_coop_CarPOV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Ego vehicle</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">+</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➕</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_CameraPOVgif.gif" alt="Gif 2" style="height: 180px;">
       <br><b>Spectator vehicle</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;;">⇒</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;;">➡️</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_POV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception</b>
