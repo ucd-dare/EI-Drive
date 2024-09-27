@@ -81,12 +81,12 @@ The perception results have significant influences on the ego vehicle's behavior
       <img src=".assets/10_coop6_both_BlackCarPOV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Ego vehicle</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">+</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➕</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/10_coop6_both_CameraPOV.gif" alt="Gif 2" style="height: 180px;">
       <br><b>RSU</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">⇒</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➡️</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/10_coop6_bothPOV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception</b>
@@ -100,12 +100,12 @@ The perception results have significant influences on the ego vehicle's behavior
       <img src=".assets/8_coop4_coop_BlackCarPOV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Ego vehicle</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none; padding: 17px;">+</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none; padding: 17px;">➕</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/8_coop4_coop_TopCameraPOV.gif" alt="Gif 2" style="height: 180px;">
       <br><b>RSU</b>
     </td>
-    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">⇒</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➡️</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/8_coop4_coop_BirdPOV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception</b>
@@ -123,6 +123,7 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
       <img src=".assets/5_coop1_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
       <br>✅
+      <br>
     </td>
     <td align="center" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopError_POV.gif" alt="Gif 2" style="height: 180px;">
@@ -142,6 +143,7 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
     <td align="center" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
+      <br>
     </td>
     <td align="center" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" alt="Gif 2" style="height: 180px;">
