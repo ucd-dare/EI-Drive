@@ -119,18 +119,18 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
 
 <table style="border-collapse: collapse; width: 100%;">
   <tr style="border: none;">
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
       <br>✅
       <br>
     </td>
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopError_POV.gif" alt="Gif 2" style="height: 180px;">
       <br><b>Cooperative perception + Transmission errors</b>
       <br>❌
     </td>
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopLatency_POV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception + Transmission latency</b>
       <br>❌
@@ -140,21 +140,22 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
 
 <table style="border-collapse: collapse; width: 100%;">
   <tr style="border: none;">
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
       <br>
     </td>
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" alt="Gif 2" style="height: 180px;">
       <br><b>Cooperative perception + Transmission errors</b>
     </td>
-    <td align="center" style="border: none; padding: 0px 10px;">
+    <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopLatency_BirdPOV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception + Transmission latency</b>
     </td>
   </tr>
 </table>
+
 
 
 
