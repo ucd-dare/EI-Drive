@@ -55,145 +55,122 @@ An open-source platform provides solution for joint simulation of edge communica
 EI-Drive has various built-in scenarios tailored for cooperative perception experiments, where the spectator vehicles and RSUs share perception information with the ego vehicle. Multiple cooperative perception tasks, including collision avoidance and traffic flow detection, enable extensive research with different goals.
 
 The perception results have significant influences on the ego vehicle's behavior. The ego vehicle benefits from cooperative perception with less blind spots (rows 1 & 2) and wider detection range (row 3).
-<div style="display: flex; gap: 10px; align-items: center;">
 
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_CarPOV.gif" style="width: auto; height: 40px;" alt="Gif 1">
-    <figcaption><b>1</b></figcaption>
+<table style="border-collapse: collapse;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/6_coop2_coop_CarPOV.gif" alt="Gif 1" style="height: 180px;">
+      <br><b>Ego vehicle</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">+</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/6_coop2_coop_CameraPOVgif.gif" alt="Gif 2" style="height: 180px;">
+      <br><b>Spectator vehicle</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;;">⇒</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/6_coop2_coop_POV.gif" alt="Gif 3" style="height: 180px;">
+      <br><b>Cooperative perception</b>
+    </td>
+  </tr>
+</table>
 
-  </figure>
+<table style="border-collapse: collapse;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/10_coop6_both_BlackCarPOV.gif" alt="Gif 1" style="height: 180px;">
+      <br><b>Ego vehicle</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">+</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/10_coop6_both_CameraPOV.gif" alt="Gif 2" style="height: 180px;">
+      <br><b>RSU</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">⇒</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/10_coop6_bothPOV.gif" alt="Gif 3" style="height: 180px;">
+      <br><b>Cooperative perception</b>
+    </td>
+  </tr>
+</table>
 
-  <!-- Inline text between GIFs -->
-   <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">+</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_CameraPOVgif.gif" style="width: auto; height: 40px;" alt="Gif 2">
-    <figcaption><b>1</b></figcaption>
-  </figure>
-
-  <!-- More inline text between GIFs -->
-   <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">⇒</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/6_coop2_coop_POV.gif" style="width: auto; height: 40px;" alt="Gif 3">
-    <figcaption><b>1</b></figcaption>
-  </figure>
-
-</div>
-
-<div style="display: flex; gap: 10px; align-items: center;">
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/10_coop6_both_BlackCarPOV.gif" style="width: auto; height: 180px;" alt="Gif 1">
-    <figcaption><b>Ego vehicle</b></figcaption>
-  </figure>
-
-  <!-- Inline text between GIFs -->
-   <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">+</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/10_coop6_both_CameraPOV.gif" style="width: auto; height: 180px;" alt="Gif 2">
-    <figcaption><b>RSU</b></figcaption>
-  </figure>
-
-  <!-- More inline text between GIFs -->
-   <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">⇒</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/10_coop6_bothPOV.gif" style="width: auto; height: 180px;" alt="Gif 3">
-    <figcaption><b>Cooperative perception</b></figcaption>
-  </figure>
-
-</div>
-
-<div style="display: flex; gap: 10px; align-items: center;">
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_coop4_coop_BlackCarPOV.gif" style="width: auto; height: 180px;" alt="Gif 1">
-    <figcaption><b>Ego vehicle</b></figcaption>
-  </figure>
-
-  <!-- Inline text between GIFs -->
-   <span style="margin: 0 3px; font-size: 44px; line-height: 1.2; font-weight: bold;">+</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_coop4_coop_TopCameraPOV.gif" style="width: auto; height: 180px;" alt="Gif 2">
-    <figcaption><b>RSU</b></figcaption>
-  </figure>
-
-  <!-- More inline text between GIFs -->
-   <span style="margin: 0 0px; font-size: 44px; line-height: 1.2; font-weight: bold;">⇒</span>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_coop4_coop_BirdPOV.gif" style="width: auto; height: 180px;" alt="Gif 3">
-    <figcaption><b>Cooperative perception</b></figcaption>
-  </figure>
-
-</div>
+<table style="border-collapse: collapse;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/8_coop4_coop_BlackCarPOV.gif" alt="Gif 1" style="height: 180px;">
+      <br><b>Ego vehicle</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none; padding: 17px;">+</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/8_coop4_coop_TopCameraPOV.gif" alt="Gif 2" style="height: 180px;">
+      <br><b>RSU</b>
+    </td>
+    <td align="center" style="font-size: 44px; line-height: 1.2; font-weight: bold; border: none;">⇒</td>
+    <td align="center" style="border: none; padding: 0;">
+      <img src=".assets/8_coop4_coop_BirdPOV.gif" alt="Gif 3" style="height: 180px;">
+      <br><b>Cooperative perception</b>
+    </td>
+  </tr>
+</table>
 
 
 #### Transmission latency and errors
 EI-Drive has great flexibility to simply apply transmission latency and errors to any perception processes, allowing the researches across both communication and autonomous driving. The transmission latency and errors not only impair the performance of cooperative perception, but also have negtive influence to the behavior of the ego vehicle.
 
-<div style="display: flex; gap: 20px;">
+<table style="border-collapse: collapse; width: 100%;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/5_coop1_coop_POV.gif" alt="Gif 1" style="height: 180px;">
+      <br><b>Cooperative perception</b>
+      <br>✅
+    </td>
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/5_coop1_coopError_POV.gif" alt="Gif 2" style="height: 180px;">
+      <br><b>Cooperative perception + Transmission errors</b>
+      <br>❌
+    </td>
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/5_coop1_coopLatency_POV.gif" alt="Gif 3" style="height: 180px;">
+      <br><b>Cooperative perception + Transmission latency</b>
+      <br>❌
+    </td>
+  </tr>
+</table>
 
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/5_coop1_coop_POV.gif" style="width: auto; height: 180px;" alt="Gif 1">
-    <figcaption><b>Cooperative perception</b></figcaption>
-    <figcaption>✅</figcaption>
-  </figure>
+<table style="border-collapse: collapse; width: 100%;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/8_server/8_coop4_coop_POV.gif" alt="Gif 1" style="height: 180px;">
+      <br><b>Cooperative perception</b>
+    </td>
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" alt="Gif 2" style="height: 180px;">
+      <br><b>Cooperative perception + Transmission errors</b>
+    </td>
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/8_server/8_coop4_coopLatency_BirdPOV.gif" alt="Gif 3" style="height: 180px;">
+      <br><b>Cooperative perception + Transmission latency</b>
+    </td>
+  </tr>
+</table>
 
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/5_coop1_coopError_POV.gif" style="width: auto; height: 180px;" alt="Gif 2">
-    <figcaption><b>Cooperative perception + Transmission errors</b></figcaption>
-    <figcaption>❌</figcaption>
-  </figure>
 
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/5_coop1_coopLatency_POV.gif" style="width: auto; height: 180px;" alt="Gif 3">
-    <figcaption><b>Cooperative perception + Transmission latency</b></figcaption>
-    <figcaption>❌</figcaption>
-  </figure>
-
-</div>
-
-<div style="display: flex; gap: 20px;">
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_server/8_coop4_coop_POV.gif" style="width: auto; height: 180px;" alt="Gif 1">
-    <figcaption><b>Cooperative perception</b></figcaption>
-    <figcaption></figcaption>
-  </figure>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" style="width: auto; height: 180px;" alt="Gif 2">
-    <figcaption><b>Cooperative perception + Transmission errors</b></figcaption>
-    <figcaption></figcaption>
-  </figure>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/8_server/8_coop4_coopLatency_BirdPOV.gif" style="width: auto; height: 180px;" alt="Gif 3">
-    <figcaption><b>Cooperative perception + Transmission latency</b></figcaption>
-    <figcaption></figcaption>
-  </figure>
-
-</div>
 
 #### Perception methods and multi-modality
 EI-Drive supports multiple perception methods and multi-modal sensor inputs, greatly enriches the experiment settings.
-<div style="display: flex; gap: 40px;">
+<table style="border-collapse: collapse; width: 100%;">
+  <tr style="border: none;">
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/1_OvertakeImg_Multimodel.png" alt="Gif 1" style="height: 250px;">
+      <br><b>Overtake</b>
+    </td>
+    <td align="center" style="border: none; padding: 0px 10px;">
+      <img src=".assets/1_OvertakeImg_Perception.png" alt="Gif 2" style="height: 250px;">
+      <br><b>Car Following</b>
+    </td>
+  </tr>
+</table>
 
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/1_OvertakeImg_Multimodel.png" style="width: auto; height: 250px;" alt="Gif 1">
-    <figcaption><b>Overtake</b></figcaption>
-  </figure>
-
-  <figure style="text-align: center; margin: 0;">
-    <img src=".assets/1_OvertakeImg_Perception.png" style="width: auto; height: 250px;" alt="Gif 2">
-    <figcaption><b>Car Following</b></figcaption>
-  </figure>
-
-</div>
 
 
 
