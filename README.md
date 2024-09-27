@@ -123,7 +123,6 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
       <img src=".assets/5_coop1_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
       <br>✅
-      <br>
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopError_POV.gif" alt="Gif 2" style="height: 180px;">
@@ -143,7 +142,6 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coop_POV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Cooperative perception</b>
-      <br>
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" alt="Gif 2" style="height: 180px;">
