@@ -51,7 +51,7 @@ An open-source platform provides solution for joint simulation of edge communica
 
 ## 🎯 Experiment Demo
 
-#### Cooperative perception
+### Cooperative perception
 EI-Drive has various built-in scenarios tailored for cooperative perception experiments, where the spectator vehicles and RSUs share perception information with the ego vehicle. Multiple cooperative perception tasks, including collision avoidance and traffic flow detection, enable extensive research with different goals.
 
 The perception results have significant influences on the ego vehicle's behavior. The ego vehicle benefits from cooperative perception with less blind spots (rows 1 & 2) and wider detection range (row 3).
@@ -114,7 +114,7 @@ The perception results have significant influences on the ego vehicle's behavior
 </table>
 
 
-#### Transmission latency and errors
+### Transmission latency and errors
 EI-Drive has great flexibility to simply apply transmission latency and errors to any perception processes, allowing the researches across both communication and autonomous driving. The transmission latency and errors not only impair the performance of cooperative perception, but also have negtive influence to the behavior of the ego vehicle.
 
 <table style="border-collapse: collapse; width: 100%;">
@@ -157,7 +157,7 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
 
 
 
-#### Perception methods and multi-modality
+### Perception methods and multi-modality
 EI-Drive supports multiple perception methods and multi-modal sensor inputs, greatly enriches the experiment settings.
 <table style="border-collapse: collapse; width: 100%;">
   <tr style="border: none;">
