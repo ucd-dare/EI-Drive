@@ -62,12 +62,12 @@ The perception results have significant influences on the ego vehicle's behavior
       <img src=".assets/6_coop2_coop_CarPOV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Ego vehicle</b>
     </td>
-    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➕</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none; padding: 2px;">➕</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_CameraPOVgif.gif" alt="Gif 2" style="height: 180px;">
       <br><b>Spectator vehicle</b>
     </td>
-    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;;">➡️</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none; padding: 2px;">➡️</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_POV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception</b>
@@ -162,11 +162,11 @@ EI-Drive supports multiple perception methods and multi-modal sensor inputs, gre
 <table style="border-collapse: collapse; width: 100%;">
   <tr style="border: none;">
     <td align="center" style="border: none; padding: 0px 10px;">
-      <img src=".assets/1_OvertakeImg_Multimodel.png" alt="Gif 1" style="height: 250px;">
+      <img src=".assets/1_OvertakeImg_Multimodel.png" alt="Gif 1" style="height: 220px;">
       <br><b>Overtake</b>
     </td>
     <td align="center" style="border: none; padding: 0px 10px;">
-      <img src=".assets/1_OvertakeImg_Perception.png" alt="Gif 2" style="height: 250px;">
+      <img src=".assets/1_OvertakeImg_Perception.png" alt="Gif 2" style="height: 220px;">
       <br><b>Car Following</b>
     </td>
   </tr>
@@ -251,7 +251,7 @@ config.yaml/
 
 ```
 
-The default perception method is oracle with blue bounding boxes, to enable object detection with YOLOv5
+The default perception method is oracle with blue bounding boxes, to enable object detection by YOLOv5
 
 ```bash
 python EI_Drive.py test_scenario=coop_perception_1 test_scenario.vehicle_perception.perception.activate=true test_scenario.vehicle_perception.perception.model=yolo
@@ -262,7 +262,7 @@ To simplify the usage of lengthy commands, we have packaged common configuration
 ### Cooperative Perception
 To enable cooperative perception, open the config file in ``test_scenario/scenario/coop_perception_1.yaml`` that defines the details of the scenario. Set ``coop_perception: true`` for the ego vehicle with ``id=0`` and the participant (RSU in this scenario) with ``id=-1``. To disable it, set ``coop_perception: false`` for the ego vehicle.
 
-Then run the script
+Then run the simulation
 ```bash
 python EI_Drive.py test_scenario=coop_perception_1
 ```
@@ -272,7 +272,7 @@ python EI_Drive.py test_scenario=coop_perception_1
 ### Transmission Latency and Errors
 To enable latency and errors, open the config file in ``test_scenario/scenario/coop_perception_1.yaml`` that defines the details of the scenario. Set ``transmission_latency: true`` and ``errors: true`` for the ego vehicle with ``id=0`` and the participant (RSU in this scenario) with ``id=-1``.
 
-Then run the script
+Then run the simulation
 ```bash
 python EI_Drive.py test_scenario=coop_perception_1
 ```
