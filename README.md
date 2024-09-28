@@ -45,7 +45,7 @@ An open-source platform provides solution for joint simulation of edge communica
 
 ![EI-Drive framework](.assets/framework.png)
 
-**Documentation:** [EI-Drive API Documents]().
+**Documentation: [EI-Drive API Documents]()**
 
 **Looking for more techincal details? Check our report here! [Paper link]()**
 
