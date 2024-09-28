@@ -267,7 +267,7 @@ Then run the simulation
 python EI_Drive.py test_scenario=coop_perception_1
 ```
 
-⚠️ Please note that this config file is a different file with ``test_scenario/coop_perception_1.yaml`` abovementioned, even they have the same name.
+💡 Please note that this config file is a different file with ``test_scenario/coop_perception_1.yaml`` abovementioned, even they have the same name.
 
 ### Transmission Latency and Errors
 To enable latency and errors, open the config file in ``test_scenario/scenario/coop_perception_1.yaml`` that defines the details of the scenario. Set ``transmission_latency: true`` and ``errors: true`` for the ego vehicle with ``id=0`` and the participant (RSU in this scenario) with ``id=-1``.
@@ -277,7 +277,7 @@ Then run the simulation
 python EI_Drive.py test_scenario=coop_perception_1
 ```
 
-⚠️ Please ensure ``coop_perception: true`` has been set for the RSU and the ego vehicle, since the latency and errors only work when data transmission exists.
+💡 Please ensure ``coop_perception: true`` has been set for the RSU and the ego vehicle, since the latency and errors work when the data transmission exists.
 
 ## 🌟 Citation
 
