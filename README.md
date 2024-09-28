@@ -18,6 +18,7 @@
 
 </div>
 
+
 ______________________________________________________________________
 
 Experience the seamless integration of **cooperative perception** and **edge communication** in autonomous driving simulation.
@@ -29,7 +30,7 @@ Experience the seamless integration of **cooperative perception** and **edge com
 
 ## **Looking for a full-stack autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
 
-Integrating cooperative perception with edge communication, EI-Drive allows the exploration how communication latency and error affect not only cooperative perception but also the overall performance of autonomous vehicles.
+Integrating cooperative perception with edge communication, EI-Drive allows the exploration how communication latency and errors affect not only cooperative perception but also the overall performance of autonomous vehicles.
 
 A streamlined implementation with a full-stack pipeline and built-in scenarios. Highly customizable components allow you to tailor your experiments.
 
@@ -62,12 +63,12 @@ The perception results have significant influences on the ego vehicle's behavior
       <img src=".assets/6_coop2_coop_CarPOV.gif" alt="Gif 1" style="height: 180px;">
       <br><b>Ego vehicle</b>
     </td>
-    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none; padding: 2px;">➕</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➕</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_CameraPOVgif.gif" alt="Gif 2" style="height: 180px;">
       <br><b>Spectator vehicle</b>
     </td>
-    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none; padding: 2px;">➡️</td>
+    <td align="center" style="font-size: 20px; line-height: 1.2; font-weight: bold; border: none;">➡️</td>
     <td align="center" style="border: none; padding: 0;">
       <img src=".assets/6_coop2_coop_POV.gif" alt="Gif 3" style="height: 180px;">
       <br><b>Cooperative perception</b>
@@ -163,11 +164,11 @@ EI-Drive supports multiple perception methods and multi-modal sensor inputs, gre
   <tr style="border: none;">
     <td align="center" style="border: none; padding: 0px 10px;">
       <img src=".assets/1_OvertakeImg_Multimodel.png" alt="Gif 1" style="height: 220px;">
-      <br><b>Overtake</b>
+      <br><b>Multi-modal inputs</b>
     </td>
     <td align="center" style="border: none; padding: 0px 10px;">
       <img src=".assets/1_OvertakeImg_Perception.png" alt="Gif 2" style="height: 220px;">
-      <br><b>Car Following</b>
+      <br><b>Multiple perception methods</b>
     </td>
   </tr>
 </table>
