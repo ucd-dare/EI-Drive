@@ -28,11 +28,11 @@ Experience the seamless integration of **cooperative perception** and **edge com
 > - **August 2024:** Support transmission error in intention sharing. -->
 
 
-## **Looking for a full-stack autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
+## **Looking for an end-to-end autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
 
 Integrating cooperative perception with edge communication, EI-Drive allows the exploration how communication latency and errors affect not only cooperative perception but also the overall performance of autonomous vehicles.
 
-A streamlined implementation with a full-stack pipeline and built-in scenarios. Highly customizable components allow you to tailor your experiments.
+A streamlined implementation with an end-to-end pipeline and built-in scenarios. Highly customizable components allow you to tailor your experiments.
 
 Clear visualization makes the results highly visible and easy to interpret.
 
@@ -40,7 +40,7 @@ Clear visualization makes the results highly visible and easy to interpret.
 
 An open-source platform provides solution for joint simulation of edge communication and cooperative perception, aimed at safe and efficient cooperative driving automation.
 
-- 🌞 **AV pipeline**: A full-stack pipeline encompassing environment, sensing, perception, planning, and control.
+- 🌞 **AV pipeline**: An end-to-end pipeline encompassing environment, sensing, perception, planning, and control.
 - 📸 **Cooperative perception**: Flexible cooperative perception with customizable agents, methods, tasks, and visualization.
 - 📡 **Transmission model**: Simulate the key characteristics, transmission latency and errors, in data transmission between the edge agents, interacting seamlessly with the perception module.
 
