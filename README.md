@@ -28,7 +28,7 @@ Experience the seamless integration of **cooperative perception** and **edge com
 > - **August 2024:** Support transmission error in intention sharing. -->
 
 
-## **Looking for an end-to-end autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
+## **Looking for an advanced autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
 
 Integrating cooperative perception with edge communication, EI-Drive allows the exploration how communication latency and errors affect not only cooperative perception but also the overall performance of autonomous vehicles.
 
