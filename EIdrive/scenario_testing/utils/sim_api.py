@@ -13,6 +13,7 @@ import carla
 import numpy as np
 from omegaconf import OmegaConf
 from collections import deque
+import time
 
 from EIdrive.core.basic.vehicle_agent import VehicleAgent
 from EIdrive.core.basic.rsu import RSU

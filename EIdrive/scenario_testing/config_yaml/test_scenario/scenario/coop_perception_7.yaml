@@ -1,0 +1,105 @@
+test_scenario: coop_perception_7
+vehicle_list:
+  - id: 0    # Ego
+    spawn_position: [-45, 52.6, 0.5, 0, 0, 0]
+    destination: [[-8, 110, 0.3]]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      camera:
+        visualize: 0
+      lidar:
+        visualize: false
+        range: 50
+    behavior:
+      max_speed: 30
+      local_planner:
+        debug_trajectory: true
+        debug: true
+    controller:
+      args:
+        lat:
+          k_p: 0.4
+          k_i: 1.2
+      
+  - id: 1    # Spectator vehicle
+    spawn_position: [19.5, 45.4, 0.5, 0 , 180, 0]
+    destination: [[28, 48, 0.3]]
+    perception:
+      coop_perception: false
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      camera:
+        visualize: 0
+      lidar:
+        visualize: false
+        range: 50
+
+  - id: 2   # Collision vehicle
+    spawn_position: [-9.0, 5, 0.5, 0, 90, 0 ]
+    destination: [[-9.0, 100, 0.3]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+    behavior:
+      max_speed: 47.5
+      local_planner:
+        debug_trajectory: true
+        debug: true
+
+  - id: 3 # Blocking Vehicle
+    spawn_position: [-16.9, 49.1, 0.6, 0 ,0 ,0]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+  - id: 4 # Blocking Vehicle
+    spawn_position: [-27.7, 49.1, 0.6, 0 ,0,0]
+    destination: [[ -9.6, 254.8, 0.3 ]]
+    perception:
+      camera:
+        visualize: 0
+        num: 0
+      lidar:
+        visualize: false
+
+rsu_list:
+  - id: -1
+    spawn_position: [-1.3, 32.5, 5, 0, 45, 0 ]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      camera:
+        visualize: 0
+      lidar:
+        visualize: false
+        range: 50
+        lower_fov: -40.0
+  - id: -2
+    spawn_position: [-2.1, 32.5, 5, 0, 135, 0 ]
+    perception:
+      coop_perception: true
+      transmission_latency: false
+      transmission_latency_in_sec: 0.3
+      errors: false
+      error_rate: 0.3
+      camera:
+        visualize: 0
+      lidar:
+        visualize: false
+        range: 50
+        lower_fov: -40.0

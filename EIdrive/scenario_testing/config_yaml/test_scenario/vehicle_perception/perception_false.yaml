@@ -1,5 +1,5 @@
 perception: &base_perception
-  activate: false # when not activated, perception_true.yaml
+  activate: false # when not activated, use oracle
   model: yolo
   camera:
     visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
