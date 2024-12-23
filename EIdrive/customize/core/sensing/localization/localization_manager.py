@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Customized Localization Module.
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
+
 
 from EIdrive.core.sensing.localization.localizer \
     import Localizer

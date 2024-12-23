@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Use Extended Kalman Filter on GPS + IMU for better localization.
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
+
 
 import math
 import numpy as np
