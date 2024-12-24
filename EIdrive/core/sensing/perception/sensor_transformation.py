@@ -45,7 +45,7 @@ def generate_bb_points(vehicle_obj):
     Parameters
     ----------
     vehicle_obj : EIdrive object
-        An instance of Opencda's DynamicObstacle with relevant attributes.
+        An instance of dynamic obstacle with relevant attributes.
 
     Returns
     -------
