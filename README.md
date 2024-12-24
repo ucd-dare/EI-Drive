@@ -3,15 +3,15 @@
 <div align="center">
     <a href="">
         <img src="https://img.icons8.com/nolan/32/api.png" alt="CarDreamer API Documents" />
-        EI-Drive API Documents
+        API Documents (coming soon)
     </a>
     &nbsp;|&nbsp;
-    <a href="">
-        <img src="https://img.icons8.com/?size=32&id=48326&format=png" alt="ArXiv Pre-print" />
+    <a href="https://arxiv.org/abs/2412.09782">
+        <img src="https://img.icons8.com/?size=32&id=48326&format=png" alt="Pre-print" />
         ArXiv Pre-print
     </a>
     &nbsp;|&nbsp;
-    <a href="">
+    <a href="https://ucd-dare.github.io/eidrive.github.io/">
         <img src="https://img.icons8.com/?size=32&id=X-WB1cntO5xU&format=png&color=000000" alt="Project Page" />
         Project Page
     </a>
@@ -20,17 +20,15 @@
 
 
 ______________________________________________________________________
-
-Experience the seamless integration of **cooperative perception** and **edge communication** in autonomous driving simulation.
 <!-- 
 > \[!NOTE\]
 >
 > - **August 2024:** Support transmission error in intention sharing. -->
 
 
-## **Looking for an advanced autonomous driving platform that seamlessly simulates cooperative perception and edge communication? Choose EI-Drive!**
+## **Looking for an advanced autonomous driving platform that seamlessly simulates cooperative perception and realistic communication models? Choose EI-Drive!**
 
-Integrating cooperative perception with edge communication, EI-Drive allows the exploration how communication latency and errors affect not only cooperative perception but also the overall performance of autonomous vehicles.
+Integrating cooperative perception with realistic communication models, EI-Drive allows to explore the impact of communication latency and errors on not only cooperative perception but also the overall performance of autonomous driving.
 
 A streamlined implementation with an end-to-end pipeline and built-in scenarios. Highly customizable components allow you to tailor your experiments.
 
@@ -42,18 +40,16 @@ An open-source platform provides solution for joint simulation of edge communica
 
 - 🌞 **AV pipeline**: An end-to-end pipeline encompassing environment, sensing, perception, planning, and control.
 - 📸 **Cooperative perception**: Flexible cooperative perception with customizable agents, methods, tasks, and visualization.
-- 📡 **Transmission model**: Simulate the key characteristics, transmission latency and errors, in data transmission between the edge agents, interacting seamlessly with the perception module.
+- 📡 **Communication model**: Realistic communication models with latency and errors that interacts seamlessly with the perception module.
 
 ![EI-Drive framework](.assets/framework.png)
 
-**Documentation: [EI-Drive API Documents]()**
-
-**Looking for more techincal details? Check our report here! [Paper link]()**
+**Check our paper here! [Paper link]()**
 
 ## 🎯 Experiment Demo
 
 ### Cooperative perception
-EI-Drive has various built-in scenarios tailored for cooperative perception experiments, where the spectator vehicles and RSUs share perception information with the ego vehicle. Multiple cooperative perception tasks, including collision avoidance and traffic flow detection, enable extensive research with different goals.
+EI-Drive has various built-in scenarios tailored for cooperative perception experiments, where the spectator vehicles and RSUs share perception information with the ego vehicle. Multiple cooperative perception tasks include collision avoidance and traffic flow detection.
 
 The perception results have significant influences on the ego vehicle's behavior. The ego vehicle benefits from cooperative perception with less blind spots (rows 1 & 2) and wider detection range (row 3).
 
@@ -115,8 +111,8 @@ The perception results have significant influences on the ego vehicle's behavior
 </table>
 
 
-### Transmission latency and errors
-EI-Drive has great flexibility to simply apply transmission latency and errors to any perception processes, allowing the researches across both communication and autonomous driving. The transmission latency and errors not only impair the performance of cooperative perception, but also have negtive influence to the behavior of the ego vehicle.
+### Communication latency and errors
+EI-Drive has great flexibility to simply apply communication latency and errors to any perception processes, allowing the researches across both communication and autonomous driving. The results show that communication latency and errors sinificantly impair the performance of cooperative perception.
 
 <table style="border-collapse: collapse; width: 100%;">
   <tr style="border: none;">
@@ -127,12 +123,12 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopError_POV.gif" alt="Gif 2" style="height: 180px;">
-      <br><b>Cooperative perception + Transmission errors</b>
+      <br><b>Cooperative perception + Communication errors</b>
       <br>❌
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/5_coop1_coopLatency_POV.gif" alt="Gif 3" style="height: 180px;">
-      <br><b>Cooperative perception + Transmission latency</b>
+      <br><b>Cooperative perception + Communication latency</b>
       <br>❌
     </td>
   </tr>
@@ -146,11 +142,11 @@ EI-Drive has great flexibility to simply apply transmission latency and errors t
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopError_BirdPOV.gif" alt="Gif 2" style="height: 180px;">
-      <br><b>Cooperative perception + Transmission errors</b>
+      <br><b>Cooperative perception + Communication errors</b>
     </td>
     <td align="center" valign="top" style="border: none; padding: 0px 10px;">
       <img src=".assets/8_server/8_coop4_coopLatency_BirdPOV.gif" alt="Gif 3" style="height: 180px;">
-      <br><b>Cooperative perception + Transmission latency</b>
+      <br><b>Cooperative perception + Communication latency</b>
     </td>
   </tr>
 </table>
@@ -183,7 +179,7 @@ EI-Drive supports multiple perception methods and multi-modal sensor inputs, gre
 
 ## 💻 Prerequisites
 
-**First, we need to install CARLA**. Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version.
+**First, CARLA needs to be installed**. Download [CARLA release](https://github.com/carla-simulator/carla/releases) of version ``0.9.14`` as we experiemented with this version.
 
 Set the following environment variables:
 ```bash
@@ -226,7 +222,7 @@ python EI_Drive.py
 
 ## 🏇 Quick Start
 
-### Scenario and Config
+### Scenarios
 To run a specific scenario, use
 
 ```bash
@@ -270,7 +266,7 @@ python EI_Drive.py test_scenario=coop_perception_1
 
 💡 Please note that this config file is a different file with ``test_scenario/coop_perception_1.yaml`` abovementioned, even they have the same name.
 
-### Transmission Latency and Errors
+### Communication Latency and Errors
 To enable latency and errors, open the config file in ``test_scenario/scenario/coop_perception_1.yaml`` that defines the details of the scenario. Set ``transmission_latency: true`` and ``errors: true`` for the ego vehicle with ``id=0`` and the participant (RSU in this scenario) with ``id=-1``.
 
 Then run the simulation
@@ -278,7 +274,7 @@ Then run the simulation
 python EI_Drive.py test_scenario=coop_perception_1
 ```
 
-💡 Please ensure ``coop_perception: true`` has been set for the RSU and the ego vehicle, since the latency and errors work when the data transmission exists.
+💡 Please ensure ``coop_perception: true`` has been set for the RSU and the ego vehicle, since the latency and errors work when the data communication exists.
 
 ## 🌟 Citation
 
@@ -286,13 +282,17 @@ If you find this repository useful, please cite this paper:
 
 **[Paper link]()**
 ```
-@article{
+@article{zhou2024ei,
+  title={EI-Drive: A Platform for Cooperative Perception with Realistic Communication Models},
+  author={Zhou, Hanchu and Xie, Edward and Shao, Wei and Gao, Dechen and Dong, Michelle and Zhang, Junshan},
+  journal={arXiv preprint arXiv:2412.09782},
+  year={2024}
 }
 ```
 
 ## 👥 Contributors
 
-Special thanks to the community for your valuable contributions and support in making CarDreamer better for everyone!
+Special thanks to the community for your valuable contributions and support in making EI-Drive better for everyone!
 
 <!-- readme: contributors -start -->
 <table>
@@ -303,6 +303,13 @@ Special thanks to the community for your valuable contributions and support in m
                     <img src="https://avatars.githubusercontent.com/u/99316745?v=4" width="100;" alt="HanchuZhou"/>
                     <br />
                     <sub><b>Hanchu Zhou</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/edheadd">
+                    <img src="https://avatars.githubusercontent.com/u/106692483?v=4" width="100;" alt="Ed Xie"/>
+                    <br />
+                    <sub><b>Ed Xie</b></sub>
                 </a>
             </td>
             <td align="center">
