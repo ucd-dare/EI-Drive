@@ -20,3 +20,8 @@ dependencies:
     - seaborn
     - lxml
     - shapely==1.4.0
+    - hydra-core
+    - omegaconf
+    - torchvision
+    - pynput
+    - scikit-image
