@@ -2,9 +2,9 @@
 
 # -- Project information
 
-project = 'Lumache'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'EI-Drive'
+copyright = '2024, Hanchu Zhou'
+author = 'Hanchu Zhou'
 
 release = '0.1'
 version = '0.1.0'
