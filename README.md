@@ -1,9 +1,9 @@
 # 📷 Cooperative Perception with Edge Communication: EI-Drive 🚕
 
 <div align="center">
-    <a href="">
+    <a href="https://ei-drive-docs.readthedocs.io/en/latest/#">
         <img src="https://img.icons8.com/nolan/32/api.png" alt="CarDreamer API Documents" />
-        API Documents (coming soon)
+        API Documents
     </a>
     &nbsp;|&nbsp;
     <a href="https://arxiv.org/abs/2412.09782">
