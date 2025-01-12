@@ -205,9 +205,6 @@ Create the EI-Drive environment using conda:
 ```bash
 conda env create -f environment.yml
 conda activate EI-Drive
-cd EI-Drive
-python setup.py develop
-.setup.sh
 ```
 
 **To run EI-Drive**, make sure the CARLA is running in the meanwhile. You may use two terminals:
