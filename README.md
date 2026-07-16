@@ -8,7 +8,7 @@
     &nbsp;|&nbsp;
     <a href="https://arxiv.org/abs/2412.09782">
         <img src="https://img.icons8.com/?size=32&id=48326&format=png" alt="Pre-print" />
-        ArXiv Pre-print
+        Paper
     </a>
     &nbsp;|&nbsp;
     <a href="https://ucd-dare.github.io/eidrive.github.io/">
